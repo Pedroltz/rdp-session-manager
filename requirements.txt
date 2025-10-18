@@ -1,3 +1,23 @@
+# ======================================
+# RDP Session Manager - Requirements
+# ======================================
+#
+# Python Dependencies for RDP Session Manager
+# Compatible with: Ubuntu 20.04+, Debian 11+, WSL
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# System dependencies are handled by install.sh
+#
+# ======================================
+
+# GUI Framework - GTK4 & libadwaita
 PyGObject>=3.42.0
 pycairo>=1.20.0
+
+# System utilities
 psutil>=5.8.0
+
+# Optional: for enhanced functionality
+# netifaces>=0.11.0  # Better network interface detection

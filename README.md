@@ -76,54 +76,59 @@ RDP Session Manager é uma aplicação moderna e completa para GNOME que permite
 
 ## 🚀 Instalação
 
-### Dependências Obrigatórias
+### Sistemas Suportados
+- ✅ **Ubuntu** 20.04 ou superior
+- ✅ **Debian** 11 (Bullseye) ou superior
+- ✅ **WSL** (Windows Subsystem for Linux) com Ubuntu/Debian
 
-#### Debian/Ubuntu:
-```bash
-sudo apt install python3 python3-pip python3-gi \
-    gir1.2-gtk-4.0 gir1.2-adw-1 \
-    libgirepository1.0-dev gcc libcairo2-dev \
-    pkg-config python3-dev python3-psutil \
-    meson ninja-build
-```
+### Instalação Automática (Recomendado)
 
-### Dependências Opcionais (instaláveis pela aplicação)
-```bash
-# xrdp - Servidor RDP (pode ser instalado pela aplicação)
-sudo apt install xrdp xorgxrdp
-
-# FreeRDP - Cliente RDP (pode ser instalado pela aplicação)
-sudo apt install freerdp3-x11
-```
-
-### Instalação da Aplicação
-
-#### Método 1: Executar Direto (Desenvolvimento)
 ```bash
 # Clone o repositório
 git clone https://github.com/yourusername/rdp-session-manager.git
 cd rdp-session-manager
 
-# Instale dependências Python
-pip install -r requirements.txt
-
-# Execute
-./run.sh
-# ou
-python3 src/main.py
+# Execute o script de instalação
+./install.sh
 ```
 
-#### Método 2: Instalação via Meson
+O script `install.sh` irá:
+- ✅ Detectar automaticamente seu sistema (Ubuntu/Debian/WSL)
+- ✅ Instalar todas as dependências do sistema (GTK4, libadwaita, etc.)
+- ✅ Instalar dependências Python (PyGObject, psutil, etc.)
+- ✅ Configurar permissões necessárias
+- ✅ Opcionalmente instalar xrdp e FreeRDP
+- ✅ Criar ambiente virtual Python (opcional)
+
+### Instalação Manual
+
+Para instruções detalhadas de instalação manual, consulte [INSTALL.md](INSTALL.md)
+
+#### Dependências Essenciais (Debian/Ubuntu):
 ```bash
-# Configure e compile
-meson setup builddir
-meson compile -C builddir
+sudo apt-get install -y \
+    python3 python3-pip python3-venv python3-dev \
+    libgtk-4-1 libgtk-4-dev \
+    libadwaita-1-0 libadwaita-1-dev \
+    gir1.2-gtk-4.0 gir1.2-adw-1 \
+    python3-gi python3-gi-cairo \
+    policykit-1
+```
 
-# Instale no sistema
-sudo meson install -C builddir
+#### Dependências Python:
+```bash
+pip install -r requirements.txt
+```
 
-# Execute
-rdp-session-manager
+### Executando a Aplicação
+
+```bash
+# Com ambiente virtual
+source venv/bin/activate
+python3 src/main.py
+
+# Sem ambiente virtual
+python3 src/main.py
 ```
 
 ## 🎯 Uso
