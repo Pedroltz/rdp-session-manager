@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=RDP Session Manager
+Comment=Gerenciador de sessões RDP
+Exec=@bindir@/rdp-session-manager
+Icon=com.rdp.SessionManager
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;System;Settings;
+Keywords=RDP;Remote;Desktop;Session;xrdp;
+StartupNotify=true

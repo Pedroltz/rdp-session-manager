@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.rdp.SessionManager" path="/com/rdp/SessionManager/">
+    <key name="window-width" type="i">
+      <default>800</default>
+      <summary>Window width</summary>
+      <description>Width of the main window</description>
+    </key>
+
+    <key name="window-height" type="i">
+      <default>600</default>
+      <summary>Window height</summary>
+      <description>Height of the main window</description>
+    </key>
+
+    <key name="window-maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized state</summary>
+      <description>Whether the window is maximized</description>
+    </key>
+
+    <key name="default-de" type="s">
+      <default>'xfce'</default>
+      <summary>Default desktop environment</summary>
+      <description>Default desktop environment for new RDP users</description>
+    </key>
+
+    <key name="rdp-users-home" type="s">
+      <default>'/opt/rdp-users'</default>
+      <summary>RDP users home directory</summary>
+      <description>Base directory for RDP user home folders</description>
+    </key>
+
+    <key name="rdp-port-start" type="i">
+      <default>3389</default>
+      <summary>Starting RDP port</summary>
+      <description>Starting port number for RDP sessions</description>
+    </key>
+
+    <key name="auto-start-sessions" type="b">
+      <default>true</default>
+      <summary>Auto-start sessions</summary>
+      <description>Automatically start RDP sessions on boot</description>
+    </key>
+  </schema>
+</schemalist>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.rdp.SessionManager</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>RDP Session Manager</name>
+  <summary>Gerenciador de sessões RDP para GNOME</summary>
+
+  <description>
+    <p>
+      RDP Session Manager é uma aplicação GTK4 para GNOME que permite criar,
+      gerenciar e monitorar sessões RDP de forma fácil e intuitiva.
+    </p>
+    <p>Recursos principais:</p>
+    <ul>
+      <li>Interface gráfica moderna usando GTK4</li>
+      <li>Criação automatizada de usuários RDP</li>
+      <li>Suporte para múltiplos ambientes gráficos (GNOME, XFCE, KDE)</li>
+      <li>Gerenciamento centralizado de sessões</li>
+      <li>Monitoramento de status em tempo real</li>
+      <li>Integração com PolicyKit para segurança</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.rdp.SessionManager.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Janela principal do gerenciador</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/yourusername/rdp-session-manager</url>
+  <url type="bugtracker">https://github.com/yourusername/rdp-session-manager/issues</url>
+
+  <provides>
+    <binary>rdp-session-manager</binary>
+  </provides>
+
+  <releases>
+    <release version="0.1.0" date="2025-10-17">
+      <description>
+        <p>Versão inicial do RDP Session Manager</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1" />
+</component>

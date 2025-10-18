@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="libadwaita" version="1.0"/>
+
+  <template class="UserDialog" parent="AdwDialog">
+    <property name="title">Criar Novo Usuário RDP</property>
+    <property name="content-width">500</property>
+    <property name="content-height">600</property>
+
+    <child>
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <child type="start">
+              <object class="GtkButton" id="cancel_button">
+                <property name="label">Cancelar</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton" id="create_button">
+                <property name="label">Criar</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <property name="content">
+          <object class="GtkScrolledWindow">
+            <property name="hscrollbar-policy">never</property>
+            <child>
+              <object class="AdwClamp">
+                <property name="maximum-size">500</property>
+                <property name="margin-top">24</property>
+                <property name="margin-bottom">24</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">24</property>
+
+                    <!-- Basic Info -->
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <property name="title">Informações Básicas</property>
+
+                        <child>
+                          <object class="AdwEntryRow" id="username_entry">
+                            <property name="title">Nome de Usuário</property>
+                            <property name="show-apply-button">false</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwEntryRow" id="fullname_entry">
+                            <property name="title">Nome Completo</property>
+                            <property name="show-apply-button">false</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Security -->
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <property name="title">Segurança</property>
+
+                        <child>
+                          <object class="AdwPasswordEntryRow" id="password_entry">
+                            <property name="title">Senha</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwPasswordEntryRow" id="confirm_password_entry">
+                            <property name="title">Confirmar Senha</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Desktop Environment -->
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <property name="title">Ambiente Desktop</property>
+                        <property name="description">Escolha o ambiente gráfico para este usuário</property>
+
+                        <child>
+                          <object class="AdwComboRow" id="de_combo">
+                            <property name="title">Ambiente Desktop</property>
+                            <!-- Model is set dynamically in setup_de_combo() -->
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwActionRow" id="install_de_row">
+                            <property name="title">Instalar Ambiente Desktop</property>
+                            <property name="subtitle">Baixar e instalar se não estiver disponível</property>
+                            <child>
+                              <object class="GtkSwitch" id="install_de_switch">
+                                <property name="valign">center</property>
+                                <property name="active">true</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Connection Settings -->
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <property name="title">Configurações de Conexão</property>
+
+                        <child>
+                          <object class="AdwActionRow" id="auto_start_row">
+                            <property name="title">Iniciar Automaticamente</property>
+                            <property name="subtitle">Iniciar sessão RDP com o sistema</property>
+                            <child>
+                              <object class="GtkSwitch" id="auto_start_switch">
+                                <property name="valign">center</property>
+                                <property name="active">true</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+  </template>
+</interface>
