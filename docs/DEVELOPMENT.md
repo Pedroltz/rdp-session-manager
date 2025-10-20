@@ -1,92 +1,92 @@
-# Documentação de Desenvolvimento
+# Development Documentation
 
-## Progresso do Projeto
+## Project Progress
 
-### ✅ Fase 1: Estrutura Base (100% Completo)
+### Phase 1: Base Structure (100% Complete)
 
-- [x] Estrutura de diretórios criada
-- [x] Sistema de build configurado (Meson + setuptools)
-- [x] Metadados da aplicação (Desktop file, AppData, GSchema)
-- [x] PolicyKit configurado para ações administrativas
+- [x] Directory structure created
+- [x] Build system configured (Meson + setuptools)
+- [x] Application metadata (Desktop file, AppData, GSchema)
+- [x] PolicyKit configured for administrative actions
 
-### ✅ Fase 2: Backend Core (100% Completo)
+### Phase 2: Core Backend (100% Complete)
 
-- [x] Módulo de gerenciamento de usuários (`user_manager.py`)
-  - Criação, exclusão, listagem de usuários RDP
-  - Validação de nomes de usuário
-  - Geração automática de UID e portas
+- [x] User management module (`user_manager.py`)
+  - Creation, deletion, listing of RDP users
+  - Username validation
+  - Automatic UID and port generation
 
-- [x] Sistema de configuração FreeRDP (`rdp_config.py`)
-  - Geração de configuração xrdp
-  - Scripts de inicialização de sessão
-  - Suporte para múltiplos DEs
+- [x] FreeRDP configuration system (`rdp_config.py`)
+  - xrdp configuration generation
+  - Session startup scripts
+  - Support for multiple Desktop Environments
 
-- [x] Instalador automático de DEs (`de_installer.py`)
-  - Suporte para GNOME, XFCE, KDE, MATE, Cinnamon, LXDE, LXQt
-  - Verificação de espaço em disco
-  - Detecção de DEs instalados
+- [x] Automatic Desktop Environment installer (`de_installer.py`)
+  - Support for GNOME, XFCE, KDE, MATE, Cinnamon, LXDE, LXQt
+  - Disk space verification
+  - Detection of installed DEs
 
-- [x] Monitoramento de sessões (`session_monitor.py`)
-  - Detecção de sessões ativas
-  - Monitoramento de recursos do sistema
-  - Obtenção de IPs e portas
+- [x] Session monitoring (`session_monitor.py`)
+  - Active session detection
+  - System resource monitoring
+  - IP and port retrieval
 
-### ✅ Fase 3: Interface GTK4 (100% Completo)
+### Phase 3: GTK4 Interface (100% Complete)
 
-- [x] Janela principal (`main-window.ui`)
-  - Lista de usuários RDP
-  - Informações do servidor
-  - Busca de usuários
+- [x] Main window (`main-window.ui`)
+  - RDP user list
+  - Server information
+  - User search
 
-- [x] Diálogo de criação de usuário (`user-dialog.ui`)
-  - Formulário completo
-  - Validação em tempo real
-  - Seleção de DE
+- [x] User creation dialog (`user-dialog.ui`)
+  - Complete form
+  - Real-time validation
+  - DE selection
 
-- [x] Implementação Python da UI
-  - `MainWindow` com atualização em tempo real
-  - `UserDialog` com validação
-  - Integração com backend
+- [x] Python UI implementation
+  - `MainWindow` with real-time updates
+  - `UserDialog` with validation
+  - Backend integration
 
-### ✅ Fase 4: Integração e Segurança (100% Completo)
+### Phase 4: Integration and Security (100% Complete)
 
 - [x] PolicyKit Helper (`rdp-session-helper.py`)
-  - Criação/exclusão de usuários
-  - Instalação de pacotes
-  - Gerenciamento de sessões
+  - User creation/deletion
+  - Package installation
+  - Session management
 
-- [x] Sistema de validação (`validator.py`)
-  - Validação de username, senha, porta
-  - Sanitização de entrada
+- [x] Validation system (`validator.py`)
+  - Username, password, port validation
+  - Input sanitization
 
-- [x] Sistema de logs (`logger.py`)
-  - Logs rotativos
-  - Auditoria JSON
-  - Múltiplos níveis de log
+- [x] Logging system (`logger.py`)
+  - Rotating logs
+  - JSON audit
+  - Multiple log levels
 
-- [x] Sistema de backup (`backup.py`)
-  - Backup de configurações
-  - Restauração
-  - Limpeza automática
+- [x] Backup system (`backup.py`)
+  - Configuration backup
+  - Restoration
+  - Automatic cleanup
 
-### ✅ Fase 5: Testes e Documentação (100% Completo)
+### Phase 5: Testing and Documentation (100% Complete)
 
-- [x] Testes unitários
+- [x] Unit tests
   - `test_validator.py`
   - `test_user_manager.py`
 
-- [x] Documentação completa
-  - README.md com instruções
-  - Documentação de desenvolvimento
-  - Guia de problemas conhecidos
+- [x] Complete documentation
+  - README.md with instructions
+  - Development documentation
+  - Known issues guide
 
-## Arquitetura do Sistema
+## System Architecture
 
-### Componentes Principais
+### Main Components
 
 ```
 ┌─────────────────────────────────────────────┐
-│          Interface GTK4 (UI)                │
+│          GTK4 Interface (UI)                │
 │  ┌──────────────┐      ┌─────────────────┐ │
 │  │ MainWindow   │      │  UserDialog     │ │
 │  └──────────────┘      └─────────────────┘ │
@@ -117,106 +117,106 @@
                     │
                     ↓
 ┌─────────────────────────────────────────────┐
-│         Sistema Operacional                 │
+│         Operating System                    │
 │    Linux Users, xrdp, Desktop Environments  │
 └─────────────────────────────────────────────┘
 ```
 
-### Fluxo de Criação de Usuário
+### User Creation Flow
 
-1. **UI**: Usuário preenche formulário
-2. **Validação**: Validator verifica dados
-3. **UserManager**: Cria estrutura do usuário
-4. **PolicyKit**: Solicita privilégios admin
-5. **Helper**: Executa `useradd` com privilégios
-6. **RDPConfig**: Configura sessão xrdp
-7. **DEInstaller**: Instala DE se necessário
-8. **Audit**: Registra ação nos logs
-9. **Backup**: Cria backup da configuração
-10. **UI**: Atualiza lista de usuários
+1. **UI**: User fills form
+2. **Validation**: Validator verifies data
+3. **UserManager**: Creates user structure
+4. **PolicyKit**: Requests admin privileges
+5. **Helper**: Executes `useradd` with privileges
+6. **RDPConfig**: Configures xrdp session
+7. **DEInstaller**: Installs DE if necessary
+8. **Audit**: Records action in logs
+9. **Backup**: Creates configuration backup
+10. **UI**: Updates user list
 
-## API Interna
+## Internal API
 
 ### UserManager
 
 ```python
-# Criar usuário
+# Create user
 user = user_manager.create_user(
-    username="joao",
-    password="SenhaForte123",
+    username="john",
+    password="StrongPass123",
     desktop_env="xfce",
-    full_name="João Silva"
+    full_name="John Doe"
 )
 
-# Listar usuários
+# List users
 users = user_manager.list_users()
 
-# Obter usuário específico
-user = user_manager.get_user("joao")
+# Get specific user
+user = user_manager.get_user("john")
 
-# Excluir usuário
-success = user_manager.delete_user("joao", remove_home=True)
+# Delete user
+success = user_manager.delete_user("john", remove_home=True)
 ```
 
 ### RDPConfig
 
 ```python
-# Criar configuração de sessão
+# Create session configuration
 rdp_config.create_user_session(
-    username="joao",
+    username="john",
     uid=5000,
     desktop_env="xfce",
     rdp_port=3389
 )
 
-# Obter status da sessão
-status = rdp_config.get_session_status("joao")
+# Get session status
+status = rdp_config.get_session_status("john")
 
-# Portas disponíveis
+# Available ports
 ports = rdp_config.get_available_ports(start_port=3389, count=10)
 ```
 
 ### SessionMonitor
 
 ```python
-# Obter sessões ativas
+# Get active sessions
 sessions = session_monitor.get_active_sessions()
 
-# Verificar se usuário está conectado
-is_connected = session_monitor.is_user_connected("joao")
+# Check if user is connected
+is_connected = session_monitor.is_user_connected("john")
 
-# Obter IP do servidor
+# Get server IP
 ip = session_monitor.get_ip_address()
 
-# Estatísticas do sistema
+# System statistics
 stats = session_monitor.get_system_stats()
 ```
 
-## Desenvolvimento
+## Development
 
-### Setup do Ambiente
+### Environment Setup
 
 ```bash
-# Clone e entre no diretório
+# Clone and enter directory
 git clone <repo>
 cd RemoteApps-RDP
 
-# Crie virtual environment
+# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# Instale dependências
+# Install dependencies
 pip install -r requirements.txt
 pip install pytest
 
-# Execute em modo desenvolvimento
+# Run in development mode
 python3 src/main.py
 ```
 
-### Adicionar Novo Desktop Environment
+### Adding a New Desktop Environment
 
-1. Edite `src/core/de_installer.py`
-2. Adicione entrada em `DE_PACKAGES`:
+1. Edit `src/core/de_installer.py`
+2. Add entry in `DE_PACKAGES`:
 
 ```python
 'budgie': {
@@ -227,12 +227,12 @@ python3 src/main.py
 }
 ```
 
-3. Teste a instalação
+3. Test the installation
 
-### Adicionar Nova Validação
+### Adding New Validation
 
-1. Edite `src/utils/validator.py`
-2. Adicione método estático:
+1. Edit `src/utils/validator.py`
+2. Add static method:
 
 ```python
 @staticmethod
@@ -242,107 +242,107 @@ def validate_something(value: str) -> Tuple[bool, str]:
     return True, ""
 ```
 
-### Executar Testes
+### Running Tests
 
 ```bash
-# Todos os testes
+# All tests
 pytest tests/ -v
 
-# Teste específico
+# Specific test
 pytest tests/test_validator.py -v
 
-# Com cobertura
+# With coverage
 pytest tests/ --cov=src --cov-report=html
 ```
 
-## Padrões de Código
+## Code Standards
 
 ### Python
 
-- **PEP 8**: Seguir guia de estilo
-- **Type Hints**: Usar quando possível
-- **Docstrings**: Documentar todas as funções públicas
-- **Logging**: Usar logger ao invés de print
+- **PEP 8**: Follow style guide
+- **Type Hints**: Use when possible
+- **Docstrings**: Document all public functions
+- **Logging**: Use logger instead of print
 
 ### GTK/UI
 
-- **Templates**: Usar Gtk.Template para UI
-- **Signals**: Conectar via `connect()`
-- **CSS Classes**: Usar classes do Adwaita quando possível
+- **Templates**: Use Gtk.Template for UI
+- **Signals**: Connect via `connect()`
+- **CSS Classes**: Use Adwaita classes when possible
 
 ### Git
 
-- **Commits**: Mensagens claras e descritivas
+- **Commits**: Clear and descriptive messages
 - **Branches**: `feature/`, `bugfix/`, `hotfix/`
-- **Pull Requests**: Um feature por PR
+- **Pull Requests**: One feature per PR
 
-## Depuração
+## Debugging
 
-### Habilitar Logs de Debug
+### Enable Debug Logs
 
 ```bash
-# Variável de ambiente
+# Environment variable
 export G_MESSAGES_DEBUG=all
 export GTK_DEBUG=interactive
 
-# Execute a aplicação
+# Run application
 python3 src/main.py
 ```
 
-### Logs do Sistema
+### System Logs
 
 ```bash
-# Logs da aplicação
+# Application logs
 tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
 
-# Logs de auditoria
+# Audit logs
 tail -f ~/.local/share/rdp-session-manager/logs/audit.log
 
-# Logs do xrdp
+# xrdp logs
 sudo tail -f /var/log/xrdp/xrdp.log
 ```
 
-### Debug do PolicyKit
+### PolicyKit Debug
 
 ```bash
-# Verificar política instalada
+# Check installed policy
 pkaction --verbose --action-id com.rdp.SessionManager.create-user
 
-# Testar autorização
+# Test authorization
 pkcheck --action-id com.rdp.SessionManager.create-user --process $$
 ```
 
-## Build e Distribuição
+## Build and Distribution
 
-### Build com Meson
+### Build with Meson
 
 ```bash
-# Configurar
+# Configure
 meson setup builddir --prefix=/usr
 
-# Compilar
+# Compile
 meson compile -C builddir
 
-# Instalar
+# Install
 sudo meson install -C builddir
 
-# Desinstalar
+# Uninstall
 sudo ninja -C builddir uninstall
 ```
 
-### Criar Pacote Debian
+### Create Debian Package
 
 ```bash
-# TODO: Adicionar suporte para dpkg-buildpackage
+# TODO: Add support for dpkg-buildpackage
 ```
 
-### Criar Flatpak
+### Create Flatpak
 
 ```bash
-# TODO: Adicionar manifest flatpak
+# TODO: Add flatpak manifest
 ```
 
-## Recursos Adicionais
+## Additional Resources
 
 - [GTK4 Documentation](https://docs.gtk.org/gtk4/)
 - [libadwaita Documentation](https://gnome.pages.gitlab.gnome.org/libadwaita/)

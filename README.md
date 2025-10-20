@@ -143,16 +143,16 @@ python3 src/main.py
 
 ```bash
 # Show all available commands
-./rdpsm --help
+rdpsm --help
 
 # Example: Create a user
-./rdpsm user create john -f "John Doe" -d xfce
+rdpsm user create john -f "John Doe" -d xfce
 
 # Example: List all users
-./rdpsm user list
+rdpsm user list
 
 # Example: View server information
-./rdpsm server info
+rdpsm server info
 ```
 
 For complete CLI documentation, see [CLI.md](CLI.md).
@@ -222,42 +222,42 @@ sudo ln -s $(pwd)/rdpsm /usr/local/bin/rdpsm
 
 **User Management:**
 ```bash
-./rdpsm user create USERNAME              # Create user
-./rdpsm user delete USERNAME              # Delete user
-./rdpsm user list                         # List all users
-./rdpsm user info USERNAME                # User details
-./rdpsm user enable USERNAME              # Enable user
-./rdpsm user disable USERNAME             # Disable user
-./rdpsm user password USERNAME            # Change password
+rdpsm user create USERNAME              # Create user
+rdpsm user delete USERNAME              # Delete user
+rdpsm user list                         # List all users
+rdpsm user info USERNAME                # User details
+rdpsm user enable USERNAME              # Enable user
+rdpsm user disable USERNAME             # Disable user
+rdpsm user password USERNAME            # Change password
 ```
 
 **Session Management:**
 ```bash
-./rdpsm session list                      # Active sessions
-./rdpsm session info USERNAME             # Session details
-./rdpsm session kill USERNAME             # Kill session
+rdpsm session list                      # Active sessions
+rdpsm session info USERNAME             # Session details
+rdpsm session kill USERNAME             # Kill session
 ```
 
 **Desktop Environments:**
 ```bash
-./rdpsm de list                           # Available DEs
-./rdpsm de install DE_ID                  # Install DE
-./rdpsm de check DE_ID                    # Check if installed
+rdpsm de list                           # Available DEs
+rdpsm de install DE_ID                  # Install DE
+rdpsm de check DE_ID                    # Check if installed
 ```
 
 **Server & Configuration:**
 ```bash
-./rdpsm server info                       # Server information
-./rdpsm server status                     # Check xrdp status
-./rdpsm config get port                   # Get RDP port
-./rdpsm config set port 3390              # Set RDP port
+rdpsm server info                       # Server information
+rdpsm server status                     # Check xrdp status
+rdpsm config get port                   # Get RDP port
+rdpsm config set port 3390              # Set RDP port
 ```
 
 **Dependencies:**
 ```bash
-./rdpsm deps check                        # Check dependencies
-./rdpsm deps install xrdp                 # Install xrdp
-./rdpsm deps install freerdp              # Install freerdp
+rdpsm deps check                        # Check dependencies
+rdpsm deps install xrdp                 # Install xrdp
+rdpsm deps install freerdp              # Install freerdp
 ```
 
 ### Output Formats
@@ -266,13 +266,13 @@ Most commands support JSON output for scripting:
 
 ```bash
 # Table format (default)
-./rdpsm user list
+rdpsm user list
 
 # JSON format
-./rdpsm user list --format json
+rdpsm user list --format json
 
 # Use with jq for parsing
-./rdpsm user list --format json | jq -r '.[].username'
+rdpsm user list --format json | jq -r '.[].username'
 ```
 
 ### Scripting Examples
@@ -280,18 +280,18 @@ Most commands support JSON output for scripting:
 **Batch user creation:**
 ```bash
 for user in alice bob charlie; do
-    ./rdpsm user create "$user" -p "TempPass123" -d xfce
+    rdpsm user create "$user" -p "TempPass123" -d xfce
 done
 ```
 
 **Monitor sessions:**
 ```bash
-watch -n 5 './rdpsm session list'
+watch -n 5 'rdpsm session list'
 ```
 
 **System health check:**
 ```bash
-./rdpsm server status && ./rdpsm deps check
+rdpsm server status && rdpsm deps check
 ```
 
 ### Testing CLI Commands
@@ -303,9 +303,9 @@ Test all CLI commands without installing the application:
 ./test_cli.sh
 
 # Manual testing
-./rdpsm --version
-./rdpsm user list
-./rdpsm server info
+rdpsm --version
+rdpsm user list
+rdpsm server info
 ```
 
 For complete CLI documentation, testing guide, and GUI-to-CLI equivalents, see:

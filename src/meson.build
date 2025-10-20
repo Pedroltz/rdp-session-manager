@@ -3,6 +3,7 @@ python_sources = [
     '__init__.py',
     'main.py',
     'application.py',
+    'cli.py',
 ]
 
 py_installation.install_sources(
