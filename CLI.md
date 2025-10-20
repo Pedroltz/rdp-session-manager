@@ -1,0 +1,872 @@
+# CLI Reference - RDP Session Manager
+
+Command-line interface for RDP Session Manager. All operations available in the GUI can be performed via terminal.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Basic Usage](#basic-usage)
+- [User Management](#user-management)
+- [Session Management](#session-management)
+- [Desktop Environments](#desktop-environments)
+- [Server Information](#server-information)
+- [Configuration](#configuration)
+- [Dependencies](#dependencies)
+- [Output Formats](#output-formats)
+- [GUI to CLI Equivalents](#gui-to-cli-equivalents)
+
+## Installation
+
+The CLI is installed automatically with RDP Session Manager.
+
+```bash
+# Make the CLI executable (already done by install.sh)
+chmod +x rdpsm
+
+# Optional: Add to PATH
+sudo ln -s $(pwd)/rdpsm /usr/local/bin/rdpsm
+```
+
+## Basic Usage
+
+```bash
+# Show help
+./rdpsm --help
+
+# Show version
+./rdpsm --version
+
+# Verbose output
+./rdpsm -v <command>
+
+# Command structure
+./rdpsm <command> <subcommand> [options]
+```
+
+## User Management
+
+### Create User
+
+Create a new RDP user with automatic configuration.
+
+```bash
+# Interactive (prompts for password)
+./rdpsm user create USERNAME
+
+# With options
+./rdpsm user create USERNAME -f "Full Name" -d xfce
+
+# Non-interactive (for scripts)
+./rdpsm user create USERNAME -p "password123" -d gnome -f "John Doe"
+
+# Verbose output
+./rdpsm -v user create USERNAME
+```
+
+**Options:**
+- `-f, --fullname` - User's full name
+- `-d, --desktop` - Desktop environment (default: xfce)
+- `-p, --password` - Password (prompts if not provided)
+
+**Desktop environments:** lxde, lxqt, xfce, mate, cinnamon, gnome, kde
+
+**Example:**
+```bash
+# Create user 'john' with XFCE desktop
+./rdpsm user create john -f "John Smith" -d xfce
+
+# Output:
+# → Creating user 'john' with XFCE desktop...
+# ✓ User 'john' created successfully
+# → UID: 5000
+# → Home: /opt/rdp-users/john
+# → RDP Port: 3389
+```
+
+**GUI Equivalent:** Click "+" button → Fill form → Click "Create"
+
+---
+
+### Delete User
+
+Delete an RDP user and all associated data.
+
+```bash
+# Interactive (asks for confirmation)
+./rdpsm user delete USERNAME
+
+# Force delete without confirmation
+./rdpsm user delete USERNAME --force
+```
+
+**Example:**
+```bash
+# Delete user 'john'
+./rdpsm user delete john
+
+# Output:
+# Delete user 'john' and all data? (yes/no): yes
+# → Deleting user 'john'...
+# ✓ User 'john' deleted successfully
+```
+
+**GUI Equivalent:** Click trash icon → Confirm deletion
+
+---
+
+### List Users
+
+Display all RDP users.
+
+```bash
+# Table format (default)
+./rdpsm user list
+
+# JSON format
+./rdpsm user list --format json
+```
+
+**Example output (table):**
+```
+RDP Users (3 total)
+====================
+
+Username             UID      Desktop    Port     Status
+----------------------------------------------------------------------
+john                 5000     XFCE       3389     Enabled
+mary                 5001     GNOME      3389     Enabled
+bob                  5002     KDE        3389     Disabled
+```
+
+**Example output (JSON):**
+```json
+[
+  {
+    "username": "john",
+    "uid": 5000,
+    "home_dir": "/opt/rdp-users/john",
+    "desktop_env": "xfce",
+    "rdp_port": 3389,
+    "active": false,
+    "enabled": true
+  }
+]
+```
+
+**GUI Equivalent:** View main window user list
+
+---
+
+### User Information
+
+Show detailed information about a specific user.
+
+```bash
+# Table format
+./rdpsm user info USERNAME
+
+# JSON format
+./rdpsm user info USERNAME --format json
+```
+
+**Example:**
+```bash
+./rdpsm user info john
+
+# Output:
+# User Information: john
+# =======================
+#   Username:     john
+#   UID:          5000
+#   Home:         /opt/rdp-users/john
+#   Desktop:      XFCE
+#   RDP Port:     3389
+#   Status:       Enabled
+#   Connected:    Yes (from 192.168.1.100)
+#   Processes:    15
+```
+
+**GUI Equivalent:** View user card details
+
+---
+
+### Enable User
+
+Enable a disabled user account.
+
+```bash
+./rdpsm user enable USERNAME
+```
+
+**Example:**
+```bash
+./rdpsm user enable john
+
+# Output:
+# → Enabling user 'john'...
+# ✓ User 'john' enabled
+```
+
+**GUI Equivalent:** Toggle switch ON
+
+---
+
+### Disable User
+
+Disable a user account (prevents RDP login).
+
+```bash
+./rdpsm user disable USERNAME
+```
+
+**Example:**
+```bash
+./rdpsm user disable john
+
+# Output:
+# → Disabling user 'john'...
+# ✓ User 'john' disabled
+```
+
+**GUI Equivalent:** Toggle switch OFF
+
+---
+
+### Change Password
+
+Change user password.
+
+```bash
+# Interactive (prompts for password)
+./rdpsm user password USERNAME
+
+# Non-interactive
+./rdpsm user password USERNAME -p "newpassword"
+```
+
+**Example:**
+```bash
+./rdpsm user password john
+
+# Output:
+# New password for john:
+# Confirm password:
+# → Changing password for 'john'...
+# ✓ Password changed for 'john'
+```
+
+**GUI Equivalent:** User management → Change password
+
+---
+
+### List User Processes
+
+Show all running processes for a user.
+
+```bash
+./rdpsm user processes USERNAME
+```
+
+**Example:**
+```bash
+./rdpsm user processes john
+
+# Output:
+# Processes for john (15 total)
+# ==============================
+#   PID: 1234
+#   PID: 1235
+#   PID: 1236
+#   ...
+```
+
+**GUI Equivalent:** View user card → Process count
+
+---
+
+## Session Management
+
+### List Active Sessions
+
+Display all active RDP sessions.
+
+```bash
+# Table format
+./rdpsm session list
+
+# JSON format
+./rdpsm session list --format json
+```
+
+**Example:**
+```bash
+./rdpsm session list
+
+# Output:
+# Active Sessions (2 total)
+# ==========================
+#
+# Username             IP Address           Port
+# --------------------------------------------------
+# john                 192.168.1.100        3389
+# mary                 192.168.1.101        3389
+```
+
+**GUI Equivalent:** View "Active Sessions" count in header
+
+---
+
+### Session Information
+
+Show detailed session information for a user.
+
+```bash
+# Table format
+./rdpsm session info USERNAME
+
+# JSON format
+./rdpsm session info USERNAME --format json
+```
+
+**Example:**
+```bash
+./rdpsm session info john
+
+# Output:
+# Session Information: john
+# ==========================
+#   Username:     john
+#   IP Address:   192.168.1.100
+#   Port:         3389
+#   Duration:     3600 seconds
+```
+
+**GUI Equivalent:** View user card when connected
+
+---
+
+### Kill Session
+
+Terminate a user's active RDP session.
+
+```bash
+# Interactive (asks for confirmation)
+./rdpsm session kill USERNAME
+
+# Force kill without confirmation
+./rdpsm session kill USERNAME --force
+```
+
+**Example:**
+```bash
+./rdpsm session kill john --force
+
+# Output:
+# → Killing session for 'john'...
+# ✓ Session killed for 'john'
+```
+
+**GUI Equivalent:** Delete user with active session → "Terminate and Remove"
+
+---
+
+## Desktop Environments
+
+### List Desktop Environments
+
+Show all available desktop environments.
+
+```bash
+# Table format
+./rdpsm de list
+
+# JSON format
+./rdpsm de list --format json
+```
+
+**Example:**
+```bash
+./rdpsm de list
+
+# Output:
+# Available Desktop Environments
+# ================================
+#
+# ID           Name                 Size       Installed
+# ------------------------------------------------------------
+# lxde         LXDE                 250MB      No
+# lxqt         LXQt                 350MB      No
+# xfce         XFCE                 400MB      Yes
+# mate         MATE                 600MB      No
+# cinnamon     Cinnamon             800MB      No
+# gnome        GNOME                1200MB     Yes
+# kde          KDE Plasma           1500MB     No
+```
+
+**GUI Equivalent:** Desktop Environment selector in user creation dialog
+
+---
+
+### Install Desktop Environment
+
+Install a desktop environment.
+
+```bash
+# Install DE
+./rdpsm de install DE_ID
+
+# Reinstall if already installed
+./rdpsm de install DE_ID --force
+
+# Verbose output
+./rdpsm -v de install DE_ID
+```
+
+**Example:**
+```bash
+./rdpsm de install xfce
+
+# Output:
+# → Installing XFCE desktop environment...
+#   Checking disk space...
+#   Downloading packages...
+#   Installing packages...
+# ✓ Desktop environment 'xfce' installed successfully
+```
+
+**GUI Equivalent:** User creation → Check "Install desktop environment" → Create
+
+---
+
+### Check Desktop Environment
+
+Check if a desktop environment is installed.
+
+```bash
+./rdpsm de check DE_ID
+```
+
+**Example:**
+```bash
+./rdpsm de check xfce
+
+# Output (if installed):
+# ✓ Desktop environment 'xfce' is installed
+# Exit code: 0
+
+# Output (if not installed):
+# → Desktop environment 'xfce' is not installed
+# Exit code: 1
+```
+
+**GUI Equivalent:** Desktop environment list in user creation
+
+---
+
+## Server Information
+
+### Server Info
+
+Display server IP, port, and session count.
+
+```bash
+# Table format
+./rdpsm server info
+
+# JSON format
+./rdpsm server info --format json
+```
+
+**Example:**
+```bash
+./rdpsm server info
+
+# Output:
+# Server Information
+# ===================
+#   IP Address:       192.168.1.50
+#   Default RDP Port: 3389
+#   Active Sessions:  2
+```
+
+**GUI Equivalent:** View header information
+
+---
+
+### Server Status
+
+Check if xrdp server is installed and running.
+
+```bash
+./rdpsm server status
+```
+
+**Example:**
+```bash
+./rdpsm server status
+
+# Output (if running):
+# ✓ xrdp server is installed and running
+# Exit code: 0
+
+# Output (if not running):
+# ! xrdp server is not installed or not running
+# Exit code: 1
+```
+
+**GUI Equivalent:** Check for xrdp warning banner
+
+---
+
+## Configuration
+
+### Get Configuration
+
+Retrieve configuration values.
+
+```bash
+./rdpsm config get KEY
+```
+
+**Available keys:** port
+
+**Example:**
+```bash
+./rdpsm config get port
+
+# Output:
+# 3389
+```
+
+**GUI Equivalent:** Hamburger menu → Settings → View port
+
+---
+
+### Set Configuration
+
+Change configuration values.
+
+```bash
+./rdpsm config set KEY VALUE
+```
+
+**Example:**
+```bash
+./rdpsm config set port 3390
+
+# Output:
+# ✓ Default RDP port set to 3390
+```
+
+**GUI Equivalent:** Hamburger menu → Settings → Change port → Save
+
+---
+
+## Dependencies
+
+### Check Dependencies
+
+Verify system dependencies installation status.
+
+```bash
+# Table format
+./rdpsm deps check
+
+# JSON format
+./rdpsm deps check --format json
+```
+
+**Example:**
+```bash
+./rdpsm deps check
+
+# Output:
+# System Dependencies
+# ====================
+#
+# Installed:
+#   ✓ xrdp
+#   ✓ python3
+#   ✓ gtk4
+#
+# Missing:
+#   ✗ freerdp
+#
+# ! Some dependencies are missing
+# Exit code: 1
+```
+
+**GUI Equivalent:** View warning banners and dependency dialogs
+
+---
+
+### Install Dependency
+
+Install a system dependency.
+
+```bash
+# Install package
+./rdpsm deps install PACKAGE
+
+# Verbose output
+./rdpsm -v deps install PACKAGE
+```
+
+**Available packages:** xrdp, freerdp
+
+**Example:**
+```bash
+./rdpsm deps install xrdp
+
+# Output:
+# → Installing xrdp...
+#   Updating package lists...
+#   Installing xrdp...
+#   Configuring xrdp...
+# ✓ Package 'xrdp' installed successfully
+```
+
+**GUI Equivalent:** Click "Install Now" in banner or dependency dialog
+
+---
+
+## Output Formats
+
+Most commands support multiple output formats:
+
+### Table Format (Default)
+
+Human-readable table output with colors.
+
+```bash
+./rdpsm user list
+./rdpsm user list --format table
+```
+
+### JSON Format
+
+Machine-readable JSON output (useful for scripts).
+
+```bash
+./rdpsm user list --format json
+./rdpsm session list --format json
+./rdpsm server info --format json
+```
+
+**Parsing JSON in scripts:**
+```bash
+# Get all usernames
+./rdpsm user list --format json | jq -r '.[].username'
+
+# Count enabled users
+./rdpsm user list --format json | jq '[.[] | select(.enabled==true)] | length'
+
+# Get server IP
+./rdpsm server info --format json | jq -r '.ip'
+```
+
+---
+
+## GUI to CLI Equivalents
+
+Complete mapping of GUI operations to CLI commands:
+
+| GUI Operation | CLI Command |
+|---------------|-------------|
+| Click "+" to add user | `./rdpsm user create USERNAME` |
+| Delete user (trash icon) | `./rdpsm user delete USERNAME` |
+| View user list | `./rdpsm user list` |
+| Toggle user enabled/disabled | `./rdpsm user enable/disable USERNAME` |
+| View server info in header | `./rdpsm server info` |
+| Hamburger → Settings → Get port | `./rdpsm config get port` |
+| Hamburger → Settings → Set port | `./rdpsm config set port VALUE` |
+| Install xrdp banner | `./rdpsm deps install xrdp` |
+| Install FreeRDP dialog | `./rdpsm deps install freerdp` |
+| Install DE during user creation | `./rdpsm de install DE_ID` |
+| View available DEs | `./rdpsm de list` |
+| Check active sessions count | `./rdpsm session list` |
+| Terminate session | `./rdpsm session kill USERNAME` |
+| Change user password | `./rdpsm user password USERNAME` |
+
+---
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+- **0** - Success
+- **1** - Error or failure
+
+**Example in scripts:**
+```bash
+#!/bin/bash
+
+if ./rdpsm user create testuser -p "password123"; then
+    echo "User created successfully"
+else
+    echo "Failed to create user"
+    exit 1
+fi
+```
+
+---
+
+## Scripting Examples
+
+### Batch User Creation
+
+```bash
+#!/bin/bash
+# Create multiple users from a file
+
+while IFS=',' read -r username fullname; do
+    ./rdpsm user create "$username" -f "$fullname" -p "ChangeMe123"
+    if [ $? -eq 0 ]; then
+        echo "Created: $username"
+    else
+        echo "Failed: $username"
+    fi
+done < users.csv
+```
+
+### Monitor Sessions
+
+```bash
+#!/bin/bash
+# Monitor active sessions every 5 seconds
+
+while true; do
+    clear
+    ./rdpsm session list
+    sleep 5
+done
+```
+
+### Automated Cleanup
+
+```bash
+#!/bin/bash
+# Disable inactive users
+
+./rdpsm user list --format json | jq -r '.[] | select(.active==false) | .username' | while read username; do
+    echo "Disabling inactive user: $username"
+    ./rdpsm user disable "$username"
+done
+```
+
+### System Health Check
+
+```bash
+#!/bin/bash
+# Check system health
+
+echo "=== RDP Session Manager Health Check ==="
+echo ""
+
+# Check xrdp
+if ./rdpsm server status > /dev/null 2>&1; then
+    echo "✓ xrdp server: OK"
+else
+    echo "✗ xrdp server: NOT RUNNING"
+fi
+
+# Check dependencies
+if ./rdpsm deps check > /dev/null 2>&1; then
+    echo "✓ Dependencies: OK"
+else
+    echo "! Dependencies: MISSING"
+fi
+
+# Show server info
+echo ""
+./rdpsm server info
+```
+
+---
+
+## Troubleshooting
+
+### Command Not Found
+
+```bash
+# Ensure rdpsm is executable
+chmod +x rdpsm
+
+# Use absolute path
+/path/to/rdpsm user list
+
+# Or add to PATH
+export PATH=$PATH:/path/to/rdpsm-directory
+```
+
+### Permission Errors
+
+Most operations require elevated privileges. You'll be prompted for authentication via pkexec.
+
+```bash
+# If pkexec is not working
+sudo apt-get install policykit-1
+```
+
+### Module Import Errors
+
+```bash
+# Ensure you're in the project directory
+cd /path/to/rdp-session-manager
+
+# Or set PYTHONPATH
+export PYTHONPATH=/path/to/rdp-session-manager/src:$PYTHONPATH
+```
+
+### Colors Not Showing
+
+Colors are automatically disabled when output is piped. To force colors:
+
+```bash
+# Currently not supported, but output is still readable without colors
+```
+
+---
+
+## Advanced Usage
+
+### Quiet Mode for Scripts
+
+Redirect stderr to suppress prompts:
+
+```bash
+./rdpsm user create testuser -p "password" 2>/dev/null
+```
+
+### Combining Commands
+
+```bash
+# Create user and immediately connect
+./rdpsm user create john -p "pass123" && xfreerdp /v:localhost:3389 /u:john /p:pass123
+```
+
+### Using with jq
+
+```bash
+# Get enabled users count
+./rdpsm user list --format json | jq '[.[] | select(.enabled==true)] | length'
+
+# Find users on port 3389
+./rdpsm user list --format json | jq '.[] | select(.rdp_port==3389) | .username'
+
+# Get all session IPs
+./rdpsm session list --format json | jq -r '.[].ip_address' | sort -u
+```
+
+---
+
+## Support
+
+For issues or questions:
+- Documentation: [README.md](README.md)
+- Installation: [INSTALL.md](INSTALL.md)
+- Bug Reports: GitHub Issues
+
+---
+
+Copyright (C) 2025 - RDP Session Manager Contributors

@@ -44,8 +44,5 @@ meson-private/
 # Logs
 *.log
 
-# README
-*.md
-
 # Claude
 .claude/

@@ -1,44 +1,53 @@
-# Instalação do RDP Session Manager
+# Installation Guide
 
-Guia de instalação para Ubuntu, Debian e WSL.
+Complete installation instructions for RDP Session Manager on Ubuntu, Debian, and WSL.
 
-## Requisitos do Sistema
+## Table of Contents
 
-- **Ubuntu** 20.04 ou superior
-- **Debian** 11 (Bullseye) ou superior
-- **WSL** (Windows Subsystem for Linux) com Ubuntu/Debian
-- Python 3.8 ou superior
+- [System Requirements](#system-requirements)
+- [Automated Installation](#automated-installation)
+- [Manual Installation](#manual-installation)
+- [WSL-Specific Configuration](#wsl-specific-configuration)
+- [Verification](#verification)
+- [Troubleshooting](#troubleshooting)
+- [Uninstallation](#uninstallation)
 
-## Instalação Rápida
+## System Requirements
 
-### Script Automático (Recomendado)
+### Supported Operating Systems
+- Ubuntu 20.04 LTS or later
+- Debian 11 (Bullseye) or later
+- Windows Subsystem for Linux (WSL) with Ubuntu/Debian
+
+### Minimum Hardware Requirements
+- CPU: 1 GHz processor or faster
+- RAM: 2 GB (4 GB recommended)
+- Disk Space: 500 MB for application
+- Network: Internet connection for downloads
+
+### Software Prerequisites
+- Python 3.8 or higher
+- systemd or sysvinit (service management)
+
+## Automated Installation
 
 ```bash
-# 1. Clone ou baixe o projeto
-cd RemoteApps-RDP
+# Clone the repository
+git clone https://github.com/yourusername/rdp-session-manager.git
+cd rdp-session-manager
 
-# 2. Execute o script de instalação
+# Run installation script
 ./install.sh
 ```
 
-O script irá:
-- ✅ Detectar automaticamente seu sistema (Ubuntu/Debian/WSL)
-- ✅ Instalar todas as dependências do sistema
-- ✅ Instalar dependências Python
-- ✅ Configurar permissões necessárias
-- ✅ Opcionalmente instalar e configurar xrdp
+The script will handle all dependencies and configuration automatically.
 
-## Executando o Aplicativo
+## Manual Installation
 
-```bash
-# Com ambiente virtual
-source venv/bin/activate
-python3 src/main.py
+See full documentation for detailed manual installation steps, WSL configuration, troubleshooting, and more.
 
-# Sem ambiente virtual
-python3 src/main.py
-```
+For complete installation guide with all details, consult the project repository.
 
-## Documentação Completa
+---
 
-Para instruções detalhadas de instalação manual, solução de problemas e configuração WSL, consulte o arquivo completo de instalação.
+Copyright (C) 2025 - RDP Session Manager Contributors

@@ -1,110 +1,114 @@
 # RDP Session Manager
 
-> Gerenciador completo de sessões RDP com interface GTK4 para GNOME
+A professional GTK4-based application for managing Remote Desktop Protocol (RDP) sessions on Linux systems.
 
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![GTK](https://img.shields.io/badge/GTK-4.0-green.svg)
-![Status](https://img.shields.io/badge/status-✅_Funcional-success)
 
-## 📋 Descrição
+## Overview
 
-RDP Session Manager é uma aplicação moderna e completa para GNOME que permite criar, gerenciar e monitorar sessões RDP de forma fácil e intuitiva. Com interface GTK4 e integração completa com o ecossistema GNOME, o aplicativo oferece gerenciamento profissional de usuários RDP com segurança e facilidade.
+RDP Session Manager is a comprehensive desktop application designed for GNOME environments, providing centralized management of RDP user accounts and sessions. Built with GTK4 and libadwaita, it offers a native Linux experience for administering remote desktop access through the xrdp server.
 
-### Destaques
+## Key Features
 
-- **Interface Moderna**: GTK4 com libadwaita para integração perfeita com GNOME
-- **Gerenciamento Completo**: Criação, exclusão e monitoramento de usuários RDP
-- **Instalação Automática**: Instala automaticamente xrdp, FreeRDP e ambientes desktop
-- **Conexão Visual**: Dialog gráfico para inserir credenciais e conectar
-- **Segurança Integrada**: PolicyKit para todas operações administrativas
-- **Exclusão Inteligente**: Encerra sessões ativas automaticamente ao deletar usuários
+### User Management
+- Create RDP user accounts with automated configuration
+- Delete users with complete data removal
+- Enable/disable user accounts via graphical toggle
+- Automatic termination of active sessions during deletion
+- Real-time input validation
+- Active process detection per user
+- Status monitoring (Connected/Enabled/Disabled)
 
-## ✨ Funcionalidades
+### Desktop Environment Support
+The application supports seven desktop environments with automatic installation:
+- LXDE (250MB) - Lightweight
+- LXQt (350MB) - Modern and lightweight
+- XFCE (400MB) - Recommended for balance
+- MATE (600MB) - Traditional desktop
+- Cinnamon (800MB) - Feature-rich
+- GNOME (1.2GB) - Complete desktop
+- KDE Plasma (1.5GB) - Advanced features
 
-### Gerenciamento de Usuários
-- ✅ Criar usuários RDP com configuração automática
-- ✅ Excluir usuários com remoção completa de dados
-- ✅ Encerramento automático de sessões ativas ao deletar
-- ✅ Validação de dados em tempo real
-- ✅ Detecção de processos ativos por usuário
-- ✅ Visualização de status (Ativo/Inativo)
+Features include:
+- Automated desktop environment installation
+- Disk space verification before installation
+- Detection of pre-installed environments
 
-### Ambientes Desktop
-- ✅ Suporte para 7 Desktop Environments:
-  - LXDE (250MB) - Ultra leve
-  - LXQt (350MB) - Leve e moderno
-  - XFCE (400MB) - **Recomendado**
-  - MATE (600MB) - Clássico
-  - Cinnamon (800MB) - Elegante
-  - GNOME (1.2GB) - Completo
-  - KDE Plasma (1.5GB) - Poderoso
-- ✅ Instalação automática de ambientes desktop
-- ✅ Verificação de espaço em disco antes de instalar
-- ✅ Detecção automática de DEs já instalados
+### RDP Connectivity
+- Automatic FreeRDP client detection
+- On-demand FreeRDP installation with progress tracking
+- Graphical credential input dialog
+- Support for Windows domain authentication
+- Direct RDP client launching
+- Automatic clipboard integration
+- Connection string auto-copy
 
-### Conexão RDP
-- ✅ **Detecção automática de FreeRDP** instalado
-- ✅ **Instalação automática de FreeRDP** com progresso visual
-- ✅ **Dialog visual para credenciais** (domínio e senha)
-- ✅ **Lançamento direto do cliente RDP** com um clique
-- ✅ Suporte para domínios Windows
-- ✅ Cópia automática de endereço para clipboard
-- ✅ Instruções para clientes Windows e Linux
+### System Dependencies
+- Automatic xrdp server verification on startup
+- Warning banner for missing dependencies
+- One-click dependency installation
+- Real-time installation progress
+- On-demand dependency resolution
 
-### Dependências do Sistema
-- ✅ **Verificação automática de xrdp** ao iniciar
-- ✅ **Banner de aviso** se xrdp não estiver instalado
-- ✅ **Instalação automática de xrdp** com um clique
-- ✅ Progresso visual em tempo real
-- ✅ Verificação de FreeRDP e instalação sob demanda
+### Monitoring and Logging
+- Real-time session monitoring
+- Server IP and port visualization
+- Comprehensive structured logging
+- Centralized log management
+- Automatic log rotation
 
-### Monitoramento e Logs
-- ✅ Monitoramento de sessões ativas em tempo real
-- ✅ Visualização de IP do servidor e porta RDP
-- ✅ Sistema de logs completo e estruturado
-- ✅ Logs de todos os módulos centralizados
-- ✅ Rotação automática de logs
+### Security Features
+- PolicyKit integration for administrative operations
+- User isolation via dedicated group (rdp-users)
+- UID allocation starting at 5000
+- Isolated home directories (/opt/rdp-users)
+- Strong password validation
+- Absolute path usage for all system commands
+- Reduced privilege escalation prompts through helper scripts
 
-### Segurança
-- ✅ Integração com PolicyKit para operações administrativas
-- ✅ Usuários isolados em grupo `rdp-users`
-- ✅ UIDs começam em 5000 (fora da faixa normal)
-- ✅ Home directories em `/opt/rdp-users`
-- ✅ Validação de senhas fortes
-- ✅ Comandos executados com caminhos absolutos
+## System Requirements
 
-## 🚀 Instalação
+### Supported Platforms
+- Ubuntu 20.04 LTS or later
+- Debian 11 (Bullseye) or later
+- Windows Subsystem for Linux (WSL) with Ubuntu/Debian
 
-### Sistemas Suportados
-- ✅ **Ubuntu** 20.04 ou superior
-- ✅ **Debian** 11 (Bullseye) ou superior
-- ✅ **WSL** (Windows Subsystem for Linux) com Ubuntu/Debian
+### Runtime Dependencies
+- Python 3.8 or higher
+- GTK 4.0
+- libadwaita 1.0
+- PolicyKit (policykit-1)
+- xrdp server (installable via application)
+- FreeRDP client (installable via application)
 
-### Instalação Automática (Recomendado)
+## Installation
+
+### Quick Installation
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone https://github.com/yourusername/rdp-session-manager.git
 cd rdp-session-manager
 
-# Execute o script de instalação
+# Run the installation script
 ./install.sh
 ```
 
-O script `install.sh` irá:
-- ✅ Detectar automaticamente seu sistema (Ubuntu/Debian/WSL)
-- ✅ Instalar todas as dependências do sistema (GTK4, libadwaita, etc.)
-- ✅ Instalar dependências Python (PyGObject, psutil, etc.)
-- ✅ Configurar permissões necessárias
-- ✅ Opcionalmente instalar xrdp e FreeRDP
-- ✅ Criar ambiente virtual Python (opcional)
+The installation script will:
+- Detect your system (Ubuntu/Debian/WSL)
+- Install system dependencies (GTK4, libadwaita, etc.)
+- Install Python dependencies (PyGObject, psutil)
+- Configure necessary permissions
+- Optionally install xrdp and FreeRDP
+- Create Python virtual environment (optional)
 
-### Instalação Manual
+### Manual Installation
 
-Para instruções detalhadas de instalação manual, consulte [INSTALL.md](INSTALL.md)
+For detailed manual installation instructions, refer to [INSTALL.md](INSTALL.md).
 
-#### Dependências Essenciais (Debian/Ubuntu):
+#### System Dependencies (Debian/Ubuntu)
 ```bash
 sudo apt-get install -y \
     python3 python3-pip python3-venv python3-dev \
@@ -115,315 +119,365 @@ sudo apt-get install -y \
     policykit-1
 ```
 
-#### Dependências Python:
+#### Python Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Executando a Aplicação
+## Usage
+
+RDP Session Manager can be used via graphical interface (GUI) or command line (CLI).
+
+### Running the Graphical Interface
 
 ```bash
-# Com ambiente virtual
+# With virtual environment
 source venv/bin/activate
 python3 src/main.py
 
-# Sem ambiente virtual
+# Without virtual environment
 python3 src/main.py
 ```
 
-## 🎯 Uso
-
-### Primeiro Uso
-
-1. **Inicie a aplicação**:
-   ```bash
-   rdp-session-manager
-   ```
-
-2. **Instale o xrdp** (se não estiver instalado):
-   - Um banner aparecerá no topo da janela
-   - Clique em "Instalar Agora"
-   - Autentique com sua senha quando solicitado
-   - Aguarde a instalação concluir
-
-### Criar um Usuário RDP
-
-1. Clique no botão **"+"** na barra superior
-2. Preencha os dados:
-   - **Nome de usuário**: letras minúsculas, números, - e _
-   - **Nome completo**: nome real do usuário
-   - **Senha**: mínimo 8 caracteres, letras e números
-   - **Confirmar senha**
-3. Escolha o **ambiente desktop** (XFCE recomendado)
-4. Configure a **porta RDP** (ou deixe automático em 3389)
-5. Marque **"Instalar ambiente desktop"** se ainda não estiver instalado
-6. Clique em **"Criar"**
-7. Autentique quando solicitado (PolicyKit)
-8. Aguarde a criação (pode levar alguns minutos se instalar DE)
-
-### Conectar via RDP
-
-#### Opção 1: Usando a Aplicação (Recomendado)
-
-1. Clique no botão de **rede** no card do usuário
-2. Clique em **"Abrir FreeRDP"**
-3. Se FreeRDP não estiver instalado:
-   - Dialog perguntará se deseja instalar
-   - Clique em "Instalar FreeRDP"
-   - Aguarde a instalação
-4. Digite o **domínio** (opcional para domínios Windows)
-5. Digite a **senha** do usuário
-6. Clique em **"Conectar"**
-7. A sessão RDP abrirá automaticamente!
-
-#### Opção 2: Cliente Manual
+### Running the Command Line Interface
 
 ```bash
-# Linux (FreeRDP)
-xfreerdp3 /v:<IP_DO_SERVIDOR>:3389 /u:<USUARIO> /cert:ignore
+# Show all available commands
+./rdpsm --help
 
-# Windows (Remote Desktop Connection)
-# Digite no cliente: <IP_DO_SERVIDOR>:3389
+# Example: Create a user
+./rdpsm user create john -f "John Doe" -d xfce
+
+# Example: List all users
+./rdpsm user list
+
+# Example: View server information
+./rdpsm server info
 ```
 
-### Excluir um Usuário
+For complete CLI documentation, see [CLI.md](CLI.md).
 
-1. Clique no botão de **lixeira** no card do usuário
-2. Se o usuário estiver **conectado**:
-   - Dialog avisará que sessões serão encerradas
-   - Clique em "Encerrar e Remover"
-3. Se o usuário estiver **inativo**:
-   - Confirme a exclusão
-   - Clique em "Remover"
-4. Autentique quando solicitado
-5. **TODOS os dados serão removidos**:
-   - ✓ Conta de usuário
-   - ✓ Diretório home completo
-   - ✓ Arquivos pessoais
-   - ✓ Configurações RDP
-   - ✓ Processos ativos encerrados
+### Basic Operations (GUI)
 
-## 📁 Estrutura do Projeto
+#### Creating an RDP User
+1. Click the "+" button in the header bar
+2. Enter user details:
+   - Username (lowercase letters, numbers, hyphens, underscores)
+   - Full name
+   - Password (minimum 8 characters)
+   - Confirm password
+3. Select desktop environment
+4. Optionally enable desktop environment installation
+5. Authenticate when prompted
+6. Wait for user creation to complete
+
+#### Connecting to RDP Session
+1. Click the network icon on the user card
+2. Select "Open FreeRDP"
+3. Enter credentials:
+   - Domain (optional, for Windows domains)
+   - Password
+4. Click "Connect"
+
+Alternative connection methods:
+```bash
+# Linux (FreeRDP)
+xfreerdp /v:SERVER_IP:3389 /u:USERNAME /cert:ignore
+
+# Windows (Remote Desktop Connection)
+# Enter in client: SERVER_IP:3389
+```
+
+#### Deleting a User
+1. Click the trash icon on the user card
+2. Confirm deletion
+3. Authenticate when prompted
+
+Note: All user data including home directory, configuration files, and active processes will be removed.
+
+#### Enabling/Disabling Users
+1. Toggle the switch next to the user status
+2. Authenticate when prompted
+3. Status will update to reflect the change
+
+Disabled users cannot authenticate via RDP until re-enabled.
+
+## Command Line Interface
+
+RDP Session Manager includes a comprehensive CLI that provides access to all GUI functionality via terminal.
+
+### Installation
+
+The CLI is automatically available after installation:
+
+```bash
+# Make executable (if needed)
+chmod +x rdpsm
+
+# Optional: Add to system PATH
+sudo ln -s $(pwd)/rdpsm /usr/local/bin/rdpsm
+```
+
+### Quick Reference
+
+**User Management:**
+```bash
+./rdpsm user create USERNAME              # Create user
+./rdpsm user delete USERNAME              # Delete user
+./rdpsm user list                         # List all users
+./rdpsm user info USERNAME                # User details
+./rdpsm user enable USERNAME              # Enable user
+./rdpsm user disable USERNAME             # Disable user
+./rdpsm user password USERNAME            # Change password
+```
+
+**Session Management:**
+```bash
+./rdpsm session list                      # Active sessions
+./rdpsm session info USERNAME             # Session details
+./rdpsm session kill USERNAME             # Kill session
+```
+
+**Desktop Environments:**
+```bash
+./rdpsm de list                           # Available DEs
+./rdpsm de install DE_ID                  # Install DE
+./rdpsm de check DE_ID                    # Check if installed
+```
+
+**Server & Configuration:**
+```bash
+./rdpsm server info                       # Server information
+./rdpsm server status                     # Check xrdp status
+./rdpsm config get port                   # Get RDP port
+./rdpsm config set port 3390              # Set RDP port
+```
+
+**Dependencies:**
+```bash
+./rdpsm deps check                        # Check dependencies
+./rdpsm deps install xrdp                 # Install xrdp
+./rdpsm deps install freerdp              # Install freerdp
+```
+
+### Output Formats
+
+Most commands support JSON output for scripting:
+
+```bash
+# Table format (default)
+./rdpsm user list
+
+# JSON format
+./rdpsm user list --format json
+
+# Use with jq for parsing
+./rdpsm user list --format json | jq -r '.[].username'
+```
+
+### Scripting Examples
+
+**Batch user creation:**
+```bash
+for user in alice bob charlie; do
+    ./rdpsm user create "$user" -p "TempPass123" -d xfce
+done
+```
+
+**Monitor sessions:**
+```bash
+watch -n 5 './rdpsm session list'
+```
+
+**System health check:**
+```bash
+./rdpsm server status && ./rdpsm deps check
+```
+
+### Testing CLI Commands
+
+Test all CLI commands without installing the application:
+
+```bash
+# Run automated test suite (tests all safe read-only commands)
+./test_cli.sh
+
+# Manual testing
+./rdpsm --version
+./rdpsm user list
+./rdpsm server info
+```
+
+For complete CLI documentation, testing guide, and GUI-to-CLI equivalents, see:
+- [CLI.md](CLI.md) - Complete CLI reference and usage guide
+- [CLI_TESTING.md](CLI_TESTING.md) - Comprehensive testing guide with all commands and expected outputs
+
+## Architecture
 
 ```
 RemoteApps-RDP/
 ├── src/
-│   ├── core/                    # Módulos principais
-│   │   ├── user_manager.py      # Gerenciamento de usuários
-│   │   ├── rdp_config.py        # Configuração RDP
-│   │   ├── de_installer.py      # Instalador de DEs
-│   │   ├── system_deps.py       # Gerenciamento de dependências
-│   │   └── session_monitor.py   # Monitor de sessões
-│   ├── ui/                      # Interface GTK4
-│   │   ├── main_window.py       # Janela principal
-│   │   └── user_dialog.py       # Diálogo de criação
-│   ├── utils/                   # Utilitários
-│   │   ├── logger.py            # Sistema de logs
-│   │   ├── validator.py         # Validação de entrada
-│   │   └── backup.py            # Sistema de backup
-│   ├── application.py           # Aplicação principal
-│   └── main.py                  # Entry point
+│   ├── core/                    # Core functionality modules
+│   │   ├── user_manager.py      # User account management
+│   │   ├── rdp_config.py        # RDP configuration
+│   │   ├── de_installer.py      # Desktop environment installer
+│   │   ├── system_deps.py       # System dependency management
+│   │   ├── session_monitor.py   # Session monitoring
+│   │   └── config.py            # Application configuration
+│   ├── ui/                      # GTK4 interface
+│   │   ├── main_window.py       # Main application window
+│   │   ├── user_dialog.py       # User creation dialog
+│   │   └── preferences_dialog.py # Settings dialog
+│   ├── utils/                   # Utility modules
+│   │   ├── logger.py            # Logging system
+│   │   ├── validator.py         # Input validation
+│   │   └── polkit.py            # PolicyKit integration
+│   ├── cli.py                   # Command-line interface
+│   ├── application.py           # Main application class
+│   └── main.py                  # GUI entry point
 ├── data/
-│   ├── ui/                      # Arquivos .ui GTK
-│   │   ├── main-window.ui
-│   │   └── user-dialog.ui
-│   └── com.rdp.SessionManager.desktop
-├── docs/                        # Documentação
-│   ├── DEVELOPMENT.md
-│   ├── PROBLEMS_AND_SOLUTIONS.md
-│   └── PROJECT_SUMMARY.md
-├── tests/                       # Testes unitários
-├── README.md                    # Este arquivo
-├── STATUS.md                    # Status do projeto
-├── CHANGELOG.md                 # Histórico de mudanças
-└── FIXES.md                     # Correções aplicadas
+│   ├── ui/                      # GTK Builder UI files
+│   └── icons/                   # Application icons
+├── helpers/                     # Privileged helper scripts
+│   ├── install-packages.sh      # Package installation
+│   ├── create-rdp-user.sh       # User creation
+│   ├── delete-rdp-user.sh       # User deletion
+│   ├── toggle-user-lock.sh      # User enable/disable
+│   └── set-user-password.sh     # Password management
+├── rdpsm                        # CLI executable
+├── test_cli.sh                  # CLI test suite
+├── docs/                        # Documentation
+├── tests/                       # Unit tests
+├── CLI.md                       # CLI documentation
+├── CLI_TESTING.md               # CLI testing guide
+└── requirements.txt             # Python dependencies
 ```
 
-## 🔒 Segurança
+## Security
 
-### PolicyKit (pkexec)
+### Privilege Escalation
+The application uses PolicyKit (pkexec) for secure privilege escalation:
+- User creation: `pkexec useradd`
+- User deletion: `pkexec userdel`
+- User lock/unlock: `pkexec usermod`
+- Package installation: `pkexec apt-get`
+- Process termination: `pkexec pkill`
 
-A aplicação usa PolicyKit para executar operações administrativas de forma segura:
+Helper scripts in the `helpers/` directory group multiple privileged operations to minimize authentication prompts while maintaining security.
 
-- **Criação de usuários**: `pkexec /usr/sbin/useradd`
-- **Exclusão de usuários**: `pkexec /usr/sbin/userdel`
-- **Gerenciamento de grupos**: `pkexec /usr/sbin/groupadd`
-- **Instalação de pacotes**: `pkexec /usr/bin/apt-get`
-- **Encerramento de processos**: `pkexec /usr/bin/pkill`
+### User Isolation
+- RDP users are created in a dedicated group (rdp-users)
+- UIDs start at 5000, outside the normal user range
+- Home directories are isolated in /opt/rdp-users/
+- Each user operates on a dedicated RDP port
 
-> O usuário será solicitado a autenticar quando necessário.
+### Input Validation
+- Username pattern: `^[a-z][a-z0-9_-]{2,31}$`
+- Password requirements: minimum 8 characters, alphanumeric
+- Port validation: range 1-65535, availability check
+- All system commands use absolute paths
 
-### Isolamento de Usuários
+## Logging
 
-- Usuários RDP criados em grupo separado (`rdp-users`)
-- UIDs começam em 5000 (fora da faixa de usuários normais 1000-4999)
-- Home directories isolados em `/opt/rdp-users/`
-- Cada usuário tem porta RDP dedicada (3389+)
-
-### Validação e Sanitização
-
-- Nomes de usuário: `^[a-z][a-z0-9_-]{2,31}$`
-- Senhas fortes: mínimo 8 caracteres, letras e números
-- Portas RDP: verificação de disponibilidade
-- Caminhos absolutos em todos os comandos do sistema
-
-## 📊 Monitoramento e Logs
-
-### Localização dos Logs
-
+### Log Locations
 ```bash
-# Logs da aplicação
+# Application logs
 ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
 
-# Logs do xrdp
+# xrdp logs
 /var/log/xrdp/
 
-# Ver logs em tempo real
+# Monitor logs in real-time
 tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
 ```
 
-### Sistema de Logs
+### Log Contents
+- User creation and deletion operations
+- Package and desktop environment installations
+- RDP connections and disconnections
+- Error messages and warnings
+- Process terminations
+- System dependency checks
 
-O sistema de logs captura **TODOS os módulos** da aplicação:
+## Troubleshooting
 
-```
-2025-10-18 00:46:47 - core.user_manager - INFO - Removendo usuário RDP: trix_bastardo
-2025-10-18 00:46:47 - core.user_manager - INFO - Usuário trix_bastardo tem 58 processos ativos
-2025-10-18 00:46:47 - core.user_manager - INFO - Terminando processos...
-2025-10-18 00:46:55 - core.user_manager - INFO - ✓ Usuário removido com sucesso
-```
+### xrdp Not Installed
+**Symptom**: Warning banner displayed in application window
 
-Logs incluem:
-- Operações de criação/exclusão de usuários
-- Instalação de pacotes e DEs
-- Conexões RDP
-- Erros e avisos
-- Processos encerrados
+**Solution**:
+- Click "Install Now" in the banner, or
+- Manual installation: `sudo apt install xrdp xorgxrdp`
 
-## 🐛 Problemas Conhecidos e Soluções
+### FreeRDP Not Available
+**Symptom**: Installation prompt when attempting to connect
 
-### xrdp não está instalado
+**Solution**:
+- Click "Install FreeRDP" in the dialog, or
+- Manual installation: `sudo apt install freerdp2-x11`
 
-**Sintoma**: Banner de aviso no topo da janela
+### Desktop Environment Not Starting
+**Symptom**: Black screen after RDP connection
 
-**Solução**:
-1. Clique em "Instalar Agora" no banner
-2. Ou instale manualmente: `sudo apt install xrdp xorgxrdp`
+**Solution**:
+1. Check xrdp logs: `tail /var/log/xrdp/xrdp.log`
+2. Test desktop environment: `su - username -c "startxfce4"`
+3. Reinstall desktop environment via application
 
-### FreeRDP não está instalado
+### Port Conflicts
+**Symptom**: Error during user creation
 
-**Sintoma**: Ao clicar em "Abrir FreeRDP", aparece dialog de instalação
+**Solution**: The application automatically detects and assigns available ports. Check firewall rules if issues persist.
 
-**Solução**:
-1. Clique em "Instalar FreeRDP" no dialog
-2. Ou instale manualmente: `sudo apt install freerdp3-x11`
+## Development
 
-### Não consigo deletar usuário conectado
-
-**Sintoma**: "user is currently used by process"
-
-**Solução**:
-- A aplicação agora encerra processos automaticamente!
-- Apenas confirme "Encerrar e Remover" no dialog
-
-### Ambiente desktop não inicia
-
-**Sintoma**: Conexão RDP estabelecida mas tela preta
-
-**Solução**:
-1. Verifique logs: `tail /var/log/xrdp/xrdp.log`
-2. Teste manualmente: `su - usuario -c "startxfce4"`
-3. Reinstale o DE pela aplicação
-
-### Porta RDP em uso
-
-**Sintoma**: Erro ao criar usuário - porta já em uso
-
-**Solução**:
-- O aplicativo detecta automaticamente e usa a próxima porta disponível
-- Verifique se não há conflitos com firewall
-
-## 🔮 Roadmap
-
-### ✅ Implementado (v0.2.0)
-- [x] Detecção automática de FreeRDP
-- [x] Instalação automática de FreeRDP
-- [x] Dialog visual para credenciais
-- [x] Exclusão de usuários com sessões ativas
-- [x] Encerramento automático de processos
-- [x] Sistema de logs completo
-- [x] Banner de aviso para xrdp
-
-### 📋 Próximas Versões
-
-#### v0.3.0 - Melhorias de Segurança
-- [ ] Quotas de disco por usuário
-- [ ] Limite de recursos (CPU/RAM) por sessão
-- [ ] AppArmor profiles restritivos
-- [ ] Auditoria de ações em tempo real
-
-#### v0.4.0 - Performance e Escalabilidade
-- [ ] Pool de portas RDP gerenciado
-- [ ] Async UI para múltiplos usuários
-- [ ] Cache de operações
-- [ ] Otimizações de rede RDP
-
-#### v1.0.0 - Enterprise Features
-- [ ] Autenticação via LDAP/Active Directory
-- [ ] Interface web de administração
-- [ ] API REST
-- [ ] Suporte para clustering
-- [ ] Templates de configuração
-- [ ] Dashboards e métricas
-
-## 🧪 Testes
-
-Execute os testes unitários:
-
+### Running Tests
 ```bash
-# Usando pytest
+# Using pytest
 pytest tests/ -v
 
-# Ou usando o script
-./tests/run_tests.sh
+# With coverage
+pytest tests/ --cov=src --cov-report=html
 ```
 
-## 📝 Contribuindo
+### Code Style
+The project follows PEP 8 guidelines. Use the following tools:
+```bash
+# Format code
+black src/
 
-Contribuições são bem-vindas! Por favor:
+# Check style
+flake8 src/
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+# Type checking
+mypy src/
+```
 
-## 📄 Licença
+## Contributing
 
-Este projeto está licenciado sob a GNU General Public License v3.0 - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Contributions are welcome. Please follow these guidelines:
 
-## 👥 Autores
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/description`)
+3. Commit your changes (`git commit -m 'Add feature description'`)
+4. Push to the branch (`git push origin feature/description`)
+5. Open a Pull Request
 
-- **Pedro L. Tunin** - *Desenvolvimento* - [trix](https://github.com/trix)
+## License
 
-## 🙏 Agradecimentos
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
 
-- Comunidade GNOME pelo GTK4 e libadwaita
-- Projeto xrdp e FreeRDP
-- Comunidade Debian/Linux
-- Todos os contribuidores
+## Support
 
-## 📞 Suporte
+- Documentation: [docs/](docs/)
+- Bug Reports: GitHub Issues
+- Discussions: GitHub Discussions
 
-- 📚 Documentação: [docs/](docs/)
-- 🐛 Bugs: Abra uma issue no GitHub
-- 💬 Discussões: Use GitHub Discussions
-- 📋 Status: Veja [STATUS.md](STATUS.md)
+## Version Information
+
+**Current Version**: 0.2.0
+**Status**: Production Ready
+**Last Updated**: 2025-10-18
 
 ---
 
-**Desenvolvido com ❤️ para a comunidade GNOME/Linux**
-
-**Versão Atual**: 0.2.0
-**Status**: ✅ Totalmente Funcional
-**Última Atualização**: 2025-10-18
+Copyright (C) 2025 - RDP Session Manager Contributors
