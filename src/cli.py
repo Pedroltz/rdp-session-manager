@@ -87,6 +87,37 @@ class CLI:
                 self.print_error("Passwords do not match")
                 return 1
 
+            # Check if Desktop Environment is installed
+            de_installed = self.de_installer.is_de_installed(desktop_env)
+
+            if not de_installed:
+                self.print_warning(f"Desktop environment '{desktop_env}' is not installed")
+                self.print_info("Installing Desktop Environment first...")
+
+                # Check disk space
+                has_space, required, available = self.de_installer.check_disk_space(desktop_env)
+                if not has_space:
+                    self.print_error(f"Insufficient disk space. Required: {required}MB, Available: {available}MB")
+                    return 1
+
+                # Install DE
+                def progress_callback(progress, message):
+                    if args.verbose:
+                        print(f"  {message}")
+
+                self.print_info(f"Installing {desktop_env.upper()} desktop environment...")
+                success, message = self.de_installer.install_de(
+                    desktop_env,
+                    progress_callback=progress_callback
+                )
+
+                if not success:
+                    self.print_error(f"Failed to install desktop environment: {message}")
+                    return 1
+
+                self.print_success(f"Desktop environment '{desktop_env}' installed successfully")
+                print()  # Blank line for readability
+
             self.print_info(f"Creating user '{username}' with {desktop_env.upper()} desktop...")
 
             user = self.user_manager.create_user(
