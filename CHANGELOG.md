@@ -7,6 +7,158 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2025-10-23
+
+### Summary
+
+This release adds superuser privilege management for RDP users, allowing administrators to grant or revoke sudo privileges easily through both the GUI and CLI. This facilitates application installation and system maintenance within user accounts without manual intervention.
+
+### Added
+
+- **Superuser Privilege Management (UI)**
+  - "..." (menu) button added next to each user in the user list
+  - Popover menu with management options
+  - "Superuser" toggle switch (On/Off) to grant/revoke sudo privileges
+  - Visual feedback with toast notifications for privilege changes
+  - Automatic UI update when privileges are changed
+  - Administrative access required (pkexec authentication)
+
+- **Superuser Privilege Management (CLI)**
+  - `rdpsm user sudo grant USERNAME` - Grant sudo privileges to user
+  - `rdpsm user sudo revoke USERNAME` - Revoke sudo privileges from user
+  - Automatic detection of existing sudo privileges
+  - Clear success/error messages
+  - Help documentation for new commands
+
+- **Backend Support**
+  - New `is_superuser` field in RDPUser model
+  - `grant_sudo()` method in UserManager
+  - `revoke_sudo()` method in UserManager
+  - `is_superuser()` method to check sudo status
+  - Helper script `toggle-user-sudo.sh` for privilege operations
+  - Automatic sudo status detection when listing users
+  - User group management (adds/removes user from 'sudo' group)
+
+### Changed
+
+- RDPUser model updated to include `is_superuser` boolean field
+- User list now displays sudo status for each user
+- JSON output includes `is_superuser` field
+- Version updated to 0.2.1
+- Improved sudo privilege detection using `id -nG` command (more reliable)
+- Enhanced sudo revocation using `gpasswd -d` with `deluser` fallback
+
+### Technical Details
+
+**Helper Script:**
+- `helpers/toggle-user-sudo.sh` - Manages sudo privileges via pkexec
+  - Usage: `pkexec toggle-user-sudo.sh USERNAME grant|revoke`
+  - Uses `usermod -aG sudo` to add user to sudo group
+  - Uses `deluser USERNAME sudo` to remove from sudo group
+  - Validates user existence before operations
+
+**UI Implementation:**
+- MenuButton with "view-more-symbolic" icon
+- Gtk.Popover containing management options
+- Gtk.Switch for superuser toggle
+- Threaded operations to prevent UI blocking
+- GLib.idle_add for safe UI updates from threads
+
+**CLI Implementation:**
+- Sub-subcommand structure: `user sudo {grant|revoke}`
+- Colored terminal output (✓ success, ✗ error, ! warning)
+- Verification of existing privileges before operations
+- Integration with existing CLI architecture
+
+### Fixed
+
+- **Sudo Privilege Detection Issue**
+  - Fixed bug where sudo status was not updated correctly after revocation
+  - Changed from `grp.getgrnam()` to `id -nG` command for reliable group detection
+  - Improved helper script to use `gpasswd -d` for more reliable group removal
+  - Added fallback to `deluser` if `gpasswd` is unavailable
+
+- **Sudo Changes Not Applied to Active Sessions**
+  - **CRITICAL FIX**: Group changes only take effect after user logout/login
+  - Automatic session termination when changing sudo privileges
+  - Warning dialogs in UI before terminating active sessions
+  - CLI confirmation prompts for users with active sessions
+  - Clear messaging about reconnection requirement
+  - Added `kill_sessions` parameter to `grant_sudo()` and `revoke_sudo()`
+  - `--force` flag in CLI to skip confirmation
+
+### Security
+
+- **Privilege Escalation Protection**
+  - All sudo operations require pkexec authentication
+  - Helper script validation of user existence
+  - Atomic operations (add/remove from group)
+  - Proper error handling for permission issues
+
+### Modified Files
+
+#### Core Modules
+- `src/core/user_manager.py`:
+  - Added `is_superuser` parameter to RDPUser.__init__()
+  - Added `is_superuser` field to to_dict()
+  - Added `grant_sudo(username)` method
+  - Added `revoke_sudo(username)` method
+  - Added `is_superuser(username)` method
+  - Updated `list_users()` to detect sudo status
+  - Updated `create_user()` to set is_superuser=False by default
+
+#### UI Modules
+- `src/ui/main_window.py`:
+  - Updated `create_user_row()` to add menu button
+  - Added MenuButton with popover menu
+  - Added superuser toggle switch in menu
+  - Added `on_sudo_toggle()` handler method
+  - Threaded sudo operations for UI responsiveness
+
+#### CLI Module
+- `src/cli.py`:
+  - Added `user_sudo_grant()` method
+  - Added `user_sudo_revoke()` method
+  - Registered 'user sudo' subcommand with 'grant'/'revoke' actions
+  - Updated version to 0.2.1
+
+#### Helper Scripts
+- `helpers/toggle-user-sudo.sh` (NEW):
+  - Bash script for sudo privilege management
+  - Executable permissions (chmod +x)
+  - Used via pkexec for privilege escalation
+
+### Testing
+
+- User sudo grant (UI): **PENDING**
+- User sudo revoke (UI): **PENDING**
+- User sudo grant (CLI): **PENDING**
+- User sudo revoke (CLI): **PENDING**
+- Sudo status detection: **PENDING**
+- JSON output with is_superuser: **PENDING**
+
+### Example Usage
+
+**GUI:**
+1. Click "..." button next to user
+2. Toggle "Superuser" switch to On/Off
+3. Authenticate when prompted (pkexec)
+4. See confirmation toast message
+
+**CLI:**
+```bash
+# Grant sudo privileges
+rdpsm user sudo grant john
+
+# Revoke sudo privileges
+rdpsm user sudo revoke john
+
+# Check status in user list
+rdpsm user list --format json
+```
+
+---
+
 ## [0.2.0] - 2025-10-18
 
 ### Summary

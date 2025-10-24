@@ -168,7 +168,8 @@ bob                  5002     KDE        3389     Disabled
     "desktop_env": "xfce",
     "rdp_port": 3389,
     "active": false,
-    "enabled": true
+    "enabled": true,
+    "is_superuser": false
   }
 ]
 ```
@@ -301,6 +302,60 @@ rdpsm user processes john
 ```
 
 **GUI Equivalent:** View user card → Process count
+
+---
+
+### Grant Sudo Privileges
+
+Grant superuser (sudo) privileges to a user.
+
+```bash
+rdpsm user sudo grant USERNAME
+```
+
+**Example:**
+```bash
+rdpsm user sudo grant john
+
+# Output:
+# → Granting sudo privileges to 'john'...
+# ✓ Sudo privileges granted to 'john'
+# → User can now execute commands with sudo
+```
+
+**What this does:**
+- Adds user to the 'sudo' group
+- User can execute commands with `sudo` after entering their password
+- Useful for installing applications and performing system maintenance
+
+**GUI Equivalent:** Click "..." → Toggle "Superuser" switch ON
+
+---
+
+### Revoke Sudo Privileges
+
+Revoke superuser (sudo) privileges from a user.
+
+```bash
+rdpsm user sudo revoke USERNAME
+```
+
+**Example:**
+```bash
+rdpsm user sudo revoke john
+
+# Output:
+# → Revoking sudo privileges from 'john'...
+# ✓ Sudo privileges revoked from 'john'
+# → User can no longer execute commands with sudo
+```
+
+**What this does:**
+- Removes user from the 'sudo' group
+- User can no longer execute commands with `sudo`
+- Increases security by limiting user permissions
+
+**GUI Equivalent:** Click "..." → Toggle "Superuser" switch OFF
 
 ---
 
@@ -697,6 +752,8 @@ Complete mapping of GUI operations to CLI commands:
 | Delete user (trash icon) | `rdpsm user delete USERNAME` |
 | View user list | `rdpsm user list` |
 | Toggle user enabled/disabled | `rdpsm user enable/disable USERNAME` |
+| Grant sudo privileges (... menu) | `rdpsm user sudo grant USERNAME` |
+| Revoke sudo privileges (... menu) | `rdpsm user sudo revoke USERNAME` |
 | View server info in header | `rdpsm server info` |
 | Hamburger → Settings → Get port | `rdpsm config get port` |
 | Hamburger → Settings → Set port | `rdpsm config set port VALUE` |
@@ -934,6 +991,8 @@ rdpsm --help
 - [ ] `rdpsm user enable testuser` - Enable user
 - [ ] `rdpsm user disable testuser` - Disable user
 - [ ] `rdpsm user password testuser` - Change password
+- [ ] `rdpsm user sudo grant testuser` - Grant sudo privileges
+- [ ] `rdpsm user sudo revoke testuser` - Revoke sudo privileges
 - [ ] `rdpsm session kill testuser` - Kill session
 - [ ] `rdpsm de install xfce` - Install desktop environment
 - [ ] `rdpsm deps install xrdp` - Install xrdp
@@ -945,7 +1004,7 @@ rdpsm --help
 **Version Command:**
 ```bash
 $ rdpsm --version
-RDPSM 0.2.0
+RDPSM 0.2.1
 ```
 
 **User List (Table):**
@@ -971,7 +1030,8 @@ $ rdpsm user list --format json
     "desktop_env": "xfce",
     "rdp_port": 3389,
     "active": false,
-    "enabled": true
+    "enabled": true,
+    "is_superuser": false
   }
 ]
 ```

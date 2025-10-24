@@ -148,6 +148,73 @@ class MainWindow(Adw.ApplicationWindow):
         enable_switch.connect('state-set', lambda s, state: self.on_user_toggle(user.username, state, s))
         status_box.append(enable_switch)
 
+        # Menu button (...)
+        menu_button = Gtk.MenuButton()
+        menu_button.set_icon_name('view-more-symbolic')
+        menu_button.add_css_class('flat')
+        menu_button.set_valign(Gtk.Align.CENTER)
+        menu_button.set_tooltip_text('Opções de gerenciamento')
+
+        # Create popover menu
+        popover = Gtk.Popover()
+        menu_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        menu_box.set_margin_top(6)
+        menu_box.set_margin_bottom(6)
+        menu_box.set_margin_start(6)
+        menu_box.set_margin_end(6)
+
+        # Superuser toggle row
+        sudo_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        sudo_row.set_margin_top(6)
+        sudo_row.set_margin_bottom(6)
+        sudo_row.set_margin_start(12)
+        sudo_row.set_margin_end(12)
+
+        sudo_label = Gtk.Label(label="Superusuário")
+        sudo_label.set_halign(Gtk.Align.START)
+        sudo_label.set_hexpand(True)
+
+        sudo_switch = Gtk.Switch()
+        sudo_switch.set_active(user.is_superuser)
+        sudo_switch.set_valign(Gtk.Align.CENTER)
+        sudo_switch.set_tooltip_text('Conceder/revogar privilégios sudo')
+        sudo_switch.connect('state-set', lambda s, state: self.on_sudo_toggle(user.username, state, s))
+
+        sudo_row.append(sudo_label)
+        sudo_row.append(sudo_switch)
+
+        menu_box.append(sudo_row)
+
+        # Copy IP row (estilo igual ao de cima, sem Button)
+        copy_ip_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        copy_ip_row.set_margin_top(6)
+        copy_ip_row.set_margin_bottom(6)
+        copy_ip_row.set_margin_start(12)
+        copy_ip_row.set_margin_end(12)
+
+        copy_ip_label = Gtk.Label(label="Copiar IP + Porta")
+        copy_ip_label.set_halign(Gtk.Align.START)
+        copy_ip_label.set_hexpand(True)
+
+        copy_ip_icon = Gtk.Image.new_from_icon_name("edit-copy-symbolic")
+
+        copy_ip_row.append(copy_ip_label)
+        copy_ip_row.append(copy_ip_icon)
+
+        # Tornar a row clicável usando GestureClick
+        gesture = Gtk.GestureClick.new()
+        gesture.connect("released", lambda g, n, x, y: self.on_copy_user_ip(user, popover))
+        copy_ip_row.add_controller(gesture)
+
+        # Adicionar estilo hover
+        copy_ip_row.set_cursor_from_name("pointer")
+
+        menu_box.append(copy_ip_row)
+        popover.set_child(menu_box)
+        menu_button.set_popover(popover)
+
+        status_box.append(menu_button)
+
         row.add_suffix(status_box)
 
         # Action buttons
@@ -306,6 +373,91 @@ class MainWindow(Adw.ApplicationWindow):
         # (vamos controlar manualmente após sucesso da operação)
         return True
 
+    def on_sudo_toggle(self, username, new_state, switch):
+        """Handle sudo privilege toggle"""
+        # Bloquear mudança automática do switch - vamos controlar manualmente
+
+        # Verificar se usuário tem sessão ativa
+        is_connected = self.session_monitor.is_user_connected(username)
+        has_processes = len(self.user_manager.get_user_processes(username)) > 0
+
+        if is_connected or has_processes:
+            # Mostrar aviso sobre reconexão necessária
+            action_text = "conceder" if new_state else "revogar"
+            dialog = Adw.MessageDialog(
+                transient_for=self,
+                heading=f"⚠ {username} está conectado",
+                body=f"""Para {action_text} privilégios sudo, a sessão do usuário será encerrada automaticamente.
+
+⚠ IMPORTANTE: Mudanças de grupo só têm efeito após logout/login completo.
+
+O usuário precisará reconectar via RDP para que os privilégios {"de superusuário sejam aplicados" if new_state else "sejam removidos"}.
+
+Deseja continuar?"""
+            )
+            dialog.add_response("cancel", "Cancelar")
+            dialog.add_response("continue", "Continuar e Encerrar Sessão")
+            dialog.set_response_appearance("continue", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("continue")
+            dialog.set_close_response("cancel")
+
+            # Store data for callback
+            dialog._username = username
+            dialog._new_state = new_state
+            dialog._switch = switch
+
+            dialog.connect("response", self.on_sudo_confirm_response)
+            dialog.present()
+        else:
+            # Sem sessão ativa, executar diretamente
+            self._do_sudo_toggle(username, new_state, switch)
+
+        # Retornar True para impedir mudança automática do switch
+        return True
+
+    def on_sudo_confirm_response(self, dialog, response):
+        """Handle sudo confirmation dialog response"""
+        if response == "continue":
+            self._do_sudo_toggle(dialog._username, dialog._new_state, dialog._switch)
+
+    def _do_sudo_toggle(self, username, new_state, switch):
+        """Execute sudo toggle operation"""
+        def do_toggle():
+            """Executar a operação em thread separada"""
+            try:
+                if new_state:
+                    # Conceder privilégios sudo
+                    success = self.user_manager.grant_sudo(username, kill_sessions=True)
+                    if success:
+                        GLib.idle_add(self.show_toast, f"✓ Privilégios sudo concedidos - Reconecte para aplicar")
+                        # Atualizar o switch manualmente
+                        GLib.idle_add(switch.set_active, True)
+                        # Atualizar lista de usuários
+                        GLib.timeout_add(500, self.load_users)
+                    else:
+                        GLib.idle_add(self.show_toast, f"✗ Erro ao conceder privilégios sudo para {username}")
+                else:
+                    # Revogar privilégios sudo
+                    success = self.user_manager.revoke_sudo(username, kill_sessions=True)
+                    if success:
+                        GLib.idle_add(self.show_toast, f"✓ Privilégios sudo revogados - Reconecte para aplicar")
+                        # Atualizar o switch manualmente
+                        GLib.idle_add(switch.set_active, False)
+                        # Atualizar lista de usuários
+                        GLib.timeout_add(500, self.load_users)
+                    else:
+                        GLib.idle_add(self.show_toast, f"✗ Erro ao revogar privilégios sudo de {username}")
+
+            except Exception as e:
+                logger.error(f"Error toggling sudo for user {username}: {e}")
+                GLib.idle_add(self.show_toast, f"✗ Erro ao alterar privilégios sudo de {username}")
+
+        # Executar em thread para não bloquear a UI
+        import threading
+        thread = threading.Thread(target=do_toggle)
+        thread.daemon = True
+        thread.start()
+
     def on_delete_user(self, username):
         """Handle delete user"""
         # Verificar se usuário tem processos ativos
@@ -390,58 +542,23 @@ class MainWindow(Adw.ApplicationWindow):
 
     def on_connect_rdp(self, user):
         """Connect to RDP session"""
-        ip = self.session_monitor.get_ip_address()
-        connection_string = f"{ip}:{user.rdp_port}"
+        # Verificar se FreeRDP está instalado
+        if not self.system_deps.is_freerdp_installed():
+            # Mostrar dialog para instalar FreeRDP
+            install_dialog = Adw.MessageDialog(
+                transient_for=self,
+                heading="FreeRDP não está instalado",
+                body="O cliente FreeRDP é necessário para conectar a sessões RDP.\n\nDeseja instalar agora?"
+            )
+            install_dialog.add_response("cancel", "Cancelar")
+            install_dialog.add_response("install", "Instalar FreeRDP")
+            install_dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+            install_dialog.connect("response", lambda d, r: self.on_freerdp_install_response(r, user))
+            install_dialog.present()
+            return
 
-        # Copiar para clipboard
-        clipboard = self.get_clipboard()
-        clipboard.set(connection_string)
-
-        # Determinar comando FreeRDP
-        freerdp_cmd = self.system_deps.get_freerdp_command() or 'xfreerdp'
-
-        # Mostrar dialog com informações
-        dialog = Adw.MessageDialog(
-            transient_for=self,
-            heading=f"Conectar ao usuário {user.username}",
-            body=f"""Endereço de conexão (copiado para clipboard):
-
-{connection_string}
-
-Usuário: {user.username}
-Desktop: {user.desktop_env.upper()}
-Porta: {user.rdp_port}
-
-Use um cliente RDP para conectar:
-• Linux: {freerdp_cmd} /v:{connection_string} /u:{user.username}
-• Windows: mstsc.exe /v:{connection_string}"""
-        )
-        dialog.add_response("ok", "OK")
-        dialog.add_response("connect", "Abrir FreeRDP")
-        dialog.set_response_appearance("connect", Adw.ResponseAppearance.SUGGESTED)
-        dialog.connect("response", lambda d, r: self.handle_connect_response(r, user))
-        dialog.present()
-
-    def handle_connect_response(self, response, user):
-        """Handle connect dialog response"""
-        if response == "connect":
-            # Verificar se FreeRDP está instalado
-            if not self.system_deps.is_freerdp_installed():
-                # Mostrar dialog para instalar FreeRDP
-                install_dialog = Adw.MessageDialog(
-                    transient_for=self,
-                    heading="FreeRDP não está instalado",
-                    body="O cliente FreeRDP é necessário para conectar a sessões RDP.\n\nDeseja instalar agora?"
-                )
-                install_dialog.add_response("cancel", "Cancelar")
-                install_dialog.add_response("install", "Instalar FreeRDP")
-                install_dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
-                install_dialog.connect("response", lambda d, r: self.on_freerdp_install_response(r, user))
-                install_dialog.present()
-                return
-
-            # Mostrar dialog para pedir senha
-            self.show_password_dialog(user)
+        # Ir direto para dialog de senha
+        self.show_password_dialog(user)
 
     def on_freerdp_install_response(self, response, user):
         """Handle FreeRDP installation response"""
@@ -450,6 +567,19 @@ Use um cliente RDP para conectar:
             app = self.get_application()
             if app:
                 app.install_freerdp_with_progress()
+
+    def on_copy_user_ip(self, user, popover):
+        """Copy user connection string to clipboard"""
+        ip = self.session_monitor.get_ip_address()
+        connection_string = f"{ip}:{user.rdp_port}"
+
+        clipboard = self.get_clipboard()
+        clipboard.set(connection_string)
+
+        self.show_toast(f"✓ {connection_string} copiado!")
+
+        # Fechar o popover
+        popover.popdown()
 
     def show_password_dialog(self, user):
         """Show password dialog before connecting"""
@@ -519,6 +649,9 @@ Use um cliente RDP para conectar:
             if not password:
                 self.show_toast("✗ Senha não pode estar vazia")
                 return
+
+            # Fechar diálogo antes de abrir FreeRDP
+            dialog.close()
 
             # Launch FreeRDP with credentials
             self.launch_freerdp_client(user, password, domain)

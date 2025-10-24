@@ -372,6 +372,104 @@ class CLI:
             self.print_error(f"Error listing processes: {e}")
             return 1
 
+    def user_sudo_grant(self, args):
+        """Grant sudo privileges to a user"""
+        try:
+            username = args.username
+
+            if not self.user_manager.user_exists(username):
+                self.print_error(f"User '{username}' does not exist")
+                return 1
+
+            # Check if user already has sudo
+            if self.user_manager.is_superuser(username):
+                self.print_warning(f"User '{username}' already has sudo privileges")
+                return 0
+
+            # Check if user has active processes
+            processes = self.user_manager.get_user_processes(username)
+            is_connected = self.session_monitor.is_user_connected(username)
+
+            if processes or is_connected:
+                self.print_warning(f"User '{username}' has active session(s)")
+                self.print_warning("⚠ IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("Active sessions will be terminated to apply changes")
+
+                # Ask for confirmation
+                if not hasattr(args, 'force') or not args.force:
+                    response = input(f"\nContinue and terminate session? (yes/no): ")
+                    if response.lower() not in ['yes', 'y']:
+                        self.print_info("Cancelled")
+                        return 0
+
+            self.print_info(f"Granting sudo privileges to '{username}'...")
+
+            success = self.user_manager.grant_sudo(username, kill_sessions=True)
+
+            if success:
+                self.print_success(f"Sudo privileges granted to '{username}'")
+                if processes:
+                    self.print_info(f"Sessions terminated - user must reconnect to apply changes")
+                else:
+                    self.print_info(f"User can now execute commands with sudo")
+                return 0
+            else:
+                self.print_error("Failed to grant sudo privileges")
+                return 1
+
+        except Exception as e:
+            self.print_error(f"Error granting sudo privileges: {e}")
+            return 1
+
+    def user_sudo_revoke(self, args):
+        """Revoke sudo privileges from a user"""
+        try:
+            username = args.username
+
+            if not self.user_manager.user_exists(username):
+                self.print_error(f"User '{username}' does not exist")
+                return 1
+
+            # Check if user has sudo
+            if not self.user_manager.is_superuser(username):
+                self.print_warning(f"User '{username}' does not have sudo privileges")
+                return 0
+
+            # Check if user has active processes
+            processes = self.user_manager.get_user_processes(username)
+            is_connected = self.session_monitor.is_user_connected(username)
+
+            if processes or is_connected:
+                self.print_warning(f"User '{username}' has active session(s)")
+                self.print_warning("⚠ IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("Active sessions will be terminated to apply changes")
+
+                # Ask for confirmation
+                if not hasattr(args, 'force') or not args.force:
+                    response = input(f"\nContinue and terminate session? (yes/no): ")
+                    if response.lower() not in ['yes', 'y']:
+                        self.print_info("Cancelled")
+                        return 0
+
+            self.print_info(f"Revoking sudo privileges from '{username}'...")
+
+            success = self.user_manager.revoke_sudo(username, kill_sessions=True)
+
+            if success:
+                self.print_success(f"Sudo privileges revoked from '{username}'")
+                if processes:
+                    self.print_info(f"Sessions terminated - user must reconnect to apply changes")
+                else:
+                    self.print_info(f"User can no longer execute commands with sudo")
+                return 0
+            else:
+                self.print_error("Failed to revoke sudo privileges")
+                return 1
+
+        except Exception as e:
+            self.print_error(f"Error revoking sudo privileges: {e}")
+            return 1
+
     # ==================== SESSION COMMANDS ====================
 
     def session_list(self, args):
@@ -720,7 +818,7 @@ class CLI:
 
         parser.add_argument('-v', '--verbose', action='store_true',
                           help='Verbose output')
-        parser.add_argument('--version', action='version', version='RDPSM 0.2.0')
+        parser.add_argument('--version', action='version', version='RDPSM 0.2.1')
 
         subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
@@ -777,6 +875,24 @@ class CLI:
         user_processes = user_subparsers.add_parser('processes', help='List user processes')
         user_processes.add_argument('username', help='Username')
         user_processes.set_defaults(func=self.user_processes)
+
+        # user sudo (sub-subcommand)
+        user_sudo = user_subparsers.add_parser('sudo', help='Manage sudo privileges')
+        user_sudo_subparsers = user_sudo.add_subparsers(dest='sudo_action')
+
+        # user sudo grant
+        user_sudo_grant = user_sudo_subparsers.add_parser('grant', help='Grant sudo privileges to user')
+        user_sudo_grant.add_argument('username', help='Username')
+        user_sudo_grant.add_argument('--force', action='store_true',
+                                     help='Skip confirmation if user has active session')
+        user_sudo_grant.set_defaults(func=self.user_sudo_grant)
+
+        # user sudo revoke
+        user_sudo_revoke = user_sudo_subparsers.add_parser('revoke', help='Revoke sudo privileges from user')
+        user_sudo_revoke.add_argument('username', help='Username')
+        user_sudo_revoke.add_argument('--force', action='store_true',
+                                      help='Skip confirmation if user has active session')
+        user_sudo_revoke.set_defaults(func=self.user_sudo_revoke)
 
         # Session commands
         session_parser = subparsers.add_parser('session', help='Session management')

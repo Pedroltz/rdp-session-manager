@@ -18,7 +18,8 @@ class RDPUser:
     """Representa um usuário RDP"""
 
     def __init__(self, username: str, uid: int, home_dir: str,
-                 desktop_env: str, rdp_port: int, active: bool = False, enabled: bool = True):
+                 desktop_env: str, rdp_port: int, active: bool = False, enabled: bool = True,
+                 is_superuser: bool = False):
         self.username = username
         self.uid = uid
         self.home_dir = home_dir
@@ -26,6 +27,7 @@ class RDPUser:
         self.rdp_port = rdp_port
         self.active = active
         self.enabled = enabled  # Se a conta está habilitada (não bloqueada)
+        self.is_superuser = is_superuser  # Se o usuário tem privilégios sudo
 
     def to_dict(self) -> Dict:
         """Converte para dicionário"""
@@ -36,7 +38,8 @@ class RDPUser:
             'desktop_env': self.desktop_env,
             'rdp_port': self.rdp_port,
             'active': self.active,
-            'enabled': self.enabled
+            'enabled': self.enabled,
+            'is_superuser': self.is_superuser
         }
 
     @classmethod
@@ -186,7 +189,8 @@ class UserManager:
                 home_dir=home_dir,
                 desktop_env=desktop_env,
                 rdp_port=rdp_port,
-                active=False
+                active=False,
+                is_superuser=False  # Novos usuários não têm sudo por padrão
             )
 
             log("")
@@ -613,6 +617,147 @@ class UserManager:
             logger.error(f"Erro ao habilitar usuário {username}: {e}")
             return False
 
+    def grant_sudo(self, username: str, kill_sessions: bool = True) -> bool:
+        """
+        Concede privilégios de superusuário (sudo) para um usuário RDP
+
+        Args:
+            username: Nome do usuário
+            kill_sessions: Se True, encerra sessões ativas para aplicar mudanças
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(username):
+                logger.error(f"Usuário não existe: {username}")
+                return False
+
+            logger.info(f"Concedendo privilégios sudo para: {username}")
+
+            # Verificar se usuário tem processos ativos
+            active_pids = self.get_user_processes(username)
+            if active_pids and kill_sessions:
+                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
+                logger.info("IMPORTANTE: Mudanças de grupo só têm efeito após logout/login")
+
+            # Usar script helper para conceder sudo
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            sudo_script = script_dir / "toggle-user-sudo.sh"
+
+            cmd = ['pkexec', str(sudo_script), username, 'grant']
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao conceder privilégios sudo: {result.stderr}")
+                return False
+
+            logger.info(f"✓ Privilégios sudo concedidos para {username}")
+
+            # Encerrar sessões ativas para forçar reconexão
+            if active_pids and kill_sessions:
+                logger.info(f"Encerrando sessões de {username} para aplicar mudanças...")
+                self.kill_user_processes(username, force=False)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao conceder privilégios sudo para {username}: {e}")
+            return False
+
+    def revoke_sudo(self, username: str, kill_sessions: bool = True) -> bool:
+        """
+        Revoga privilégios de superusuário (sudo) de um usuário RDP
+
+        Args:
+            username: Nome do usuário
+            kill_sessions: Se True, encerra sessões ativas para aplicar mudanças
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(username):
+                logger.error(f"Usuário não existe: {username}")
+                return False
+
+            logger.info(f"Revogando privilégios sudo de: {username}")
+
+            # Verificar se usuário tem processos ativos
+            active_pids = self.get_user_processes(username)
+            if active_pids and kill_sessions:
+                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
+                logger.info("IMPORTANTE: Mudanças de grupo só têm efeito após logout/login")
+
+            # Usar script helper para revogar sudo
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            sudo_script = script_dir / "toggle-user-sudo.sh"
+
+            cmd = ['pkexec', str(sudo_script), username, 'revoke']
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao revogar privilégios sudo: {result.stderr}")
+                return False
+
+            logger.info(f"✓ Privilégios sudo revogados de {username}")
+
+            # Encerrar sessões ativas para forçar reconexão
+            if active_pids and kill_sessions:
+                logger.info(f"Encerrando sessões de {username} para aplicar mudanças...")
+                self.kill_user_processes(username, force=False)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao revogar privilégios sudo de {username}: {e}")
+            return False
+
+    def is_superuser(self, username: str) -> bool:
+        """
+        Verifica se um usuário tem privilégios de superusuário (está no grupo sudo)
+
+        Args:
+            username: Nome do usuário
+
+        Returns:
+            True se o usuário tem privilégios sudo, False caso contrário
+        """
+        try:
+            # Usar 'id -nG' para obter todos os grupos do usuário de forma confiável
+            # Este comando retorna todos os grupos, incluindo secundários
+            result = subprocess.run(
+                ['id', '-nG', username],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode == 0:
+                # Obter lista de grupos
+                groups = result.stdout.strip().split()
+                # Verificar se 'sudo' está na lista
+                has_sudo = 'sudo' in groups
+                logger.debug(f"User {username} groups: {groups}, has sudo: {has_sudo}")
+                return has_sudo
+
+            # Se o comando falhou, tentar método alternativo
+            logger.warning(f"Command 'id -nG {username}' failed, trying alternative method")
+
+            # Método alternativo: verificar diretamente no grupo
+            sudo_group = grp.getgrnam('sudo')
+            return username in sudo_group.gr_mem
+
+        except KeyError:
+            # Grupo sudo não existe
+            logger.warning("Grupo 'sudo' não encontrado no sistema")
+            return False
+        except Exception as e:
+            logger.error(f"Erro ao verificar privilégios sudo de {username}: {e}")
+            return False
+
     def user_exists(self, username: str) -> bool:
         """Verifica se um usuário RDP existe"""
         try:
@@ -792,6 +937,9 @@ class UserManager:
                     # (não requer privilégios para ler se o arquivo tem permissões corretas)
                     is_enabled = self._check_user_enabled_from_shadow(user_info.pw_name)
 
+                    # Verificar se usuário tem privilégios sudo
+                    has_sudo = self.is_superuser(user_info.pw_name)
+
                     rdp_user = RDPUser(
                         username=user_info.pw_name,
                         uid=user_info.pw_uid,
@@ -799,7 +947,8 @@ class UserManager:
                         desktop_env=desktop_env,
                         rdp_port=rdp_port,
                         active=False,  # TODO: verificar status
-                        enabled=is_enabled
+                        enabled=is_enabled,
+                        is_superuser=has_sudo
                     )
                     users.append(rdp_user)
 

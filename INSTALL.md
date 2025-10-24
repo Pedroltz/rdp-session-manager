@@ -17,7 +17,6 @@ Complete installation instructions for RDP Session Manager on Ubuntu, Debian, an
 ### Supported Operating Systems
 - Ubuntu 20.04 LTS or later
 - Debian 11 (Bullseye) or later
-- Windows Subsystem for Linux (WSL) with Ubuntu/Debian
 
 ### Minimum Hardware Requirements
 - CPU: 1 GHz processor or faster
