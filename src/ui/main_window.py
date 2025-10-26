@@ -40,6 +40,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.session_monitor = session_monitor
         self.system_deps = system_deps
 
+        # Flag para evitar atualizações simultâneas
+        self._updating_users = False
+
         # Adicionar toast overlay
         self.toast_overlay = Adw.ToastOverlay()
         current_child = self.get_content()
@@ -72,18 +75,23 @@ class MainWindow(Adw.ApplicationWindow):
         ip = self.session_monitor.get_ip_address()
         self.ip_row.set_subtitle(ip)
 
-        # Get active sessions count
-        sessions_count = self.session_monitor.get_session_count()
+        # Get active sessions count (apenas usuários habilitados)
+        all_sessions = self.session_monitor.get_active_sessions()
+        enabled_users = [u.username for u in self.user_manager.list_users() if u.enabled]
+        sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)
         self.sessions_row.set_subtitle(f"{sessions_count} sessões ativas")
 
     def update_sessions_info(self):
         """Update sessions information periodically"""
         try:
-            sessions_count = self.session_monitor.get_session_count()
-            self.sessions_row.set_subtitle(f"{sessions_count} sessões ativas")
+            # Contar apenas sessões de usuários habilitados
+            all_sessions = self.session_monitor.get_active_sessions()
+            enabled_users = [u.username for u in self.user_manager.list_users() if u.enabled]
 
-            # Update user status
-            self.load_users()
+            # Filtrar sessões de usuários habilitados
+            sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)
+
+            self.sessions_row.set_subtitle(f"{sessions_count} sessões ativas")
 
         except Exception as e:
             logger.error(f"Error updating sessions: {e}")
@@ -92,26 +100,35 @@ class MainWindow(Adw.ApplicationWindow):
 
     def load_users(self):
         """Load and display users"""
-        # Clear existing rows
-        while True:
-            row = self.users_listbox.get_row_at_index(0)
-            if row is None:
-                break
-            self.users_listbox.remove(row)
-
-        # Get users
-        users = self.user_manager.list_users()
-
-        if not users:
-            self.main_stack.set_visible_child_name('empty')
+        # Evitar múltiplas atualizações simultâneas
+        if self._updating_users:
             return
 
-        self.main_stack.set_visible_child_name('users_list')
+        self._updating_users = True
 
-        # Add user rows
-        for user in users:
-            row = self.create_user_row(user)
-            self.users_listbox.append(row)
+        try:
+            # Clear existing rows
+            while True:
+                row = self.users_listbox.get_row_at_index(0)
+                if row is None:
+                    break
+                self.users_listbox.remove(row)
+
+            # Get users
+            users = self.user_manager.list_users()
+
+            if not users:
+                self.main_stack.set_visible_child_name('empty')
+                return
+
+            self.main_stack.set_visible_child_name('users_list')
+
+            # Add user rows
+            for user in users:
+                row = self.create_user_row(user)
+                self.users_listbox.append(row)
+        finally:
+            self._updating_users = False
 
     def create_user_row(self, user):
         """Create a user row widget"""
@@ -126,13 +143,13 @@ class MainWindow(Adw.ApplicationWindow):
         # Status label and switch
         status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
-        # Status label - mostra "Habilitado/Desabilitado" se não está ativo, "Conectado" se ativo
-        if is_active:
-            status_text = 'Conectado'
-        elif user.enabled:
-            status_text = 'Habilitado'
-        else:
+        # Status label - prioridade: 1) Desabilitado, 2) Conectado, 3) Habilitado
+        if not user.enabled:
             status_text = 'Desabilitado'
+        elif is_active:
+            status_text = 'Conectado'
+        else:
+            status_text = 'Habilitado'
 
         status_label = Gtk.Label(label=status_text)
         status_label.add_css_class('dim-label')

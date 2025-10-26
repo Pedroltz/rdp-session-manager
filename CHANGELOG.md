@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.2.2] - 2025-10-24
+## [0.2.2] - 2025-10-26
 
 ### Summary
 
-This release focuses on improving code quality and reliability through comprehensive unit test coverage. The test suite has been significantly expanded from 2 test files to 6 test files, increasing total test coverage to 109 tests across all critical modules.
+This release focuses on improving code quality and reliability through comprehensive unit test coverage, along with critical bug fixes for user state persistence, session monitoring, and UI stability. The test suite has been significantly expanded from 2 test files to 6 test files, increasing total test coverage to 109 tests across all critical modules.
 
 ### Added
 
@@ -44,6 +44,28 @@ This release focuses on improving code quality and reliability through comprehen
   - Debugging guide for failed tests
   - Contributing guidelines for new tests
   - Complete test statistics and coverage metrics
+
+- **Persistent User State Cache**
+  - JSON file cache for enabled/disabled user states
+  - Located at `~/.config/rdp-session-manager/user_states.json`
+  - Automatic loading on application startup
+  - Automatic saving on state changes (enable/disable/create/delete)
+  - Solves state persistence when app is closed and reopened
+  - Fallback to cache when `/etc/shadow` access is denied
+
+- **Enhanced RDP Session Detection**
+  - Multi-method session detection for improved reliability
+  - Method 1: `xrdp-sesman` process detection for user sessions
+  - Method 2: `loginctl` integration for remote session verification
+  - Checks `Remote=yes` flag and `xrdp` service markers
+  - Filters out root daemon processes from session count
+  - Prevents false positives in session counting
+
+- **Smart Session Filtering**
+  - Active session counter now filters by enabled users only
+  - Disabled users with active RDP sessions are not counted
+  - Provides accurate session statistics in "Informações do Servidor"
+  - Automatic updates when user state changes
 
 ### Testing Coverage
 
@@ -100,12 +122,84 @@ This release focuses on improving code quality and reliability through comprehen
    - Import/export operations
    - Roundtrip data integrity
 
+### Fixed
+
+- **User State Not Persisting After App Restart** (Critical)
+  - **Issue**: When user was disabled via toggle switch and app was closed, user appeared as enabled on restart
+  - **Cause**: State stored only in memory cache (`_user_states_cache`) which was lost on app closure
+  - **Root Cause**: Unable to read `/etc/shadow` without root permissions, falling back to "enabled" by default
+  - **Solution**: Implemented persistent JSON cache at `~/.config/rdp-session-manager/user_states.json`
+  - **Impact**: User enable/disable state now persists across app restarts
+  - **Modified Files**: `src/core/user_manager.py`
+    - Added `states_cache_file` path in `__init__()`
+    - Added `_load_states_cache()` method to load cache on startup
+    - Added `_save_states_cache()` method to persist cache to disk
+    - Updated `lock_user()`, `unlock_user()`, `create_user()`, `delete_user()` to save cache
+
+- **Status Label Showing "Conectado" for Disabled Users**
+  - **Issue**: Status label showed "Conectado" even when user toggle switch was off
+  - **Cause**: Incorrect priority in status determination logic (checked connection before enabled state)
+  - **Solution**: Changed status priority to: 1) Desabilitado, 2) Conectado, 3) Habilitado
+  - **Impact**: Status label now correctly shows "Desabilitado" when user is disabled regardless of connection
+  - **Modified Files**: `src/ui/main_window.py:129-135`
+
+- **Infinite UI Update Loop Causing App Freeze**
+  - **Issue**: App became unresponsive with continuous UI updates, unable to click or toggle users
+  - **Cause**: `update_sessions_info()` was calling `load_users()` internally, creating circular updates
+  - **Additional Cause**: Multiple simultaneous calls to `load_users()` from different operations
+  - **Solution**:
+    - Removed `load_users()` call from `update_sessions_info()`
+    - Added `_updating_users` flag to prevent concurrent `load_users()` calls
+    - Removed redundant `update_sessions_info()` calls from toggle operations
+  - **Impact**: UI now remains responsive, users can interact normally with switches
+  - **Modified Files**: `src/ui/main_window.py`
+    - Added `_updating_users = False` flag in `__init__()`
+    - Wrapped `load_users()` with flag check and try/finally block
+
+- **Session Counter Including Disabled Users**
+  - **Issue**: "Sessões Ativas" counter showed 1 even when only user was disabled
+  - **Cause**: Counter counted all active RDP sessions regardless of user enabled/disabled state
+  - **Solution**: Filter sessions to only count enabled users
+  - **Logic**: `sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)`
+  - **Impact**: Counter now shows accurate count of sessions from enabled users only
+  - **Modified Files**:
+    - `src/ui/main_window.py:update_server_info()` (lines 78-82)
+    - `src/ui/main_window.py:update_sessions_info()` (lines 82-89)
+
+- **Improved User Creation Success Dialog**
+  - **Issue**: Success dialog had inconsistent formatting with checkmarks and emojis
+  - **Changes**:
+    - Removed "✓" checkmark from dialog heading
+    - Removed "📡" emoji from "Como Conectar:" section
+    - Added bold formatting to "Como Conectar:" using Pango markup
+    - Removed "✓" checkmark from "O usuário já aparece na lista principal!"
+    - Added `set_body_use_markup(True)` to enable markup rendering
+  - **Impact**: Cleaner, more professional success dialog appearance
+  - **Modified Files**: `src/ui/user_dialog.py:467-494`
+
 ### Changed
 
 - All unit tests now use proper mocking to avoid system dependencies
 - Tests use temporary directories for isolation
 - Added timing controls to prevent timestamp collision in backup tests
 - Improved test assertions to be more flexible with boundary conditions
+
+- **Session Detection Method**
+  - Changed from single-method (process check) to dual-method approach
+  - Now uses both `xrdp-sesman` process detection and `loginctl` session verification
+  - Improved reliability and accuracy in detecting active RDP sessions
+  - Modified: `src/core/session_monitor.py:_get_rdp_connections()`
+
+- **Status Label Priority Logic**
+  - Old priority: Connection status → Enabled status
+  - New priority: Enabled status → Connection status → Default
+  - Ensures disabled state always takes precedence in display
+  - Modified: `src/ui/main_window.py:create_user_row()`
+
+- **Session Counter Behavior**
+  - Now considers user state (enabled/disabled) in addition to connection status
+  - Provides more meaningful statistics about active usable sessions
+  - Modified: `src/ui/main_window.py:update_server_info()`, `update_sessions_info()`
 
 ### Technical Details
 
@@ -134,7 +228,7 @@ This release focuses on improving code quality and reliability through comprehen
 
 ### Testing
 
-All 109 tests pass successfully:
+All 109 unit tests pass successfully:
 - `test_user_manager.py`: **14 tests PASSED**
 - `test_validator.py`: **20 tests PASSED**
 - `test_session_monitor.py`: **23 tests PASSED**
@@ -143,6 +237,29 @@ All 109 tests pass successfully:
 - `test_backup.py`: **20 tests PASSED**
 
 **Total: 109/109 tests passing (100%)**
+
+**Manual Testing - Bug Fixes**:
+- User state persistence: **PASSED** ✓
+  - Disabled user via toggle → closed app → reopened → user still disabled
+- Status label priority: **PASSED** ✓
+  - Disabled user shows "Desabilitado" (not "Conectado")
+  - Enabled + connected user shows "Conectado"
+  - Enabled + not connected user shows "Habilitado"
+- UI responsiveness: **PASSED** ✓
+  - No infinite update loops
+  - All buttons and switches clickable
+  - Smooth toggle operations
+- Session counter accuracy: **PASSED** ✓
+  - Disabled user with active RDP session → counter shows 0
+  - Enabled user with active RDP session → counter shows 1
+  - Multiple users (some disabled) → counter shows only enabled
+- Session detection: **PASSED** ✓
+  - `loginctl` integration detects remote xrdp sessions correctly
+  - Filters out root daemon processes
+- Success dialog formatting: **PASSED** ✓
+  - No checkmarks in heading or footer
+  - No emoji in "Como Conectar:"
+  - "Como Conectar:" appears in bold
 
 ### Example Usage
 
@@ -598,4 +715,4 @@ Tested on:
 ---
 
 **Maintainer**: Pedro L. Tunin
-**Last Updated**: 2025-10-18
+**Last Updated**: 2025-10-26

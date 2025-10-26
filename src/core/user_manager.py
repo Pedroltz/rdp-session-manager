@@ -6,6 +6,7 @@ Módulo de gerenciamento de usuários RDP
 import os
 import pwd
 import grp
+import json
 import subprocess
 import logging
 from pathlib import Path
@@ -63,7 +64,10 @@ class UserManager:
         self.app_config = app_config
         self.rdp_users_home = Path(rdp_users_home)
         self.config_file = self.rdp_users_home / "users.conf"
+        # Cache persistente de estados de usuários
+        self.states_cache_file = Path.home() / ".config" / "rdp-session-manager" / "user_states.json"
         self._ensure_base_setup()
+        self._load_states_cache()
 
     def _ensure_base_setup(self):
         """Garante que a estrutura base existe"""
@@ -89,27 +93,39 @@ class UserManager:
             logger.warning(f"Grupo {self.RDP_GID_NAME} não existe")
             return -1
 
+    def _load_states_cache(self):
+        """Carrega o cache persistente de estados dos usuários"""
+        try:
+            if self.states_cache_file.exists():
+                with open(self.states_cache_file, 'r') as f:
+                    cached_states = json.load(f)
+                    # Atualizar o cache em memória
+                    UserManager._user_states_cache.update(cached_states)
+                    logger.debug(f"Cache de estados carregado: {cached_states}")
+        except Exception as e:
+            logger.warning(f"Erro ao carregar cache de estados: {e}")
+
+    def _save_states_cache(self):
+        """Salva o cache de estados dos usuários em arquivo"""
+        try:
+            # Criar diretório se não existir
+            self.states_cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(self.states_cache_file, 'w') as f:
+                json.dump(UserManager._user_states_cache, f, indent=2)
+                logger.debug(f"Cache de estados salvo: {UserManager._user_states_cache}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar cache de estados: {e}")
+
     def _get_next_uid(self) -> int:
         """Obtém o próximo UID disponível para usuários RDP"""
-        existing_uids = []
-        for user in self.list_users():
-            existing_uids.append(user.uid)
+        existing_uids = [user.uid for user in self.list_users()]
 
         uid = self.RDP_UID_START
         while uid in existing_uids:
             uid += 1
 
         return uid
-
-    def _get_next_rdp_port(self, start_port: int = 3389) -> int:
-        """Obtém a próxima porta RDP disponível"""
-        existing_ports = [user.rdp_port for user in self.list_users()]
-
-        port = start_port
-        while port in existing_ports:
-            port += 1
-
-        return port
 
     def create_user(self, username: str, password: str, desktop_env: str,
                    full_name: str = "", log_callback=None) -> Optional[RDPUser]:
@@ -206,6 +222,7 @@ class UserManager:
 
             # Adicionar ao cache como habilitado (usuários novos são criados habilitados)
             UserManager._user_states_cache[username] = True
+            self._save_states_cache()
 
             return rdp_user
 
@@ -527,9 +544,10 @@ class UserManager:
             logger.info(f"  - Diretório home removido: {remove_home}")
             logger.info(f"  - Processos terminados: {kill_processes}")
 
-            # Remover do cache
+            # Remover do cache e persistir
             if username in UserManager._user_states_cache:
                 del UserManager._user_states_cache[username]
+                self._save_states_cache()
 
             return True
 
@@ -568,8 +586,9 @@ class UserManager:
 
             logger.info(f"✓ Usuário {username} desabilitado com sucesso")
 
-            # Atualizar cache
+            # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = False
+            self._save_states_cache()
 
             return True
 
@@ -608,8 +627,9 @@ class UserManager:
 
             logger.info(f"✓ Usuário {username} habilitado com sucesso")
 
-            # Atualizar cache
+            # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = True
+            self._save_states_cache()
 
             return True
 

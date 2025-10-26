@@ -468,13 +468,13 @@ class UserDialog(Adw.Dialog):
         """Show success dialog"""
         success_dialog = Adw.MessageDialog(
             transient_for=self.get_root(),
-            heading="✓ Usuário Criado com Sucesso!",
+            heading="Usuário Criado com Sucesso!",
             body=f"""Usuário: {username}
 Nome: {fullname or username}
 Desktop: {de_id.upper()}
 Porta RDP: {user.rdp_port}
 
-📡 Como Conectar:
+<b>Como Conectar:</b>
 
 Endereço: {self.get_connection_info(user.rdp_port)}
 
@@ -485,8 +485,9 @@ Windows:
   Use "Conexão de Área de Trabalho Remota"
   Digite: {self.get_connection_info(user.rdp_port)}
 
-✓ O usuário já aparece na lista principal!"""
+O usuário já aparece na lista principal!"""
         )
+        success_dialog.set_body_use_markup(True)
 
         success_dialog.add_response("ok", "Fechar")
         success_dialog.connect("response", lambda d, r: self.close())

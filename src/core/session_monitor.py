@@ -76,30 +76,83 @@ class SessionMonitor:
     def _get_rdp_connections(self) -> List[Dict]:
         """Obtém conexões RDP ativas do sistema"""
         connections = []
+        seen_users = set()
 
         try:
-            # Verificar processos xrdp
+            # Método 1: Verificar processos xrdp-sesman de usuários específicos
             for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
-                    if 'xrdp' in proc.info['name'].lower():
-                        # Obter conexões do processo
-                        try:
-                            proc_connections = proc.connections(kind='inet')
+                    # Procurar por processos xrdp-sesman rodando como usuários (não root)
+                    if 'xrdp-sesman' in proc.info['name'].lower():
+                        username = proc.info['username']
 
-                            for conn in proc_connections:
-                                if conn.status == 'ESTABLISHED':
-                                    connections.append({
-                                        'username': proc.info['username'],
-                                        'session_id': str(proc.info['pid']),
-                                        'remote_ip': conn.raddr.ip if conn.raddr else 'unknown',
-                                        'port': conn.laddr.port if conn.laddr else 0
-                                    })
-                        except (psutil.AccessDenied, AttributeError):
-                            # Processo não tem permissão ou não tem conexões
-                            pass
+                        # Ignorar processos root (são os daemons principais)
+                        if username != 'root' and username not in seen_users:
+                            # Este é um processo de sessão de usuário
+                            try:
+                                # Verificar se tem conexões estabelecidas
+                                proc_connections = proc.connections(kind='inet')
+
+                                for conn in proc_connections:
+                                    if conn.status == 'ESTABLISHED':
+                                        connections.append({
+                                            'username': username,
+                                            'session_id': str(proc.info['pid']),
+                                            'remote_ip': conn.raddr.ip if conn.raddr else 'unknown',
+                                            'port': conn.laddr.port if conn.laddr else 0
+                                        })
+                                        seen_users.add(username)
+                                        break
+                            except (psutil.AccessDenied, AttributeError):
+                                pass
 
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
+
+            # Método 2: Verificar via loginctl (sessões gráficas)
+            try:
+                result = subprocess.run(
+                    ['loginctl', 'list-sessions', '--no-legend'],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n'):
+                        if not line:
+                            continue
+
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            session_id = parts[0]
+                            username = parts[2]
+
+                            # Verificar detalhes da sessão
+                            session_details = subprocess.run(
+                                ['loginctl', 'show-session', session_id],
+                                capture_output=True,
+                                text=True,
+                                timeout=2
+                            )
+
+                            if session_details.returncode == 0:
+                                session_info = session_details.stdout
+
+                                # Verificar se é sessão xrdp (tem display remoto)
+                                if 'Remote=yes' in session_info or 'xrdp' in session_info.lower():
+                                    if username not in seen_users:
+                                        connections.append({
+                                            'username': username,
+                                            'session_id': session_id,
+                                            'remote_ip': 'unknown',
+                                            'port': 0
+                                        })
+                                        seen_users.add(username)
+
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                # loginctl não disponível ou timeout
+                pass
 
         except Exception as e:
             logger.error(f"Erro ao obter conexões RDP: {e}")
