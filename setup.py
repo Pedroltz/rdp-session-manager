@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rdp-session-manager',
-    version='0.1.0',
+    version='0.2.2',
     description='Gerenciador de sessões RDP com interface GTK4',
     author='Your Name',
     author_email='your.email@example.com',

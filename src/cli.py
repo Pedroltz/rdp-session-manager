@@ -818,7 +818,7 @@ class CLI:
 
         parser.add_argument('-v', '--verbose', action='store_true',
                           help='Verbose output')
-        parser.add_argument('--version', action='version', version='RDPSM 0.2.1')
+        parser.add_argument('--version', action='version', version='RDPSM 0.2.2')
 
         subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
