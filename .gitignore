@@ -46,3 +46,6 @@ meson-private/
 
 # Claude
 .claude/
+
+# Release
+release/

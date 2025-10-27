@@ -92,6 +92,30 @@ chmod +x "${BUILD_DIR}/usr/bin/rdpsm"
 [ -f "data/com.rdp.SessionManager.appdata.xml" ] && \
     cp data/com.rdp.SessionManager.appdata.xml "${BUILD_DIR}/usr/share/metainfo/"
 
+# Create post-install script inline
+cat > "${BUILD_DIR}/DEBIAN_postinst" << 'POSTINSTALL'
+#!/bin/bash
+echo "Configurando RDP Session Manager..."
+command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications 2>/dev/null || true
+command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+command -v appstreamcli >/dev/null 2>&1 && appstreamcli refresh-cache --force 2>/dev/null || true
+echo "✓ RDP Session Manager instalado com sucesso!"
+echo "Execute 'rdp-session-manager' para abrir a interface gráfica"
+POSTINSTALL
+chmod +x "${BUILD_DIR}/DEBIAN_postinst"
+
+# Create post-remove script inline
+cat > "${BUILD_DIR}/DEBIAN_postrm" << 'POSTREMOVE'
+#!/bin/bash
+echo "Removendo configurações do RDP Session Manager..."
+command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications 2>/dev/null || true
+command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+echo "✓ RDP Session Manager removido"
+POSTREMOVE
+chmod +x "${BUILD_DIR}/DEBIAN_postrm"
+
 # Build package
 echo "→ Building .deb package..."
 fpm -s dir -t deb \
@@ -110,8 +134,8 @@ fpm -s dir -t deb \
     --depends "libadwaita-1-0" \
     --depends "polkitd | policykit-1" \
     --depends "python3-psutil" \
-    --after-install "${PROJECT_DIR}/post-install.sh" \
-    --after-remove "${PROJECT_DIR}/post-remove.sh" \
+    --after-install "${BUILD_DIR}/DEBIAN_postinst" \
+    --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
     -C "${BUILD_DIR}" \
     -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
     .
