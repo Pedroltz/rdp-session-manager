@@ -109,6 +109,9 @@ class RDPSessionManagerApp(Adw.Application):
 
     def on_about(self, action, param):
         """Show about dialog"""
+        from pathlib import Path
+        from gi.repository import Gdk
+
         about = Adw.AboutDialog(
             application_name="RDP Session Manager",
             application_icon="com.rdp.SessionManager",
@@ -120,6 +123,15 @@ class RDPSessionManagerApp(Adw.Application):
             website="https://github.com/yourusername/rdp-session-manager",
             issue_url="https://github.com/yourusername/rdp-session-manager/issues"
         )
+
+        # Try to load custom logo image
+        logo_path = Path(__file__).parent.parent / "imgs" / "RDPSM.png"
+        if logo_path.exists():
+            try:
+                texture = Gdk.Texture.new_from_filename(str(logo_path))
+                about.set_application_icon("com.rdp.SessionManager")
+            except Exception as e:
+                logger.warning(f"Could not load logo image: {e}")
 
         about.present(self.window)
 

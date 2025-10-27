@@ -18,6 +18,20 @@ This release focuses on improving code quality and reliability through comprehen
 - **Comprehensive Unit Test Suite**
   - `tests/test_session_monitor.py` - 23 tests for SessionMonitor and SessionInfo classes
   - `tests/test_config.py` - 17 tests for AppConfig module
+- **Application Icon** (`imgs/RDPSM.png`)
+  - Custom application icon integrated into the system
+  - Icon installed to `/usr/share/icons/hicolor/scalable/apps/`
+  - Appears in application menu and About dialog
+  - Configured in desktop file and package metadata
+  - Automatic icon cache updates via post-install script
+
+- **Debian Package Distribution**
+  - `build_release.sh` - Automated .deb package generator using fpm
+  - `install.sh` - One-command installation with dependency management
+  - `uninstall.sh` - Complete removal of application and files
+  - Professional package structure following Debian standards
+  - Automatic post-install/post-remove hooks for system integration
+  - Ready-to-distribute `.deb` file in `Release/` directory
   - `tests/test_logger.py` - 25 tests for AuditLogger and logging setup
   - `tests/test_backup.py` - 20 tests for BackupManager module
 
