@@ -19,7 +19,8 @@ class TestUserManager(unittest.TestCase):
 
     def setUp(self):
         """Setup test fixtures"""
-        self.user_manager = UserManager("/tmp/test-rdp-users")
+        # UserManager agora recebe app_config como primeiro parâmetro, rdp_users_home como segundo
+        self.user_manager = UserManager(app_config=None, rdp_users_home="/tmp/test-rdp-users")
 
     def test_rdp_user_to_dict(self):
         """Test RDPUser to_dict method"""
@@ -119,8 +120,9 @@ class TestUserManager(unittest.TestCase):
 
     def test_get_next_rdp_port(self):
         """Test RDP port generation"""
-        port = self.user_manager._get_next_rdp_port(3389)
-        self.assertGreaterEqual(port, 3389)
+        # _detect_rdp_port agora recebe UID e retorna a porta baseada na config global
+        port = self.user_manager._detect_rdp_port(5001)
+        self.assertEqual(port, 3389)  # Deve retornar a porta padrão
 
     def test_rdp_user_defaults(self):
         """Test RDPUser default values"""

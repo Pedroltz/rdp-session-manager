@@ -50,6 +50,13 @@ cp -r data/ui "${BUILD_DIR}/usr/share/${APP_NAME}/data/"
 # Copy scripts if exist
 [ -d "scripts" ] && cp -r scripts "${BUILD_DIR}/usr/share/${APP_NAME}/"
 
+# Copy helper scripts (CRITICAL for user creation!)
+if [ -d "helpers" ]; then
+    echo "→ Copying helper scripts..."
+    cp -r helpers "${BUILD_DIR}/usr/share/${APP_NAME}/"
+    chmod +x "${BUILD_DIR}/usr/share/${APP_NAME}/helpers/"*.sh
+fi
+
 # Clean Python cache
 find "${BUILD_DIR}" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find "${BUILD_DIR}" -type f -name "*.pyc" -delete 2>/dev/null || true

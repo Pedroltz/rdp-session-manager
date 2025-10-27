@@ -115,13 +115,13 @@ class RDPSessionManagerApp(Adw.Application):
         about = Adw.AboutDialog(
             application_name="RDP Session Manager",
             application_icon="com.rdp.SessionManager",
-            developer_name="Your Name",
+            developer_name="Pedroltz",
             version="0.2.2",
-            developers=["Your Name"],
-            copyright="© 2025 Your Name",
+            developers=["Pedroltz"],
+            copyright="© 2025 Pedroltz",
             license_type=Gtk.License.GPL_3_0,
-            website="https://github.com/yourusername/rdp-session-manager",
-            issue_url="https://github.com/yourusername/rdp-session-manager/issues"
+            website="https://github.com/Pedroltz/rdp-session-manager",
+            issue_url="https://github.com/Pedroltz/rdp-session-manager/issues"
         )
 
         # Try to load custom logo image

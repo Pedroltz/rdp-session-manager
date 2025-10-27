@@ -5,16 +5,25 @@ Gerenciador de sessões RDP com interface GTK4 para GNOME
 """
 
 from setuptools import setup, find_packages
+from pathlib import Path
+import glob
+
+# Get all helper scripts
+helper_scripts = glob.glob('helpers/*.sh')
 
 setup(
     name='rdp-session-manager',
     version='0.2.2',
     description='Gerenciador de sessões RDP com interface GTK4',
-    author='Your Name',
+    author='Pedroltz',
     author_email='your.email@example.com',
-    url='https://github.com/yourusername/rdp-session-manager',
+    url='https://github.com/Pedroltz/rdp-session-manager',
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    data_files=[
+        # Install helper scripts to /usr/share/rdp-session-manager/helpers
+        ('share/rdp-session-manager/helpers', helper_scripts),
+    ],
     install_requires=[
         'PyGObject>=3.42.0',
         'pycairo>=1.20.0',
