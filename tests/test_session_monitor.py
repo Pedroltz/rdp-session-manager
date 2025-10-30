@@ -96,20 +96,28 @@ class TestSessionMonitor(unittest.TestCase):
         self.assertIsNotNone(self.monitor)
         self.assertIsInstance(self.monitor.sessions, dict)
 
+    @patch('subprocess.run')
     @patch('psutil.process_iter')
-    def test_get_active_sessions_no_processes(self, mock_process_iter):
+    def test_get_active_sessions_no_processes(self, mock_process_iter, mock_subprocess):
         """Test get_active_sessions with no xrdp processes"""
         # Simular processos sem xrdp
         mock_proc = Mock()
         mock_proc.info = {'pid': 1234, 'name': 'bash', 'username': 'user'}
         mock_process_iter.return_value = [mock_proc]
 
+        # Simular loginctl sem sessões
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ''
+        mock_subprocess.return_value = mock_result
+
         sessions = self.monitor.get_active_sessions()
 
         self.assertEqual(len(sessions), 0)
 
+    @patch('subprocess.run')
     @patch('psutil.process_iter')
-    def test_get_active_sessions_with_xrdp(self, mock_process_iter):
+    def test_get_active_sessions_with_xrdp(self, mock_process_iter, mock_subprocess):
         """Test get_active_sessions with xrdp processes"""
         # Criar mock de processo xrdp
         mock_proc = Mock()
@@ -123,6 +131,12 @@ class TestSessionMonitor(unittest.TestCase):
 
         mock_proc.connections.return_value = [mock_conn]
         mock_process_iter.return_value = [mock_proc]
+
+        # Simular loginctl sem sessões (para não duplicar)
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ''
+        mock_subprocess.return_value = mock_result
 
         sessions = self.monitor.get_active_sessions()
 

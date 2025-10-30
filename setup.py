@@ -13,7 +13,7 @@ helper_scripts = glob.glob('helpers/*.sh')
 
 setup(
     name='rdp-session-manager',
-    version='0.2.2',
+    version='0.3.0',
     description='Gerenciador de sessões RDP com interface GTK4',
     author='Pedroltz',
     author_email='your.email@example.com',

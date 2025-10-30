@@ -202,6 +202,38 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu_box.append(sudo_row)
 
+        # Settings row (configurações de usuário)
+        settings_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        settings_row.set_margin_top(6)
+        settings_row.set_margin_bottom(6)
+        settings_row.set_margin_start(12)
+        settings_row.set_margin_end(12)
+
+        settings_label = Gtk.Label(label="Configurações de Usuário")
+        settings_label.set_halign(Gtk.Align.START)
+        settings_label.set_hexpand(True)
+
+        settings_icon = Gtk.Image.new_from_icon_name("emblem-system-symbolic")
+
+        settings_row.append(settings_label)
+        settings_row.append(settings_icon)
+
+        # Tornar a row clicável usando GestureClick
+        settings_gesture = Gtk.GestureClick.new()
+        settings_gesture.connect("released", lambda g, n, x, y: self.on_user_settings(user, popover))
+        settings_row.add_controller(settings_gesture)
+
+        # Adicionar estilo hover
+        settings_row.set_cursor_from_name("pointer")
+
+        menu_box.append(settings_row)
+
+        # Separator
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator.set_margin_top(6)
+        separator.set_margin_bottom(6)
+        menu_box.append(separator)
+
         # Copy IP row (estilo igual ao de cima, sem Button)
         copy_ip_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         copy_ip_row.set_margin_top(6)
@@ -584,6 +616,178 @@ Deseja continuar?"""
             app = self.get_application()
             if app:
                 app.install_freerdp_with_progress()
+
+    def on_user_settings(self, user, popover):
+        """Open user settings dialog"""
+        # Fechar o popover
+        popover.popdown()
+
+        # Criar dialog de configurações
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading=f"Configurações de {user.username}",
+            body="Altere as informações do usuário:"
+        )
+
+        # Criar container para os campos
+        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        settings_box.set_margin_top(12)
+        settings_box.set_margin_bottom(12)
+        settings_box.set_margin_start(12)
+        settings_box.set_margin_end(12)
+
+        # Campo: Nome de usuário
+        username_label = Gtk.Label(label="Nome de usuário:")
+        username_label.set_halign(Gtk.Align.START)
+        settings_box.append(username_label)
+
+        username_entry = Gtk.Entry()
+        username_entry.set_text(user.username)
+        username_entry.set_hexpand(True)
+        settings_box.append(username_entry)
+
+        # Campo: Nome completo
+        fullname_label = Gtk.Label(label="Nome completo:")
+        fullname_label.set_halign(Gtk.Align.START)
+        fullname_label.set_margin_top(8)
+        settings_box.append(fullname_label)
+
+        # Obter nome completo atual
+        try:
+            import pwd
+            user_info = pwd.getpwnam(user.username)
+            current_fullname = user_info.pw_gecos.split(',')[0] if user_info.pw_gecos else ""
+        except:
+            current_fullname = ""
+
+        fullname_entry = Gtk.Entry()
+        fullname_entry.set_text(current_fullname)
+        fullname_entry.set_hexpand(True)
+        settings_box.append(fullname_entry)
+
+        # Campo: Nova senha
+        password_label = Gtk.Label(label="Nova senha (deixe em branco para não alterar):")
+        password_label.set_halign(Gtk.Align.START)
+        password_label.set_margin_top(8)
+        settings_box.append(password_label)
+
+        password_entry = Gtk.Entry()
+        password_entry.set_visibility(False)
+        password_entry.set_invisible_char('•')
+        password_entry.set_hexpand(True)
+        password_entry.set_placeholder_text("Digite a nova senha ou deixe vazio")
+        settings_box.append(password_entry)
+
+        # Confirmação de senha
+        confirm_label = Gtk.Label(label="Confirmar senha:")
+        confirm_label.set_halign(Gtk.Align.START)
+        confirm_label.set_margin_top(4)
+        settings_box.append(confirm_label)
+
+        confirm_entry = Gtk.Entry()
+        confirm_entry.set_visibility(False)
+        confirm_entry.set_invisible_char('•')
+        confirm_entry.set_hexpand(True)
+        settings_box.append(confirm_entry)
+
+        dialog.set_extra_child(settings_box)
+        dialog.add_response("cancel", "Cancelar")
+        dialog.add_response("save", "Salvar Alterações")
+        dialog.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("save")
+        dialog.set_close_response("cancel")
+
+        # Store references
+        dialog._user = user
+        dialog._username_entry = username_entry
+        dialog._fullname_entry = fullname_entry
+        dialog._password_entry = password_entry
+        dialog._confirm_entry = confirm_entry
+        dialog._original_username = user.username
+
+        dialog.connect("response", self.on_user_settings_response)
+        dialog.present()
+
+    def on_user_settings_response(self, dialog, response):
+        """Handle user settings dialog response"""
+        if response == "save":
+            new_username = dialog._username_entry.get_text().strip()
+            new_fullname = dialog._fullname_entry.get_text().strip()
+            new_password = dialog._password_entry.get_text()
+            confirm_password = dialog._confirm_entry.get_text()
+            original_username = dialog._original_username
+
+            # Validar dados
+            if not new_username:
+                self.show_toast("✗ Nome de usuário não pode estar vazio")
+                return
+
+            # Validar senha se fornecida
+            if new_password or confirm_password:
+                if new_password != confirm_password:
+                    self.show_toast("✗ As senhas não coincidem")
+                    return
+                if len(new_password) < 6:
+                    self.show_toast("✗ Senha deve ter pelo menos 6 caracteres")
+                    return
+
+            # Aplicar alterações em thread separada
+            def apply_changes():
+                try:
+                    changes_made = []
+
+                    # Obter nome completo original
+                    try:
+                        import pwd
+                        user_info = pwd.getpwnam(original_username)
+                        original_fullname = user_info.pw_gecos.split(',')[0] if user_info.pw_gecos else ""
+                    except:
+                        original_fullname = ""
+
+                    # 1. Alterar nome completo (se mudou)
+                    if new_fullname and new_fullname != original_fullname:
+                        success = self.user_manager.change_user_fullname(original_username, new_fullname)
+                        if success:
+                            changes_made.append("nome completo")
+                        else:
+                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar nome completo")
+                            return
+
+                    # 2. Alterar senha (se fornecida)
+                    if new_password:
+                        success = self.user_manager.change_password(original_username, new_password)
+                        if success:
+                            changes_made.append("senha")
+                        else:
+                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar senha")
+                            return
+
+                    # 3. Renomear usuário (último, pois muda o username)
+                    if new_username != original_username:
+                        success = self.user_manager.rename_user(original_username, new_username)
+                        if success:
+                            changes_made.append("nome de usuário")
+                        else:
+                            GLib.idle_add(self.show_toast, f"✗ Erro ao renomear usuário")
+                            return
+
+                    # Mostrar sucesso
+                    if changes_made:
+                        changes_text = ", ".join(changes_made)
+                        GLib.idle_add(self.show_toast, f"✓ Alterado: {changes_text}")
+                        GLib.timeout_add(300, self.load_users)
+                    else:
+                        GLib.idle_add(self.show_toast, "ℹ Nenhuma alteração foi feita")
+
+                except Exception as e:
+                    logger.error(f"Error updating user settings: {e}")
+                    GLib.idle_add(self.show_toast, f"✗ Erro ao atualizar configurações")
+
+            # Executar em thread
+            import threading
+            thread = threading.Thread(target=apply_changes)
+            thread.daemon = True
+            thread.start()
 
     def on_copy_user_ip(self, user, popover):
         """Copy user connection string to clipboard"""

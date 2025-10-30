@@ -993,17 +993,140 @@ class UserManager:
         return bool(re.match(pattern, username))
 
     def change_password(self, username: str, new_password: str) -> bool:
-        """Altera senha de um usuário"""
+        """
+        Altera senha de um usuário RDP
+
+        Args:
+            username: Nome do usuário
+            new_password: Nova senha
+
+        Returns:
+            True se sucesso, False se falha
+        """
         try:
             if not self.user_exists(username):
                 logger.error(f"Usuário não existe: {username}")
                 return False
 
-            # Alterar via PolicyKit helper
             logger.info(f"Alterando senha do usuário: {username}")
 
+            # Usar script helper para alterar senha
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            password_script = script_dir / "set-user-password.sh"
+
+            # Usar echo e pipe para passar a senha
+            echo_proc = subprocess.Popen(
+                ['echo', f'{username}:{new_password}'],
+                stdout=subprocess.PIPE
+            )
+
+            passwd_proc = subprocess.Popen(
+                ['pkexec', str(password_script)],
+                stdin=echo_proc.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+            echo_proc.stdout.close()
+            stdout, stderr = passwd_proc.communicate(timeout=30)
+
+            if passwd_proc.returncode != 0:
+                error_msg = stderr.decode().strip()
+                logger.error(f"Falha ao alterar senha: {error_msg}")
+                return False
+
+            logger.info(f"✓ Senha de {username} alterada com sucesso")
             return True
 
         except Exception as e:
             logger.error(f"Erro ao alterar senha de {username}: {e}")
+            return False
+
+    def rename_user(self, old_username: str, new_username: str) -> bool:
+        """
+        Renomeia um usuário RDP
+
+        Args:
+            old_username: Nome atual do usuário
+            new_username: Novo nome do usuário
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(old_username):
+                logger.error(f"Usuário não existe: {old_username}")
+                return False
+
+            if self.user_exists(new_username):
+                logger.error(f"Usuário já existe: {new_username}")
+                return False
+
+            # Validar novo nome
+            if not self._validate_username(new_username):
+                logger.error(f"Nome de usuário inválido: {new_username}")
+                return False
+
+            logger.info(f"Renomeando usuário: {old_username} -> {new_username}")
+
+            # Usar script helper para renomear usuário
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            rename_script = script_dir / "rename-user.sh"
+
+            cmd = ['pkexec', str(rename_script), old_username, new_username]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao renomear usuário: {result.stderr}")
+                return False
+
+            logger.info(f"✓ Usuário renomeado: {old_username} -> {new_username}")
+
+            # Atualizar cache de estados
+            if old_username in UserManager._user_states_cache:
+                UserManager._user_states_cache[new_username] = UserManager._user_states_cache.pop(old_username)
+                self._save_states_cache()
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao renomear usuário {old_username}: {e}")
+            return False
+
+    def change_user_fullname(self, username: str, new_fullname: str) -> bool:
+        """
+        Altera o nome completo (GECOS) de um usuário RDP
+
+        Args:
+            username: Nome do usuário
+            new_fullname: Novo nome completo
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(username):
+                logger.error(f"Usuário não existe: {username}")
+                return False
+
+            logger.info(f"Alterando nome completo de {username} para: {new_fullname}")
+
+            # Usar script helper para alterar GECOS
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            chfn_script = script_dir / "change-user-fullname.sh"
+
+            cmd = ['pkexec', str(chfn_script), username, new_fullname]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao alterar nome completo: {result.stderr}")
+                return False
+
+            logger.info(f"✓ Nome completo de {username} alterado com sucesso")
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao alterar nome completo de {username}: {e}")
             return False

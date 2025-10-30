@@ -7,6 +7,238 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2025-10-29
+
+### Summary
+
+This release introduces comprehensive user configuration capabilities, allowing administrators to modify user account settings directly from the interface with superuser privileges. Users can now change usernames, full names, and passwords through an intuitive settings dialog accessible from the user management menu.
+
+### Added
+
+- **User Configuration Dialog**
+  - New "Configurações de Usuário" option in user context menu (popover)
+  - Comprehensive settings dialog for editing user information
+  - Accessible via the "..." menu button next to each user
+  - Requires superuser authentication (pkexec) for all operations
+  - Real-time validation of user input
+
+- **Username Modification**
+  - Ability to rename existing RDP users
+  - Automatic validation of new username format
+  - Checks for username conflicts before applying changes
+  - Automatic home directory renaming (`/opt/rdp-users/oldname` → `/opt/rdp-users/newname`)
+  - Preservation of all user files and configurations during rename
+  - Automatic session termination if user is active during rename
+  - State cache updates to maintain enabled/disabled status
+  - Helper script: `helpers/rename-user.sh`
+
+- **Full Name (GECOS) Modification**
+  - Change user's full name/display name
+  - Updates system GECOS field via `usermod -c`
+  - No session termination required
+  - Helper script: `helpers/change-user-fullname.sh`
+
+- **Password Change Functionality**
+  - Set new password for any RDP user
+  - Password confirmation field to prevent typos
+  - Minimum password length validation (6 characters)
+  - Password mismatch detection
+  - Uses existing `helpers/set-user-password.sh` script
+  - Secure password handling via stdin pipe
+
+- **Enhanced User Interface**
+  - Settings icon (emblem-system-symbolic) in user menu
+  - Visual separator between management and utility options
+  - Hover effects on clickable menu items
+  - Toast notifications for all operations
+  - Detailed error messages for failed operations
+
+### Backend Implementation
+
+**New Methods in UserManager (`src/core/user_manager.py`)**:
+
+1. **`change_password(username, new_password)`**
+   - Altered from stub to full implementation
+   - Uses `helpers/set-user-password.sh` via pkexec
+   - Secure password passing through stdin pipe
+   - Returns `True` on success, `False` on failure
+
+2. **`rename_user(old_username, new_username)`**
+   - Validates both old and new usernames
+   - Checks for username conflicts
+   - Terminates active user sessions before rename
+   - Renames user account and moves home directory atomically
+   - Updates group name if user has a personal primary group
+   - Updates state cache with new username
+   - Uses `helpers/rename-user.sh` via pkexec
+
+3. **`change_user_fullname(username, new_fullname)`**
+   - Updates GECOS field (full name)
+   - Uses `usermod -c` command
+   - No session termination required
+   - Uses `helpers/change-user-fullname.sh` via pkexec
+
+**New Helper Scripts**:
+
+1. **`helpers/rename-user.sh`**
+   - Validates old and new usernames
+   - Terminates user processes gracefully (SIGTERM → SIGKILL)
+   - Executes `usermod -l NEW_USER -d NEW_HOME -m OLD_USER`
+   - Renames primary group if it matches username
+   - Comprehensive error handling
+
+2. **`helpers/change-user-fullname.sh`**
+   - Validates username exists
+   - Executes `usermod -c "Full Name" username`
+   - Simple and efficient single-purpose script
+
+### UI Implementation
+
+**Changes in `src/ui/main_window.py`**:
+
+1. **New UI Elements** (lines 205-229):
+   - Settings row in popover menu
+   - Icon: `emblem-system-symbolic`
+   - Label: "Configurações de Usuário"
+   - GestureClick handler for interaction
+   - Visual separator after settings option
+
+2. **New Methods**:
+   - `on_user_settings(user, popover)` - Opens settings dialog
+   - `on_user_settings_response(dialog, response)` - Handles save/cancel
+
+3. **Settings Dialog Fields**:
+   - Username entry (with validation)
+   - Full name entry
+   - New password entry (optional, hidden)
+   - Confirm password entry (hidden)
+   - Cancel/Save buttons
+
+4. **Validation Logic**:
+   - Non-empty username check
+   - Password match verification
+   - Minimum password length (6 chars)
+   - Username format validation
+
+5. **Threaded Operations**:
+   - All user modifications run in background thread
+   - UI remains responsive during operations
+   - GLib.idle_add for safe UI updates from threads
+   - Automatic user list reload after successful changes
+
+### Changed
+
+- **User Context Menu Order**:
+  - Old: Superusuário → Copiar IP + Porta
+  - New: Superusuário → Configurações de Usuário → [Separator] → Copiar IP + Porta
+  - Improved logical grouping of management vs. utility functions
+
+- **Helper Script Organization**:
+  - Added two new scripts to `helpers/` directory
+  - Both scripts marked as executable (`chmod +x`)
+  - Consistent error handling across all helper scripts
+
+### Security
+
+- **Authentication Requirements**:
+  - All user modification operations require pkexec authentication
+  - Password changes protected by root privileges
+  - Username renames require administrative access
+  - Full name changes require authentication
+
+- **Input Validation**:
+  - Username format validation (letters, numbers, dash, underscore)
+  - Username length limits (3-32 characters)
+  - Password minimum length enforcement
+  - Duplicate username prevention
+
+- **Safe Operations**:
+  - Atomic rename operations (usermod with -m flag)
+  - Graceful session termination before rename
+  - State cache synchronization
+  - Error recovery and rollback handling
+
+### Modified Files
+
+#### Core Modules
+- `src/core/user_manager.py`:
+  - Implemented `change_password()` method (lines 995-1043)
+  - Added `rename_user()` method (lines 1045-1095)
+  - Added `change_user_fullname()` method (lines 1097-1132)
+
+#### UI Modules
+- `src/ui/main_window.py`:
+  - Added settings menu item (lines 205-229)
+  - Added separator in popover menu (lines 231-235)
+  - Added `on_user_settings()` method (lines 620-709)
+  - Added `on_user_settings_response()` method (lines 711-784)
+
+#### Helper Scripts
+- `helpers/rename-user.sh` (NEW):
+  - Bash script for renaming users with pkexec
+  - Handles process termination and home directory move
+  - Renames primary group if applicable
+
+- `helpers/change-user-fullname.sh` (NEW):
+  - Bash script for changing GECOS field
+  - Simple usermod wrapper with validation
+
+### Testing
+
+Manual testing performed on all new features:
+
+- Change username: **PENDING**
+- Change full name: **PENDING**
+- Change password: **PENDING**
+- Change multiple fields at once: **PENDING**
+- Password validation (mismatch, too short): **PENDING**
+- Username validation (invalid format, duplicate): **PENDING**
+- Settings dialog UI responsiveness: **PENDING**
+- Toast notifications for all operations: **PENDING**
+
+### Example Usage
+
+**GUI - User Settings:**
+1. Click "..." menu button next to user in list
+2. Click "Configurações de Usuário"
+3. Modify desired fields:
+   - Username: Change from `testuser` to `newuser`
+   - Full Name: Add or change display name
+   - Password: Enter new password (leave blank to keep current)
+4. Click "Salvar Alterações"
+5. Authenticate when prompted (pkexec)
+6. See toast notification: "✓ Alterado: nome de usuário, senha"
+
+**Validation Examples:**
+```
+❌ Username empty: "✗ Nome de usuário não pode estar vazio"
+❌ Password mismatch: "✗ As senhas não coincidem"
+❌ Password too short: "✗ Senha deve ter pelo menos 6 caracteres"
+❌ Username invalid: Username validation fails in UserManager
+❌ Username exists: Rename operation fails with error
+```
+
+### Known Limitations
+
+- Username rename requires user to reconnect (session termination)
+- Password changes do not terminate active sessions (by design)
+- Full name changes are cosmetic only (no functional impact)
+- No password strength indicator in dialog
+- Cannot change desktop environment after user creation
+- Cannot change RDP port (global setting)
+
+### Future Enhancements
+
+Planned for future versions:
+- Password strength meter
+- Desktop environment change capability
+- User-specific RDP port configuration
+- Bulk user operations
+- Import/export user configurations
+- Password expiration policies
+
+---
+
 ## [0.2.2] - 2025-10-26
 
 ### Summary

@@ -40,16 +40,31 @@ class TestAuditLogger(unittest.TestCase):
         self.assertEqual(self.audit_logger.log_dir, self.test_dir)
 
     @patch('pathlib.Path.home')
-    def test_audit_logger_fallback_to_home(self, mock_home):
+    @patch('pathlib.Path.mkdir')
+    def test_audit_logger_fallback_to_home(self, mock_mkdir, mock_home):
         """Test AuditLogger fallback to home directory on permission error"""
         mock_home.return_value = self.test_dir
 
         # Criar um diretório que vai dar PermissionError
         restricted_dir = Path("/var/log/restricted_test_dir")
 
+        # Simular PermissionError no primeiro mkdir (diretório restrito)
+        # Mas permitir o segundo mkdir (diretório home)
+        call_count = [0]
+
+        def mkdir_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Primeira chamada: falhar com PermissionError
+                raise PermissionError("Permission denied")
+            # Segunda chamada: criar diretório real no test_dir
+            original_mkdir = Path.mkdir.__wrapped__ if hasattr(Path.mkdir, '__wrapped__') else Path.mkdir
+            # Não fazer nada, apenas retornar (simular sucesso)
+            return None
+
+        mock_mkdir.side_effect = mkdir_side_effect
+
         # Tentar criar logger em diretório restrito (vai falhar e usar fallback)
-        # Não vamos mockar mkdir, vamos apenas deixar que o código real falhe naturalmente
-        # e faça fallback para o home directory
         logger = AuditLogger(str(restricted_dir))
 
         # Deve ter feito fallback para diretório home
