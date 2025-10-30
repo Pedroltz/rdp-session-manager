@@ -14,6 +14,12 @@ Command-line interface for RDP Session Manager. All operations available in the 
 - [Dependencies](#dependencies)
 - [Output Formats](#output-formats)
 - [GUI to CLI Equivalents](#gui-to-cli-equivalents)
+- [Exit Codes](#exit-codes)
+- [RemoteApp Mode](#remoteapp-mode)
+- [Scripting Examples](#scripting-examples)
+- [Troubleshooting](#troubleshooting)
+- [Advanced Usage](#advanced-usage)
+- [Testing the CLI](#testing-the-cli)
 
 ## Installation
 
@@ -47,7 +53,9 @@ rdpsm <command> <subcommand> [options]
 
 ### Create User
 
-Create a new RDP user with automatic configuration.
+Create a new RDP user with automatic configuration. Supports both full desktop sessions and RemoteApp (single application) mode.
+
+#### Desktop Session (Full DE)
 
 ```bash
 # Interactive (prompts for password)
@@ -63,14 +71,31 @@ rdpsm user create USERNAME -p "password123" -d gnome -f "John Doe"
 rdpsm -v user create USERNAME
 ```
 
+#### RemoteApp Session (Single Application)
+
+```bash
+# Create RemoteApp user with Firefox
+rdpsm user create USERNAME -s remoteapp --app-command firefox
+
+# RemoteApp with application arguments
+rdpsm user create USERNAME -s remoteapp --app-command firefox --app-args "--private-window"
+
+# RemoteApp with full options
+rdpsm user create USERNAME -f "Full Name" -p "password123" \
+  -s remoteapp --app-command thunderbird --app-args "--safe-mode"
+```
+
 **Options:**
 - `-f, --fullname` - User's full name
-- `-d, --desktop` - Desktop environment (default: xfce)
+- `-d, --desktop` - Desktop environment (default: xfce, used for desktop sessions)
 - `-p, --password` - Password (prompts if not provided)
+- `-s, --session-type` - Session type: `desktop` or `remoteapp` (default: desktop)
+- `--app-command` - Application command for RemoteApp (e.g., firefox, thunderbird, libreoffice)
+- `--app-args` - Application arguments for RemoteApp (e.g., --private-window)
 
 **Desktop environments:** lxde, lxqt, xfce, mate, cinnamon, gnome, kde
 
-**Example:**
+**Example 1: Desktop Session**
 ```bash
 # Create user 'john' with XFCE desktop
 rdpsm user create john -f "John Smith" -d xfce
@@ -81,9 +106,41 @@ rdpsm user create john -f "John Smith" -d xfce
 # → UID: 5000
 # → Home: /opt/rdp-users/john
 # → RDP Port: 3389
+# → Session Type: Desktop (XFCE)
 ```
 
-**GUI Equivalent:** Click "+" button → Fill form → Click "Create"
+**Example 2: RemoteApp Session**
+```bash
+# Create RemoteApp user for Firefox
+rdpsm user create webuser -f "Web User" -s remoteapp --app-command firefox
+
+# Output:
+# → Creating RemoteApp user 'webuser' with application: firefox
+# ✓ User 'webuser' created successfully
+# → UID: 5001
+# → Home: /opt/rdp-users/webuser
+# → RDP Port: 3390
+# → Session Type: RemoteApp
+# → Application: firefox
+```
+
+**Example 3: RemoteApp with Arguments**
+```bash
+# Create RemoteApp user for LibreOffice Writer
+rdpsm user create docuser -f "Document User" -p "password123" \
+  -s remoteapp --app-command libreoffice --app-args "--writer"
+
+# Output:
+# → Creating RemoteApp user 'docuser' with application: libreoffice --writer
+# ✓ User 'docuser' created successfully
+# → UID: 5002
+# → Home: /opt/rdp-users/docuser
+# → RDP Port: 3391
+# → Session Type: RemoteApp
+# → Application: libreoffice --writer
+```
+
+**GUI Equivalent:** Click "+" button → Fill form → Select session type → Click "Create"
 
 ---
 
@@ -768,13 +825,83 @@ fi
 
 ---
 
+## RemoteApp Mode
+
+RDP Session Manager supports RemoteApp mode, which allows users to run a single application instead of a full desktop environment. This is useful for:
+- Providing access to specific applications only
+- Reducing resource usage (no full DE required)
+- Simplified user experience
+- Application isolation
+
+### Creating RemoteApp Users
+
+```bash
+# Basic RemoteApp user
+rdpsm user create appuser -s remoteapp --app-command firefox
+
+# With full options
+rdpsm user create appuser -f "Application User" -p "SecurePass123" \
+  -s remoteapp --app-command firefox --app-args "--private-window"
+```
+
+### Supported Applications
+
+RemoteApp works with any GUI application installed on the server:
+
+**Web Browsers:**
+```bash
+rdpsm user create webuser -s remoteapp --app-command firefox
+rdpsm user create chromeuser -s remoteapp --app-command chromium
+```
+
+**Office Applications:**
+```bash
+rdpsm user create writeruser -s remoteapp --app-command libreoffice --app-args "--writer"
+rdpsm user create calcuser -s remoteapp --app-command libreoffice --app-args "--calc"
+```
+
+**Email Clients:**
+```bash
+rdpsm user create mailuser -s remoteapp --app-command thunderbird
+```
+
+**Other Applications:**
+```bash
+rdpsm user create termuser -s remoteapp --app-command gnome-terminal
+rdpsm user create edituser -s remoteapp --app-command gedit
+```
+
+### RemoteApp Features
+
+- **Fullscreen Mode**: Applications automatically open in fullscreen/maximized mode
+- **Dynamic Resolution**: Applications adapt to client screen size
+- **OpenBox Window Manager**: Lightweight WM provides better fullscreen experience
+- **Custom Commands**: Any installed application can be used
+
+### Connecting to RemoteApp
+
+Connect the same way as desktop sessions:
+
+```bash
+# From Linux
+xfreerdp /v:SERVER_IP:PORT /u:USERNAME /cert:ignore
+
+# From Windows
+# Use Remote Desktop Connection with SERVER_IP:PORT
+```
+
+The application will launch automatically in fullscreen when connected.
+
+---
+
 ## Scripting Examples
 
 ### Batch User Creation
 
+**Desktop Users:**
 ```bash
 #!/bin/bash
-# Create multiple users from a file
+# Create multiple desktop users from a file
 
 while IFS=',' read -r username fullname; do
     rdpsm user create "$username" -f "$fullname" -p "ChangeMe123"
@@ -784,6 +911,33 @@ while IFS=',' read -r username fullname; do
         echo "Failed: $username"
     fi
 done < users.csv
+```
+
+**RemoteApp Users:**
+```bash
+#!/bin/bash
+# Create multiple RemoteApp users with different applications
+
+# Array of users: username,fullname,app_command,app_args
+declare -a users=(
+    "webuser1,Web User 1,firefox,"
+    "webuser2,Web User 2,firefox,--private-window"
+    "officeuser,Office User,libreoffice,--writer"
+    "mailuser,Mail User,thunderbird,"
+)
+
+for user_data in "${users[@]}"; do
+    IFS=',' read -r username fullname app_cmd app_args <<< "$user_data"
+
+    echo "Creating RemoteApp user: $username ($app_cmd)"
+    if [ -z "$app_args" ]; then
+        rdpsm user create "$username" -f "$fullname" -p "ChangeMe123" \
+            -s remoteapp --app-command "$app_cmd"
+    else
+        rdpsm user create "$username" -f "$fullname" -p "ChangeMe123" \
+            -s remoteapp --app-command "$app_cmd" --app-args "$app_args"
+    fi
+done
 ```
 
 ### Monitor Sessions

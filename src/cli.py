@@ -73,7 +73,26 @@ class CLI:
 
             username = args.username
             full_name = args.fullname or ""
+            session_type = args.session_type or "desktop"
+
+            # RemoteApp parameters
+            app_command = args.app_command or ""
+            app_args = args.app_args or ""
+
+            # Desktop environment (only for desktop sessions)
             desktop_env = args.desktop or "xfce"
+
+            # Validate session type
+            if session_type not in ['desktop', 'remoteapp']:
+                self.print_error(f"Invalid session type '{session_type}'. Must be 'desktop' or 'remoteapp'")
+                return 1
+
+            # Validate RemoteApp parameters
+            if session_type == 'remoteapp':
+                if not app_command:
+                    self.print_error("RemoteApp session requires --app-command parameter")
+                    self.print_info("Example: rdpsm user create USERNAME --session-type remoteapp --app-command firefox")
+                    return 1
 
             # Get password
             if args.password:
@@ -87,44 +106,52 @@ class CLI:
                 self.print_error("Passwords do not match")
                 return 1
 
-            # Check if Desktop Environment is installed
-            de_installed = self.de_installer.is_de_installed(desktop_env)
+            # For desktop sessions, check if Desktop Environment is installed
+            if session_type == 'desktop':
+                de_installed = self.de_installer.is_de_installed(desktop_env)
 
-            if not de_installed:
-                self.print_warning(f"Desktop environment '{desktop_env}' is not installed")
-                self.print_info("Installing Desktop Environment first...")
+                if not de_installed:
+                    self.print_warning(f"Desktop environment '{desktop_env}' is not installed")
+                    self.print_info("Installing Desktop Environment first...")
 
-                # Check disk space
-                has_space, required, available = self.de_installer.check_disk_space(desktop_env)
-                if not has_space:
-                    self.print_error(f"Insufficient disk space. Required: {required}MB, Available: {available}MB")
-                    return 1
+                    # Check disk space
+                    has_space, required, available = self.de_installer.check_disk_space(desktop_env)
+                    if not has_space:
+                        self.print_error(f"Insufficient disk space. Required: {required}MB, Available: {available}MB")
+                        return 1
 
-                # Install DE
-                def progress_callback(progress, message):
-                    if args.verbose:
-                        print(f"  {message}")
+                    # Install DE
+                    def progress_callback(progress, message):
+                        if args.verbose:
+                            print(f"  {message}")
 
-                self.print_info(f"Installing {desktop_env.upper()} desktop environment...")
-                success, message = self.de_installer.install_de(
-                    desktop_env,
-                    progress_callback=progress_callback
-                )
+                    self.print_info(f"Installing {desktop_env.upper()} desktop environment...")
+                    success, message = self.de_installer.install_de(
+                        desktop_env,
+                        progress_callback=progress_callback
+                    )
 
-                if not success:
-                    self.print_error(f"Failed to install desktop environment: {message}")
-                    return 1
+                    if not success:
+                        self.print_error(f"Failed to install desktop environment: {message}")
+                        return 1
 
-                self.print_success(f"Desktop environment '{desktop_env}' installed successfully")
-                print()  # Blank line for readability
+                    self.print_success(f"Desktop environment '{desktop_env}' installed successfully")
+                    print()  # Blank line for readability
 
-            self.print_info(f"Creating user '{username}' with {desktop_env.upper()} desktop...")
+                self.print_info(f"Creating user '{username}' with {desktop_env.upper()} desktop...")
+            else:
+                # RemoteApp session
+                app_display = f"{app_command} {app_args}".strip()
+                self.print_info(f"Creating RemoteApp user '{username}' with application: {app_display}")
 
             user = self.user_manager.create_user(
                 username=username,
                 password=password,
                 desktop_env=desktop_env,
                 full_name=full_name,
+                session_type=session_type,
+                app_command=app_command,
+                app_args=app_args,
                 log_callback=lambda msg: print(f"  {msg}") if args.verbose else None
             )
 
@@ -133,6 +160,11 @@ class CLI:
                 self.print_info(f"UID: {user.uid}")
                 self.print_info(f"Home: {user.home_dir}")
                 self.print_info(f"RDP Port: {user.rdp_port}")
+                if session_type == 'remoteapp':
+                    self.print_info(f"Session Type: RemoteApp")
+                    self.print_info(f"Application: {app_command} {app_args}".strip())
+                else:
+                    self.print_info(f"Session Type: Desktop ({desktop_env.upper()})")
                 return 0
             else:
                 self.print_error("Failed to create user")
@@ -818,7 +850,7 @@ class CLI:
 
         parser.add_argument('-v', '--verbose', action='store_true',
                           help='Verbose output')
-        parser.add_argument('--version', action='version', version='RDPSM 0.2.2')
+        parser.add_argument('--version', action='version', version='RDPSM 0.3.0')
 
         subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
@@ -831,8 +863,12 @@ class CLI:
         user_create.add_argument('username', help='Username')
         user_create.add_argument('-f', '--fullname', help='Full name')
         user_create.add_argument('-d', '--desktop', default='xfce',
-                                help='Desktop environment (default: xfce)')
+                                help='Desktop environment (default: xfce, used for desktop sessions)')
         user_create.add_argument('-p', '--password', help='Password (will prompt if not provided)')
+        user_create.add_argument('-s', '--session-type', choices=['desktop', 'remoteapp'], default='desktop',
+                                help='Session type: desktop (full DE) or remoteapp (single application)')
+        user_create.add_argument('--app-command', help='Application command for RemoteApp (e.g., firefox, thunderbird)')
+        user_create.add_argument('--app-args', default='', help='Application arguments for RemoteApp (e.g., --private-window)')
         user_create.set_defaults(func=self.user_create)
 
         # user delete
