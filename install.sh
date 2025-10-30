@@ -5,7 +5,7 @@
 
 set -e
 
-DEB_FILE="release/rdp-session-manager_0.2.2_all.deb"
+DEB_FILE="release/rdp-session-manager_0.3.0_all.deb"
 
 echo "========================================="
 echo "  Installing RDP Session Manager"

@@ -10,6 +10,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 from .user_dialog import UserDialog
@@ -138,7 +139,13 @@ class MainWindow(Adw.ApplicationWindow):
         # Create row
         row = Adw.ActionRow()
         row.set_title(user.username)
-        row.set_subtitle(f"{user.desktop_env.upper()} • Porta {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
+
+        # Subtitle diferente para RemoteApp vs Desktop
+        if hasattr(user, 'session_type') and user.session_type == 'remoteapp':
+            app_name = user.app_command.split('/')[-1] if user.app_command else 'unknown'
+            row.set_subtitle(f"RemoteApp: {app_name} • Porta {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
+        else:
+            row.set_subtitle(f"{user.desktop_env.upper()} • Porta {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
 
         # Status label and switch
         status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -665,6 +672,66 @@ Deseja continuar?"""
         fullname_entry.set_hexpand(True)
         settings_box.append(fullname_entry)
 
+        # Separator
+        separator1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator1.set_margin_top(12)
+        separator1.set_margin_bottom(8)
+        settings_box.append(separator1)
+
+        # Campo: Tipo de Sessão
+        session_type_label = Gtk.Label(label="Tipo de Sessão:")
+        session_type_label.set_halign(Gtk.Align.START)
+        settings_box.append(session_type_label)
+
+        session_type_combo = Gtk.ComboBoxText()
+        session_type_combo.append("desktop", "Desktop Completo")
+        session_type_combo.append("remoteapp", "RemoteApp (Aplicativo Único)")
+
+        # Set current value
+        current_session_type = getattr(user, 'session_type', 'desktop')
+        session_type_combo.set_active_id(current_session_type)
+        settings_box.append(session_type_combo)
+
+        # Campo: Comando do Aplicativo (para RemoteApp)
+        app_label = Gtk.Label(label="Comando do Aplicativo:")
+        app_label.set_halign(Gtk.Align.START)
+        app_label.set_margin_top(8)
+        settings_box.append(app_label)
+
+        # Campo de entrada para comando personalizado
+        custom_app_entry = Gtk.Entry()
+        custom_app_entry.set_hexpand(True)
+        custom_app_entry.set_placeholder_text("Ex: firefox, thunderbird, libreoffice...")
+        if current_session_type == 'remoteapp' and hasattr(user, 'app_command'):
+            custom_app_entry.set_text(user.app_command)
+        settings_box.append(custom_app_entry)
+
+        # Campo: Argumentos
+        app_args_entry = Gtk.Entry()
+        app_args_entry.set_hexpand(True)
+        app_args_entry.set_placeholder_text("Argumentos (opcional)...")
+        if current_session_type == 'remoteapp' and hasattr(user, 'app_args'):
+            app_args_entry.set_text(user.app_args)
+        settings_box.append(app_args_entry)
+
+        # Função para toggle visibility based on session type
+        def on_session_type_changed(combo):
+            is_remoteapp = combo.get_active_id() == 'remoteapp'
+            app_label.set_visible(is_remoteapp)
+            custom_app_entry.set_visible(is_remoteapp)
+            app_args_entry.set_visible(is_remoteapp)
+
+        session_type_combo.connect('changed', on_session_type_changed)
+
+        # Initialize visibility
+        on_session_type_changed(session_type_combo)
+
+        # Separator
+        separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator2.set_margin_top(12)
+        separator2.set_margin_bottom(8)
+        settings_box.append(separator2)
+
         # Campo: Nova senha
         password_label = Gtk.Label(label="Nova senha (deixe em branco para não alterar):")
         password_label.set_halign(Gtk.Align.START)
@@ -701,6 +768,9 @@ Deseja continuar?"""
         dialog._user = user
         dialog._username_entry = username_entry
         dialog._fullname_entry = fullname_entry
+        dialog._session_type_combo = session_type_combo
+        dialog._custom_app_entry = custom_app_entry
+        dialog._app_args_entry = app_args_entry
         dialog._password_entry = password_entry
         dialog._confirm_entry = confirm_entry
         dialog._original_username = user.username
@@ -713,9 +783,24 @@ Deseja continuar?"""
         if response == "save":
             new_username = dialog._username_entry.get_text().strip()
             new_fullname = dialog._fullname_entry.get_text().strip()
+            new_session_type = dialog._session_type_combo.get_active_id()
             new_password = dialog._password_entry.get_text()
             confirm_password = dialog._confirm_entry.get_text()
             original_username = dialog._original_username
+            original_session_type = getattr(dialog._user, 'session_type', 'desktop')
+
+            # Get RemoteApp data
+            new_app_command = ''
+            new_app_args = ''
+            if new_session_type == 'remoteapp':
+                # Pegar comando direto do campo de entrada
+                new_app_command = dialog._custom_app_entry.get_text().strip()
+                new_app_args = dialog._app_args_entry.get_text().strip()
+
+                # Validar que app command não está vazio
+                if not new_app_command:
+                    self.show_toast("✗ Comando do aplicativo não pode estar vazio para RemoteApp")
+                    return
 
             # Validar dados
             if not new_username:
@@ -762,7 +847,55 @@ Deseja continuar?"""
                             GLib.idle_add(self.show_toast, "✗ Erro ao alterar senha")
                             return
 
-                    # 3. Renomear usuário (último, pois muda o username)
+                    # 3. Alterar tipo de sessão (se mudou)
+                    if new_session_type != original_session_type:
+                        # Determinar comando correto
+                        if new_session_type == 'remoteapp':
+                            session_command = new_app_command
+                            session_args = new_app_args
+                        else:
+                            # Para desktop, usar o DE atual do usuário
+                            user_obj = self.user_manager.get_user(original_username)
+                            if user_obj and user_obj.desktop_env != 'remoteapp':
+                                # Mapear DE para comando
+                                de_commands = {
+                                    'xfce': 'startxfce4',
+                                    'gnome': 'gnome-session',
+                                    'kde': 'startplasma-x11',
+                                    'mate': 'mate-session',
+                                    'cinnamon': 'cinnamon-session',
+                                    'lxde': 'startlxde',
+                                    'lxqt': 'startlxqt'
+                                }
+                                session_command = de_commands.get(user_obj.desktop_env, 'startxfce4')
+                            else:
+                                session_command = 'startxfce4'  # Default
+                            session_args = ''
+
+                        success = self.user_manager.change_user_session_type(
+                            original_username, new_session_type, session_command, session_args
+                        )
+                        if success:
+                            changes_made.append("tipo de sessão")
+                        else:
+                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar tipo de sessão")
+                            return
+                    elif new_session_type == 'remoteapp':
+                        # Mesmo tipo, mas pode ter mudado app/args
+                        original_app = getattr(dialog._user, 'app_command', '')
+                        original_args = getattr(dialog._user, 'app_args', '')
+
+                        if new_app_command != original_app or new_app_args != original_args:
+                            success = self.user_manager.change_user_session_type(
+                                original_username, 'remoteapp', new_app_command, new_app_args
+                            )
+                            if success:
+                                changes_made.append("aplicativo RemoteApp")
+                            else:
+                                GLib.idle_add(self.show_toast, "✗ Erro ao alterar aplicativo")
+                                return
+
+                    # 4. Renomear usuário (último, pois muda o username)
                     if new_username != original_username:
                         success = self.user_manager.rename_user(original_username, new_username)
                         if success:
@@ -889,39 +1022,60 @@ Deseja continuar?"""
 
             ip = self.session_monitor.get_ip_address()
 
-            # Construir comando
+            # Verificar se é RemoteApp para ajustar parâmetros
+            is_remoteapp = hasattr(user, 'session_type') and user.session_type == 'remoteapp'
+
+            # Construir comando base
             cmd = [
                 freerdp_cmd,
                 f'/v:{ip}:{user.rdp_port}',
                 f'/u:{user.username}',
                 '/cert:ignore',
-                '/dynamic-resolution',
                 '+clipboard',
                 '/audio-mode:0',  # Redirect audio
                 '/bpp:32',  # Color depth
             ]
+
+            # Para RemoteApp e Desktop, sempre usar dynamic-resolution
+            cmd.append('/dynamic-resolution')
+
+            if is_remoteapp:
+                app_full_cmd = f"{user.app_command} {user.app_args}".strip()
+                logger.info(f"Launching RemoteApp: {app_full_cmd}")
 
             # Adicionar domínio se fornecido
             if domain:
                 cmd.append(f'/d:{domain}')
 
             if password:
-                # Passar senha via parâmetro /p: (mais simples e funciona melhor)
                 cmd.append(f'/p:{password}')
 
-                # Abrir processo normalmente
-                subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-            else:
-                # Sem senha, abrir normalmente (vai pedir no GUI do FreeRDP)
-                subprocess.Popen(cmd)
+            # Log do comando completo (ocultando senha)
+            cmd_display = [arg if not arg.startswith('/p:') else '/p:***' for arg in cmd]
+            logger.info(f"FreeRDP command: {' '.join(cmd_display)}")
 
-            domain_info = f" (domínio: {domain})" if domain else ""
-            self.show_toast(f"Abrindo {freerdp_cmd}{domain_info}...")
-            logger.info(f"Launched {freerdp_cmd} for user {user.username}{domain_info}")
+            # Abrir processo com captura de erro
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            # Verificar se processo iniciou corretamente
+            time.sleep(0.5)
+            if process.poll() is not None:
+                # Processo terminou imediatamente - houve erro
+                _, stderr = process.communicate()
+                error_msg = stderr.decode('utf-8', errors='ignore') if stderr else ''
+                logger.error(f"FreeRDP failed. Exit code: {process.returncode}, Error: {error_msg}")
+                raise Exception(f"FreeRDP terminou com código {process.returncode}: {error_msg[:200]}")
+
+            # Mostrar mensagem de sucesso
+            is_remoteapp = hasattr(user, 'session_type') and user.session_type == 'remoteapp'
+            if is_remoteapp:
+                app_name = user.app_command.split('/')[-1]
+                self.show_toast(f"Abrindo RemoteApp: {app_name}...")
+                logger.info(f"Launched RemoteApp {app_name} for user {user.username}")
+            else:
+                domain_suffix = f" (domínio: {domain})" if domain else ""
+                self.show_toast(f"Abrindo {freerdp_cmd}{domain_suffix}...")
+                logger.info(f"Launched {freerdp_cmd} for user {user.username}{domain_suffix}")
         except FileNotFoundError:
             self.show_toast("✗ FreeRDP não encontrado")
             logger.error("FreeRDP command not found")

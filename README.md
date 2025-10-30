@@ -208,15 +208,7 @@ RDP Session Manager includes a comprehensive CLI that provides access to all GUI
 
 ### Installation
 
-The CLI is automatically available after installation:
-
-```bash
-# Make executable (if needed)
-chmod +x rdpsm
-
-# Optional: Add to system PATH
-sudo ln -s $(pwd)/rdpsm /usr/local/bin/rdpsm
-```
+The CLI is automatically available after installing the .deb package. The `rdpsm` command will be available system-wide.
 
 ### Quick Reference
 
@@ -296,11 +288,11 @@ rdpsm server status && rdpsm deps check
 
 ### Testing CLI Commands
 
-Test all CLI commands without installing the application:
+Test all CLI commands after installing the application:
 
 ```bash
 # Run automated test suite (tests all safe read-only commands)
-./test_cli.sh
+bash tests/test_cli.sh
 
 # Manual testing
 rdpsm --version
@@ -344,10 +336,9 @@ RemoteApps-RDP/
 │   ├── delete-rdp-user.sh       # User deletion
 │   ├── toggle-user-lock.sh      # User enable/disable
 │   └── set-user-password.sh     # Password management
-├── rdpsm                        # CLI executable
-├── test_cli.sh                  # CLI test suite
 ├── docs/                        # Documentation
 ├── tests/                       # Unit tests
+│   └── test_cli.sh              # CLI test suite
 ├── CLI.md                       # CLI documentation
 ├── CLI_TESTING.md               # CLI testing guide
 └── requirements.txt             # Python dependencies
@@ -474,9 +465,9 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ## Version Information
 
-**Current Version**: 0.2.0
+**Current Version**: 0.3.0
 **Status**: Production Ready
-**Last Updated**: 2025-10-18
+**Last Updated**: 2025-10-30
 
 ---
 

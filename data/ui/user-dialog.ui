@@ -84,9 +84,24 @@
                       </object>
                     </child>
 
-                    <!-- Desktop Environment -->
+                    <!-- Session Type -->
                     <child>
                       <object class="AdwPreferencesGroup">
+                        <property name="title">Tipo de Sessão</property>
+                        <property name="description">Escolha entre desktop completo ou aplicativo único</property>
+
+                        <child>
+                          <object class="AdwComboRow" id="session_type_combo">
+                            <property name="title">Modo de Conexão</property>
+                            <!-- Model is set dynamically in setup_session_type_combo() -->
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Desktop Environment -->
+                    <child>
+                      <object class="AdwPreferencesGroup" id="desktop_group">
                         <property name="title">Ambiente Desktop</property>
                         <property name="description">Escolha o ambiente gráfico para este usuário</property>
 
@@ -107,6 +122,37 @@
                                 <property name="active">true</property>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- RemoteApp Settings -->
+                    <child>
+                      <object class="AdwPreferencesGroup" id="remoteapp_group">
+                        <property name="title">Configurações de RemoteApp</property>
+                        <property name="description">Configure o aplicativo a ser executado</property>
+                        <property name="visible">false</property>
+
+                        <child>
+                          <object class="AdwComboRow" id="app_combo">
+                            <property name="title">Aplicativo</property>
+                            <!-- Model is set dynamically in setup_app_combo() -->
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwEntryRow" id="custom_app_entry">
+                            <property name="title">Comando Personalizado</property>
+                            <property name="show-apply-button">false</property>
+                            <property name="visible">false</property>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwEntryRow" id="app_args_entry">
+                            <property name="title">Argumentos (opcional)</property>
+                            <property name="show-apply-button">false</property>
                           </object>
                         </child>
                       </object>

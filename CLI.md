@@ -17,9 +17,7 @@ Command-line interface for RDP Session Manager. All operations available in the 
 
 ## Installation
 
-### Via Package (.deb)
-
-When installed via Debian package, the CLI is automatically available system-wide:
+When installed via the Debian package, the CLI is automatically available system-wide:
 
 ```bash
 # After installing the .deb package
@@ -27,22 +25,6 @@ rdpsm --version
 
 # Use from anywhere
 rdpsm user list
-```
-
-### Development Mode
-
-For testing during development:
-
-```bash
-# Make the CLI executable
-chmod +x rdpsm
-
-# Run from project directory
-rdpsm --version
-
-# Or add to PATH temporarily
-export PATH=$PATH:$(pwd)
-rdpsm --version
 ```
 
 ## Basic Usage
@@ -60,8 +42,6 @@ rdpsm -v <command>
 # Command structure
 rdpsm <command> <subcommand> [options]
 ```
-
-**Note**: In development mode (before installation), use `./rdpsm` from the project directory.
 
 ## User Management
 
@@ -865,15 +845,14 @@ rdpsm server info
 
 ### Command Not Found
 
+If `rdpsm` is not found, ensure the .deb package is properly installed:
+
 ```bash
-# Ensure rdpsm is executable
-chmod +x rdpsm
+# Check if rdpsm is installed
+which rdpsm
 
-# Use absolute path
-/path/to/rdpsm user list
-
-# Or add to PATH
-export PATH=$PATH:/path/to/rdpsm-directory
+# Reinstall if necessary
+sudo dpkg -i rdp-session-manager_*.deb
 ```
 
 ### Permission Errors
@@ -939,28 +918,13 @@ rdpsm session list --format json | jq -r '.[].ip_address' | sort -u
 
 ## Testing the CLI
 
-You can test the CLI directly from the project directory without installation.
-
-### Prerequisites
-
-```bash
-# Navigate to project directory
-cd /path/to/rdp-session-manager
-
-# Make the CLI executable (one time only)
-chmod +x rdpsm
-
-# Test any command
-rdpsm --help
-```
-
-**Note**: The `rdpsm` script automatically adds the `src/` directory to Python path, so no installation is needed for testing.
+After installing the .deb package, you can test the CLI functionality:
 
 ### Running Automated Tests
 
 ```bash
 # Run the automated test suite (safe read-only commands only)
-./test_cli.sh
+bash tests/test_cli.sh
 
 # The test script will verify:
 # - Version and help commands

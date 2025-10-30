@@ -20,7 +20,8 @@ class RDPUser:
 
     def __init__(self, username: str, uid: int, home_dir: str,
                  desktop_env: str, rdp_port: int, active: bool = False, enabled: bool = True,
-                 is_superuser: bool = False):
+                 is_superuser: bool = False, session_type: str = 'desktop',
+                 app_command: str = '', app_args: str = ''):
         self.username = username
         self.uid = uid
         self.home_dir = home_dir
@@ -29,6 +30,9 @@ class RDPUser:
         self.active = active
         self.enabled = enabled  # Se a conta está habilitada (não bloqueada)
         self.is_superuser = is_superuser  # Se o usuário tem privilégios sudo
+        self.session_type = session_type  # 'desktop' ou 'remoteapp'
+        self.app_command = app_command  # Comando do app para RemoteApp (ex: 'firefox')
+        self.app_args = app_args  # Argumentos do app (ex: '--private-window')
 
     def to_dict(self) -> Dict:
         """Converte para dicionário"""
@@ -40,7 +44,10 @@ class RDPUser:
             'rdp_port': self.rdp_port,
             'active': self.active,
             'enabled': self.enabled,
-            'is_superuser': self.is_superuser
+            'is_superuser': self.is_superuser,
+            'session_type': self.session_type,
+            'app_command': self.app_command,
+            'app_args': self.app_args
         }
 
     @classmethod
@@ -128,15 +135,19 @@ class UserManager:
         return uid
 
     def create_user(self, username: str, password: str, desktop_env: str,
-                   full_name: str = "", log_callback=None) -> Optional[RDPUser]:
+                   full_name: str = "", session_type: str = 'desktop',
+                   app_command: str = '', app_args: str = '', log_callback=None) -> Optional[RDPUser]:
         """
         Cria um novo usuário RDP
 
         Args:
             username: Nome de usuário
             password: Senha do usuário
-            desktop_env: Ambiente desktop (gnome, xfce, kde)
+            desktop_env: Ambiente desktop (gnome, xfce, kde) - usado apenas se session_type='desktop'
             full_name: Nome completo do usuário
+            session_type: Tipo de sessão ('desktop' ou 'remoteapp')
+            app_command: Comando do aplicativo para RemoteApp (ex: 'firefox')
+            app_args: Argumentos do aplicativo (ex: '--private-window')
 
         Returns:
             RDPUser se sucesso, None se falha
@@ -144,7 +155,12 @@ class UserManager:
         logger.info("=" * 70)
         logger.info("USER_MANAGER: Método create_user() CHAMADO")
         logger.info(f"  - Username: {username}")
-        logger.info(f"  - Desktop ENV: {desktop_env}")
+        logger.info(f"  - Session Type: {session_type}")
+        if session_type == 'desktop':
+            logger.info(f"  - Desktop ENV: {desktop_env}")
+        else:
+            logger.info(f"  - App Command: {app_command}")
+            logger.info(f"  - App Args: {app_args}")
         logger.info(f"  - Full name: {full_name}")
         logger.info("=" * 70)
 
@@ -194,7 +210,8 @@ class UserManager:
             log("")
             log("→ Criando usuário no sistema...")
             log("  ⚠ Você será solicitado a autenticar (pkexec)")
-            success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env, log_callback=log)
+            success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
+                                               session_type, app_command, app_args, log_callback=log)
 
             if not success:
                 raise Exception("Falha ao criar usuário no sistema")
@@ -206,7 +223,10 @@ class UserManager:
                 desktop_env=desktop_env,
                 rdp_port=rdp_port,
                 active=False,
-                is_superuser=False  # Novos usuários não têm sudo por padrão
+                is_superuser=False,  # Novos usuários não têm sudo por padrão
+                session_type=session_type,
+                app_command=app_command,
+                app_args=app_args
             )
 
             log("")
@@ -321,7 +341,9 @@ class UserManager:
                 log_callback(f"  ✓ Diretório {self.rdp_users_home} já existe")
 
     def _create_system_user(self, username: str, password: str, uid: int,
-                           home_dir: str, full_name: str, desktop_env: str, log_callback=None) -> bool:
+                           home_dir: str, full_name: str, desktop_env: str,
+                           session_type: str = 'desktop', app_command: str = '',
+                           app_args: str = '', log_callback=None) -> bool:
         """Cria usuário no sistema via pkexec usando script helper"""
         try:
             # Obter caminho do script helper
@@ -329,7 +351,7 @@ class UserManager:
             create_script = script_dir / "create-rdp-user.sh"
             password_script = script_dir / "set-user-password.sh"
 
-            # Mapear desktop_env para comando DE
+            # Mapear desktop_env para comando DE (usado apenas para desktop mode)
             de_commands = {
                 'gnome': 'gnome-session',
                 'xfce': 'startxfce4',
@@ -347,14 +369,24 @@ class UserManager:
                 log_callback(f"  → Criando usuário e configurando sistema...")
                 log_callback(f"  ⚠ Você será solicitado a autenticar (apenas uma vez)")
 
-            # Executar script de criação de usuário (agrupa: groupadd, mkdir, useradd, chmod, criar .xsession)
+            # Executar script de criação de usuário
+            # Passar: username, uid, home_dir, full_name, session_type, de_command_or_app, app_args
+            if session_type == 'remoteapp':
+                session_command = app_command
+                extra_args = app_args
+            else:
+                session_command = de_command
+                extra_args = ""
+
             cmd = [
                 'pkexec', str(create_script),
                 username,
                 str(uid),
                 home_dir,
                 full_name or "",
-                de_command  # Passar comando DE para criar .xsession junto
+                session_type,  # 'desktop' ou 'remoteapp'
+                session_command,  # Comando DE ou app
+                extra_args  # Args do app (vazio para desktop)
             ]
 
             logger.info(f"Executando script helper: {create_script.name}")
@@ -887,42 +919,68 @@ class UserManager:
                 return UserManager._user_states_cache[username]
             return True  # Por padrão, assumir habilitado
 
-    def _detect_desktop_env(self, home_dir: str) -> str:
-        """Detecta o Desktop Environment lendo o arquivo .xsession"""
+    def _detect_session_info(self, home_dir: str) -> tuple:
+        """
+        Detecta informações de sessão do usuário do arquivo .xsession
+
+        Returns:
+            tuple: (session_type, desktop_env_or_command, app_args)
+        """
         try:
             xsession_file = Path(home_dir) / '.xsession'
 
             if not xsession_file.exists():
                 logger.warning(f"Arquivo .xsession não encontrado em {home_dir}")
-                return "unknown"
+                return ('desktop', 'unknown', '')
 
             # Ler arquivo .xsession
             with open(xsession_file, 'r') as f:
                 content = f.read()
 
-            # Mapear comandos para DEs
-            de_commands = {
-                'startlxde': 'lxde',
-                'startlxqt': 'lxqt',
-                'startxfce4': 'xfce',
-                'mate-session': 'mate',
-                'cinnamon-session': 'cinnamon',
-                'gnome-session': 'gnome',
-                'startplasma-x11': 'kde'
-            }
+            # Detectar se é RemoteApp ou Desktop (RemoteApp usa openbox)
+            if 'Mode: RemoteApp' in content or 'openbox' in content:
+                # RemoteApp mode - extrair comando do app
+                for line in content.split('\n'):
+                    line = line.strip()
+                    if line.startswith('exec ') and not any(wm in line for wm in ['openbox', 'metacity', 'dbus-launch']):
+                        # Extrair comando e argumentos
+                        exec_cmd = line[5:].strip()  # Remove "exec "
+                        parts = exec_cmd.split(maxsplit=1)
+                        app_command = parts[0] if parts else ''
+                        app_args = parts[1] if len(parts) > 1 else ''
+                        logger.debug(f"Detected RemoteApp: {app_command} {app_args}")
+                        return ('remoteapp', app_command, app_args)
+                return ('remoteapp', 'unknown', '')
+            else:
+                # Desktop mode - detectar DE
+                de_commands = {
+                    'startlxde': 'lxde',
+                    'startlxqt': 'lxqt',
+                    'startxfce4': 'xfce',
+                    'mate-session': 'mate',
+                    'cinnamon-session': 'cinnamon',
+                    'gnome-session': 'gnome',
+                    'startplasma-x11': 'kde'
+                }
 
-            # Procurar comando no arquivo
-            for command, de_id in de_commands.items():
-                if command in content:
-                    logger.debug(f"Detected DE for {home_dir}: {de_id} (command: {command})")
-                    return de_id
+                for command, de_id in de_commands.items():
+                    if command in content:
+                        logger.debug(f"Detected DE for {home_dir}: {de_id} (command: {command})")
+                        return ('desktop', de_id, '')
 
-            logger.warning(f"Comando DE não reconhecido em {xsession_file}")
-            return "unknown"
+                logger.warning(f"Comando DE não reconhecido em {xsession_file}")
+                return ('desktop', 'unknown', '')
 
         except Exception as e:
-            logger.error(f"Erro ao detectar DE de {home_dir}: {e}")
-            return "unknown"
+            logger.error(f"Erro ao detectar sessão de {home_dir}: {e}")
+            return ('desktop', 'unknown', '')
+
+    def _detect_desktop_env(self, home_dir: str) -> str:
+        """Detecta o Desktop Environment lendo o arquivo .xsession"""
+        session_type, desktop_env_or_cmd, _ = self._detect_session_info(home_dir)
+        if session_type == 'remoteapp':
+            return 'remoteapp'  # Para usuários RemoteApp, retorna 'remoteapp' como DE
+        return desktop_env_or_cmd
 
     def _detect_rdp_port(self, uid: int) -> int:
         """Detecta a porta RDP baseada na configuração global"""
@@ -947,8 +1005,18 @@ class UserManager:
             for user_info in pwd.getpwall():
                 # Verificar se o usuário está no grupo rdp-users
                 if self._is_rdp_user(user_info.pw_name) or user_info.pw_gid == rdp_group.gr_gid:
-                    # Detectar Desktop Environment real
-                    desktop_env = self._detect_desktop_env(user_info.pw_dir)
+                    # Detectar informações de sessão (tipo, DE/app, args)
+                    session_type, desktop_env_or_cmd, app_args = self._detect_session_info(user_info.pw_dir)
+
+                    # Para desktop mode, desktop_env_or_cmd é o DE
+                    # Para remoteapp mode, desktop_env_or_cmd é o comando do app
+                    if session_type == 'remoteapp':
+                        desktop_env = 'remoteapp'
+                        app_command = desktop_env_or_cmd
+                    else:
+                        desktop_env = desktop_env_or_cmd
+                        app_command = ''
+                        app_args = ''
 
                     # Detectar porta RDP baseada no UID
                     rdp_port = self._detect_rdp_port(user_info.pw_uid)
@@ -968,7 +1036,10 @@ class UserManager:
                         rdp_port=rdp_port,
                         active=False,  # TODO: verificar status
                         enabled=is_enabled,
-                        is_superuser=has_sudo
+                        is_superuser=has_sudo,
+                        session_type=session_type,
+                        app_command=app_command,
+                        app_args=app_args
                     )
                     users.append(rdp_user)
 
@@ -1129,4 +1200,53 @@ class UserManager:
 
         except Exception as e:
             logger.error(f"Erro ao alterar nome completo de {username}: {e}")
+            return False
+
+    def change_user_session_type(self, username: str, session_type: str,
+                                 session_command: str = '', app_args: str = '') -> bool:
+        """
+        Altera o tipo de sessão de um usuário RDP (desktop <-> remoteapp)
+
+        Args:
+            username: Nome do usuário
+            session_type: Novo tipo ('desktop' ou 'remoteapp')
+            session_command: Comando DE (desktop) ou app (remoteapp)
+            app_args: Argumentos do app (apenas remoteapp)
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(username):
+                logger.error(f"Usuário não existe: {username}")
+                return False
+
+            if session_type not in ['desktop', 'remoteapp']:
+                logger.error(f"Tipo de sessão inválido: {session_type}")
+                return False
+
+            logger.info(f"Alterando tipo de sessão de {username} para: {session_type}")
+
+            # Verificar se usuário tem processos ativos
+            active_pids = self.get_user_processes(username)
+            if active_pids:
+                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
+
+            # Usar script helper para alterar .xsession
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            change_script = script_dir / "change-session-type.sh"
+
+            cmd = ['pkexec', str(change_script), username, session_type, session_command, app_args]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao alterar tipo de sessão: {result.stderr}")
+                return False
+
+            logger.info(f"✓ Tipo de sessão de {username} alterado para {session_type}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao alterar tipo de sessão de {username}: {e}")
             return False

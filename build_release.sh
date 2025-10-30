@@ -6,7 +6,7 @@
 set -e
 
 APP_NAME="rdp-session-manager"
-APP_VERSION="0.2.2"
+APP_VERSION="0.3.0"
 APP_DESCRIPTION="Gerenciador de Sessões RDP com Interface GTK4"
 APP_MAINTAINER="Your Name <your.email@example.com>"
 

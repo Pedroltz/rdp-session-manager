@@ -30,8 +30,14 @@ class UserDialog(Adw.Dialog):
     fullname_entry = Gtk.Template.Child()
     password_entry = Gtk.Template.Child()
     confirm_password_entry = Gtk.Template.Child()
+    session_type_combo = Gtk.Template.Child()
+    desktop_group = Gtk.Template.Child()
     de_combo = Gtk.Template.Child()
     install_de_switch = Gtk.Template.Child()
+    remoteapp_group = Gtk.Template.Child()
+    app_combo = Gtk.Template.Child()
+    custom_app_entry = Gtk.Template.Child()
+    app_args_entry = Gtk.Template.Child()
     auto_start_switch = Gtk.Template.Child()
     create_button = Gtk.Template.Child()
     cancel_button = Gtk.Template.Child()
@@ -44,7 +50,9 @@ class UserDialog(Adw.Dialog):
         self.de_installer = de_installer
 
         self.setup_signals()
+        self.setup_session_type_combo()
         self.setup_de_combo()
+        self.setup_app_combo()
 
     def setup_signals(self):
         """Setup signal handlers"""
@@ -55,6 +63,18 @@ class UserDialog(Adw.Dialog):
         self.username_entry.connect('changed', lambda e: self.validate_form())
         self.password_entry.connect('changed', lambda e: self.validate_form())
         self.confirm_password_entry.connect('changed', lambda e: self.validate_form())
+
+    def setup_session_type_combo(self):
+        """Setup session type combo (Desktop vs RemoteApp)"""
+        string_list = Gtk.StringList()
+        string_list.append("Desktop Completo")
+        string_list.append("RemoteApp (Aplicativo Único)")
+
+        self.session_type_combo.set_model(string_list)
+        self.session_type_combo.set_selected(0)  # Default: Desktop
+
+        # Connect signal to toggle visibility
+        self.session_type_combo.connect('notify::selected', self.on_session_type_changed)
 
     def setup_de_combo(self):
         """Setup desktop environment combo"""
@@ -81,6 +101,25 @@ class UserDialog(Adw.Dialog):
 
         # Set default selection to first item (usually the lightest DE)
         self.de_combo.set_selected(0)
+
+    def setup_app_combo(self):
+        """Setup RemoteApp application combo"""
+        # Não precisamos mais do combo, apenas o campo de entrada
+        # Ocultar o combo e sempre mostrar o campo personalizado
+        self.app_combo.set_visible(False)
+        self.custom_app_entry.set_visible(True)
+
+    def on_session_type_changed(self, combo, param):
+        """Handle session type change"""
+        selected = combo.get_selected()
+
+        if selected == 0:  # Desktop Completo
+            self.desktop_group.set_visible(True)
+            self.remoteapp_group.set_visible(False)
+        else:  # RemoteApp
+            self.desktop_group.set_visible(False)
+            self.remoteapp_group.set_visible(True)
+
 
     def validate_form(self):
         """Validate form inputs"""
@@ -127,37 +166,60 @@ class UserDialog(Adw.Dialog):
         fullname = self.fullname_entry.get_text()
         password = self.password_entry.get_text()
 
-        # Get selected DE
-        de_idx = self.de_combo.get_selected()
-        de_id = self.de_map.get(de_idx, 'xfce')
+        # Get session type
+        session_type_idx = self.session_type_combo.get_selected()
+        session_type = 'desktop' if session_type_idx == 0 else 'remoteapp'
 
         logger.info(f"Dados do formulário:")
         logger.info(f"  - Username: {username}")
         logger.info(f"  - Fullname: {fullname}")
-        logger.info(f"  - DE Index: {de_idx}")
-        logger.info(f"  - DE ID: {de_id}")
-        logger.info(f"  - DE Map: {self.de_map}")
+        logger.info(f"  - Session Type: {session_type}")
 
-        auto_start = self.auto_start_switch.get_active()
-        install_de = self.install_de_switch.get_active()
+        # Get DE or App based on session type
+        if session_type == 'desktop':
+            de_idx = self.de_combo.get_selected()
+            de_id = self.de_map.get(de_idx, 'xfce')
+            app_command = ''
+            app_args = ''
 
-        logger.info(f"  - Auto-start: {auto_start}")
-        logger.info(f"  - Instalar DE: {install_de}")
+            logger.info(f"  - DE Index: {de_idx}")
+            logger.info(f"  - DE ID: {de_id}")
+
+            auto_start = self.auto_start_switch.get_active()
+            install_de = self.install_de_switch.get_active()
+
+            logger.info(f"  - Auto-start: {auto_start}")
+            logger.info(f"  - Instalar DE: {install_de}")
+        else:  # remoteapp
+            de_id = 'xfce'  # Default DE (não será usado)
+            install_de = False
+
+            # Get app command directly from custom entry
+            app_command = self.custom_app_entry.get_text().strip()
+            app_args = self.app_args_entry.get_text().strip()
+
+            logger.info(f"  - App Command: {app_command}")
+            logger.info(f"  - App Args: {app_args}")
 
         # Check if DE needs installation
         de_installed = self.de_installer.is_de_installed(de_id)
         logger.info(f"  - DE '{de_id}' já instalado: {de_installed}")
 
-        if install_de and not de_installed:
+        # Para RemoteApp, não precisa instalar DE
+        if session_type == 'remoteapp':
+            logger.info(f"→ Criando usuário RemoteApp diretamente")
+            self.create_user(username, password, fullname, de_id, session_type, app_command, app_args)
+        elif install_de and not de_installed:
             logger.info(f"→ Desktop Environment '{de_id}' precisa ser instalado primeiro")
-            self.install_de_and_create_user(de_id, username, password, fullname)
+            self.install_de_and_create_user(de_id, username, password, fullname, session_type, app_command, app_args)
         else:
             if not de_installed:
                 logger.warning(f"⚠ DE '{de_id}' não está instalado mas usuário optou por não instalar")
             logger.info(f"→ Criando usuário diretamente (DE instalação: {install_de})")
-            self.create_user(username, password, fullname, de_id)
+            self.create_user(username, password, fullname, de_id, session_type, app_command, app_args)
 
-    def install_de_and_create_user(self, de_id, username, password, fullname):
+    def install_de_and_create_user(self, de_id, username, password, fullname,
+                                   session_type='desktop', app_command='', app_args=''):
         """Install DE and then create user"""
         logger.info(f"→ INICIANDO INSTALAÇÃO DE DESKTOP ENVIRONMENT: {de_id}")
 
@@ -262,7 +324,7 @@ class UserDialog(Adw.Dialog):
                 # Wait and then create user
                 logger.info("→ Aguardando 1.5s antes de criar usuário...")
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
-                GLib.timeout_add(1600, lambda: self.create_user(username, password, fullname, de_id))
+                GLib.timeout_add(1600, lambda: self.create_user(username, password, fullname, de_id, session_type, app_command, app_args))
             else:
                 logger.error(f"✗ ERRO na instalação de {de_name}: {message}")
                 append_log(f"✗ ERRO: {message}")
@@ -270,7 +332,7 @@ class UserDialog(Adw.Dialog):
 
                 # Wait and show error dialog
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
-                GLib.timeout_add(1600, lambda: self.show_de_install_error(message, username, password, fullname, de_id))
+                GLib.timeout_add(1600, lambda: self.show_de_install_error(message, username, password, fullname, de_id, session_type, app_command, app_args))
 
         def install_in_thread():
             try:
@@ -309,7 +371,8 @@ class UserDialog(Adw.Dialog):
         elif progress == 100:
             update_status("Finalizando instalação...")
 
-    def show_de_install_error(self, message, username, password, fullname, de_id):
+    def show_de_install_error(self, message, username, password, fullname, de_id,
+                              session_type='desktop', app_command='', app_args=''):
         """Show DE installation error dialog"""
         error_dialog = Adw.MessageDialog(
             transient_for=self.get_root(),
@@ -319,19 +382,25 @@ class UserDialog(Adw.Dialog):
         error_dialog.add_response("cancel", "Cancelar")
         error_dialog.add_response("continue", "Continuar Mesmo Assim")
         error_dialog.set_response_appearance("continue", Adw.ResponseAppearance.SUGGESTED)
-        error_dialog.connect("response", lambda d, r: self.handle_install_error(r, username, password, fullname, de_id))
+        error_dialog.connect("response", lambda d, r: self.handle_install_error(r, username, password, fullname, de_id, session_type, app_command, app_args))
         error_dialog.present()
 
-    def handle_install_error(self, response, username, password, fullname, de_id):
+    def handle_install_error(self, response, username, password, fullname, de_id,
+                            session_type='desktop', app_command='', app_args=''):
         """Handle installation error response"""
         if response == "continue":
-            self.create_user(username, password, fullname, de_id)
+            self.create_user(username, password, fullname, de_id, session_type, app_command, app_args)
 
-    def create_user(self, username, password, fullname, de_id):
+    def create_user(self, username, password, fullname, de_id,
+                   session_type='desktop', app_command='', app_args=''):
         """Create the user"""
         logger.info("=" * 60)
         logger.info(f"→ INICIANDO CRIAÇÃO DO USUÁRIO: {username}")
-        logger.info(f"  - Desktop Environment: {de_id}")
+        logger.info(f"  - Session Type: {session_type}")
+        if session_type == 'desktop':
+            logger.info(f"  - Desktop Environment: {de_id}")
+        else:
+            logger.info(f"  - App Command: {app_command} {app_args}")
         logger.info("=" * 60)
 
         # Show progress with terminal log
@@ -433,6 +502,9 @@ class UserDialog(Adw.Dialog):
                     password=password,
                     desktop_env=de_id,
                     full_name=fullname,
+                    session_type=session_type,
+                    app_command=app_command,
+                    app_args=app_args,
                     log_callback=lambda msg: GLib.idle_add(append_log, msg)
                 )
 
