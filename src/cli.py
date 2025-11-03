@@ -45,11 +45,11 @@ class CLI:
 
     def print_success(self, message: str):
         """Print success message"""
-        print(f"{self.GREEN}✓{self.RESET} {message}")
+        print(f"{self.GREEN}OK{self.RESET} {message}")
 
     def print_error(self, message: str):
         """Print error message"""
-        print(f"{self.RED}✗{self.RESET} {message}", file=sys.stderr)
+        print(f"{self.RED}X{self.RESET} {message}", file=sys.stderr)
 
     def print_warning(self, message: str):
         """Print warning message"""
@@ -83,8 +83,8 @@ class CLI:
             desktop_env = args.desktop or "xfce"
 
             # Validate session type
-            if session_type not in ['desktop', 'remoteapp']:
-                self.print_error(f"Invalid session type '{session_type}'. Must be 'desktop' or 'remoteapp'")
+            if session_type not in ['desktop', 'remoteapp', 'winege-remoteapp']:
+                self.print_error(f"Invalid session type '{session_type}'. Must be 'desktop', 'remoteapp', or 'winege-remoteapp'")
                 return 1
 
             # Validate RemoteApp parameters
@@ -93,6 +93,24 @@ class CLI:
                     self.print_error("RemoteApp session requires --app-command parameter")
                     self.print_info("Example: rdpsm user create USERNAME --session-type remoteapp --app-command firefox")
                     return 1
+
+            # Validate WineGE RemoteApp parameters
+            if session_type == 'winege-remoteapp':
+                if not app_command:
+                    self.print_error("WineGE RemoteApp session requires --app-command parameter with .exe path")
+                    self.print_info("Example: rdpsm user create USERNAME --session-type winege-remoteapp --app-command /path/to/app.exe")
+                    return 1
+
+                # Verificar se o arquivo .exe existe
+                from pathlib import Path
+                exe_path = Path(app_command)
+                if not exe_path.exists():
+                    self.print_error(f"Executable file not found: {app_command}")
+                    return 1
+
+                if not app_command.lower().endswith('.exe'):
+                    self.print_warning(f"Warning: File does not have .exe extension: {app_command}")
+                    self.print_info("Proceeding anyway, but make sure this is a Windows executable")
 
             # Get password
             if args.password:
@@ -273,9 +291,18 @@ class CLI:
                 print(f"  Username:     {user.username}")
                 print(f"  UID:          {user.uid}")
                 print(f"  Home:         {user.home_dir}")
-                print(f"  Desktop:      {user.desktop_env.upper()}")
+                print(f"  Session Type: {user.session_type}")
+
+                if user.session_type == 'desktop':
+                    print(f"  Desktop Env:  {user.desktop_env.upper()}")
+                elif user.session_type in ['remoteapp', 'winege-remoteapp']:
+                    print(f"  App Command:  {user.app_command}")
+                    if user.app_args:
+                        print(f"  App Args:     {user.app_args}")
+
                 print(f"  RDP Port:     {user.rdp_port}")
                 print(f"  Status:       {'Enabled' if user.enabled else 'Disabled'}")
+                print(f"  Sudo Access:  {'Yes' if user.is_superuser else 'No'}")
 
                 # Check if connected
                 if self.session_monitor.is_user_connected(username):
@@ -424,7 +451,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("⚠ IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation
@@ -473,7 +500,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("⚠ IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation
@@ -794,12 +821,12 @@ class CLI:
                 if installed:
                     print(f"\n{self.GREEN}Installed:{self.RESET}")
                     for dep in installed:
-                        print(f"  ✓ {dep}")
+                        print(f"  OK {dep}")
 
                 if missing:
                     print(f"\n{self.RED}Missing:{self.RESET}")
                     for dep in missing:
-                        print(f"  ✗ {dep}")
+                        print(f"  X {dep}")
 
                 if all_ok:
                     print(f"\n{self.GREEN}All dependencies are installed{self.RESET}")
@@ -865,10 +892,10 @@ class CLI:
         user_create.add_argument('-d', '--desktop', default='xfce',
                                 help='Desktop environment (default: xfce, used for desktop sessions)')
         user_create.add_argument('-p', '--password', help='Password (will prompt if not provided)')
-        user_create.add_argument('-s', '--session-type', choices=['desktop', 'remoteapp'], default='desktop',
-                                help='Session type: desktop (full DE) or remoteapp (single application)')
-        user_create.add_argument('--app-command', help='Application command for RemoteApp (e.g., firefox, thunderbird)')
-        user_create.add_argument('--app-args', default='', help='Application arguments for RemoteApp (e.g., --private-window)')
+        user_create.add_argument('-s', '--session-type', choices=['desktop', 'remoteapp', 'winege-remoteapp'], default='desktop',
+                                help='Session type: desktop (full DE), remoteapp (single app), or winege-remoteapp (Windows app via WineGE)')
+        user_create.add_argument('--app-command', help='Application command for RemoteApp (e.g., firefox) or .exe path for WineGE RemoteApp')
+        user_create.add_argument('--app-args', default='', help='Application arguments for RemoteApp/WineGE (e.g., --private-window)')
         user_create.set_defaults(func=self.user_create)
 
         # user delete

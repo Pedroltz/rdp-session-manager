@@ -29,11 +29,11 @@ fi
 if [ "$ACTION" = "lock" ]; then
     echo "Desabilitando usuário $USERNAME..."
     /usr/sbin/usermod --lock "$USERNAME"
-    echo "✓ Usuário $USERNAME desabilitado (conta bloqueada)"
+    echo "OK Usuário $USERNAME desabilitado (conta bloqueada)"
 else
     echo "Habilitando usuário $USERNAME..."
     /usr/sbin/usermod --unlock "$USERNAME"
-    echo "✓ Usuário $USERNAME habilitado (conta desbloqueada)"
+    echo "OK Usuário $USERNAME habilitado (conta desbloqueada)"
 fi
 
 exit 0

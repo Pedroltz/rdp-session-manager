@@ -71,7 +71,7 @@ class SystemDependencies:
             if dep_id == 'freerdp':
                 if self.is_freerdp_installed():
                     installed.append(dep_id)
-                    logger.info(f"✓ {dep_info['name']} está instalado")
+                    logger.info(f"OK {dep_info['name']} está instalado")
                 else:
                     if dep_info['critical']:
                         missing.append(dep_id)
@@ -83,11 +83,11 @@ class SystemDependencies:
 
             if self.is_package_installed(main_package):
                 installed.append(dep_id)
-                logger.info(f"✓ {dep_info['name']} está instalado")
+                logger.info(f"OK {dep_info['name']} está instalado")
             else:
                 if dep_info['critical']:
                     missing.append(dep_id)
-                    logger.warning(f"✗ {dep_info['name']} NÃO está instalado")
+                    logger.warning(f"X {dep_info['name']} NÃO está instalado")
 
         return len(missing) == 0, missing, installed
 
@@ -116,7 +116,7 @@ class SystemDependencies:
         # Verificar se já está instalado
         if self.is_package_installed(packages[0]):
             msg = f"{dep_info['name']} já está instalado"
-            log(100, f"✓ {msg}")
+            log(100, f"OK {msg}")
             return True, msg
 
         try:
@@ -124,7 +124,7 @@ class SystemDependencies:
             log(5, f"  Descrição: {dep_info['description']}")
             log(5, f"  Pacotes: {', '.join(packages)}")
             log(5, "")
-            log(10, "  ⚠ Você será solicitado a autenticar (apenas uma vez)")
+            log(10, "  AVISO Você será solicitado a autenticar (apenas uma vez)")
             log(10, "")
 
             # Usar script helper que agrupa update + install em um único pkexec
@@ -160,7 +160,7 @@ class SystemDependencies:
                     elif 'Reading' in line or 'Building' in line:
                         log(progress, f"  {line}")
                     elif line.startswith('E:') or line.startswith('Err:'):
-                        log(progress, f"  ✗ {line}")
+                        log(progress, f"  X {line}")
                     else:
                         logger.debug(f"apt: {line}")
 
@@ -169,11 +169,11 @@ class SystemDependencies:
             if returncode != 0:
                 error_msg = f"Falha na instalação de {dep_info['name']} (código: {returncode})"
                 logger.error(error_msg)
-                log(progress, f"✗ {error_msg}")
+                log(progress, f"X {error_msg}")
                 return False, error_msg
 
             log(90, "")
-            log(90, f"  ✓ {dep_info['name']} instalado com sucesso")
+            log(90, f"  OK {dep_info['name']} instalado com sucesso")
 
             # Iniciar serviço se necessário
             if dep_info['service']:
@@ -194,24 +194,24 @@ class SystemDependencies:
                 )
 
                 if start_result.returncode == 0:
-                    log(98, f"  ✓ Serviço {dep_info['service']} iniciado")
+                    log(98, f"  OK Serviço {dep_info['service']} iniciado")
                 else:
-                    log(98, f"  ⚠ Falha ao iniciar serviço {dep_info['service']}")
+                    log(98, f"  AVISO Falha ao iniciar serviço {dep_info['service']}")
 
             log(100, "")
-            log(100, f"✓ {dep_info['name']} configurado e pronto para uso!")
+            log(100, f"OK {dep_info['name']} configurado e pronto para uso!")
 
             return True, f"{dep_info['name']} instalado com sucesso"
 
         except subprocess.TimeoutExpired:
             error_msg = f"Timeout na instalação de {dep_info['name']}"
             logger.error(error_msg)
-            log(0, f"✗ {error_msg}")
+            log(0, f"X {error_msg}")
             return False, error_msg
         except Exception as e:
             error_msg = f"Erro ao instalar {dep_info['name']}: {e}"
             logger.error(error_msg)
-            log(0, f"✗ {error_msg}")
+            log(0, f"X {error_msg}")
             return False, error_msg
 
     def ensure_dependencies(self, progress_callback: Optional[Callable] = None) -> Tuple[bool, str]:

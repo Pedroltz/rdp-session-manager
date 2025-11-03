@@ -120,11 +120,11 @@ class RDPConfig:
             xsession_path = Path(home_dir) / ".xsession"
 
             if xsession_path.exists():
-                logger.info(f"RDP_CONFIG: ✓ Script .xsession já existe")
+                logger.info(f"RDP_CONFIG: OK Script .xsession já existe")
                 logger.info(f"RDP_CONFIG:   - Arquivo: {xsession_path}")
                 return True
             else:
-                logger.warning(f"RDP_CONFIG: ⚠ Script .xsession não encontrado")
+                logger.warning(f"RDP_CONFIG: AVISO Script .xsession não encontrado")
                 logger.warning(f"RDP_CONFIG:   - Isso pode indicar um problema durante a criação do usuário")
                 logger.warning(f"RDP_CONFIG:   - O arquivo deveria ter sido criado automaticamente")
                 return False

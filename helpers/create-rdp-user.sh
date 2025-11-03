@@ -8,8 +8,8 @@ USERNAME="$1"
 USER_UID="$2"
 HOME_DIR="$3"
 FULLNAME="$4"
-SESSION_TYPE="$5"        # 'desktop' ou 'remoteapp'
-SESSION_COMMAND="$6"     # DE command (ex: startxfce4) ou app command (ex: firefox)
+SESSION_TYPE="$5"        # 'desktop', 'remoteapp', ou 'winege-remoteapp'
+SESSION_COMMAND="$6"     # DE command (ex: startxfce4), app command (ex: firefox), ou .exe path para WineGE
 APP_ARGS="$7"            # Argumentos do app (apenas para remoteapp)
 
 # Validar parâmetros
@@ -98,6 +98,49 @@ EOFSCRIPT
     sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
     sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
     sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
+elif [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
+    # WineGE RemoteApp mode - lançar aplicativo Windows via WineGE
+    cat > "$XSESSION_FILE" <<'EOFSCRIPT'
+#!/bin/bash
+# RDP Session startup script for $USERNAME
+# Mode: WineGE RemoteApp
+
+# Set environment variables
+export HOME=$HOME_DIR
+export USER=$USERNAME
+export LOGNAME=$USERNAME
+
+# Configure D-Bus
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    eval $(dbus-launch --sh-syntax --exit-with-session)
+fi
+
+# Configure openbox to maximize windows by default
+mkdir -p $HOME_DIR/.config/openbox
+cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <applications>
+    <application class="*">
+      <maximized>yes</maximized>
+      <decor>no</decor>
+    </application>
+  </applications>
+</openbox_config>
+OPENBOXEOF
+
+# Start openbox window manager
+openbox --config-file $HOME_DIR/.config/openbox/rc.xml &
+sleep 1
+
+# Launch WineGE RemoteApp using wrapper script
+exec $HOME_DIR/.launch_winege_app.sh $APP_ARGS
+EOFSCRIPT
+
+    # Replace variables in the script
+    sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
+    sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
+    sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
 else
     # Desktop mode - lançar desktop completo
     cat > "$XSESSION_FILE" <<EOF
@@ -122,7 +165,32 @@ fi
 
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
-echo "  ✓ Arquivo .xsession criado"
+echo "  OK Arquivo .xsession criado"
 
-echo "✓ Usuário $USERNAME criado com sucesso!"
+# 6. Se for WineGE RemoteApp, configurar WineGE
+if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
+    echo ""
+    echo "→ Configurando WineGE RemoteApp..."
+
+    # SESSION_COMMAND contém o caminho do .exe
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    WINEGE_SCRIPT="$SCRIPT_DIR/setup-winege-app.sh"
+
+    if [ ! -f "$WINEGE_SCRIPT" ]; then
+        echo "  X Erro: Script setup-winege-app.sh não encontrado em $SCRIPT_DIR"
+        exit 1
+    fi
+
+    # Executar setup do WineGE (não precisa de pkexec, já estamos como root)
+    bash "$WINEGE_SCRIPT" "$USERNAME" "$HOME_DIR" "$SESSION_COMMAND"
+
+    if [ $? -ne 0 ]; then
+        echo "  X Erro ao configurar WineGE"
+        exit 1
+    fi
+
+    echo "  OK WineGE RemoteApp configurado com sucesso"
+fi
+
+echo "OK Usuário $USERNAME criado com sucesso!"
 exit 0

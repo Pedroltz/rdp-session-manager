@@ -6,7 +6,8 @@
   <template class="UserDialog" parent="AdwDialog">
     <property name="title">Criar Novo Usuário RDP</property>
     <property name="content-width">500</property>
-    <property name="content-height">600</property>
+    <property name="content-height">680</property>
+    <property name="can-close">true</property>
 
     <child>
       <object class="AdwToolbarView">
@@ -101,25 +102,31 @@
 
                     <!-- Desktop Environment -->
                     <child>
-                      <object class="AdwPreferencesGroup" id="desktop_group">
-                        <property name="title">Ambiente Desktop</property>
-                        <property name="description">Escolha o ambiente gráfico para este usuário</property>
-
+                      <object class="GtkBox" id="desktop_container">
+                        <property name="orientation">vertical</property>
+                        <property name="height-request">180</property>
                         <child>
-                          <object class="AdwComboRow" id="de_combo">
+                          <object class="AdwPreferencesGroup" id="desktop_group">
                             <property name="title">Ambiente Desktop</property>
-                            <!-- Model is set dynamically in setup_de_combo() -->
-                          </object>
-                        </child>
+                            <property name="description">Escolha o ambiente gráfico para este usuário</property>
 
-                        <child>
-                          <object class="AdwActionRow" id="install_de_row">
-                            <property name="title">Instalar Ambiente Desktop</property>
-                            <property name="subtitle">Baixar e instalar se não estiver disponível</property>
                             <child>
-                              <object class="GtkSwitch" id="install_de_switch">
-                                <property name="valign">center</property>
-                                <property name="active">true</property>
+                              <object class="AdwComboRow" id="de_combo">
+                                <property name="title">Ambiente Desktop</property>
+                                <!-- Model is set dynamically in setup_de_combo() -->
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="AdwActionRow" id="install_de_row">
+                                <property name="title">Instalar Ambiente Desktop</property>
+                                <property name="subtitle">Baixar e instalar se não estiver disponível</property>
+                                <child>
+                                  <object class="GtkSwitch" id="install_de_switch">
+                                    <property name="valign">center</property>
+                                    <property name="active">true</property>
+                                  </object>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -129,30 +136,75 @@
 
                     <!-- RemoteApp Settings -->
                     <child>
-                      <object class="AdwPreferencesGroup" id="remoteapp_group">
-                        <property name="title">Configurações de RemoteApp</property>
-                        <property name="description">Configure o aplicativo a ser executado</property>
+                      <object class="GtkBox" id="remoteapp_container">
+                        <property name="orientation">vertical</property>
+                        <property name="height-request">180</property>
                         <property name="visible">false</property>
-
                         <child>
-                          <object class="AdwComboRow" id="app_combo">
-                            <property name="title">Aplicativo</property>
-                            <!-- Model is set dynamically in setup_app_combo() -->
+                          <object class="AdwPreferencesGroup" id="remoteapp_group">
+                            <property name="title">Configurações de RemoteApp</property>
+                            <property name="description">Configure o aplicativo Linux a ser executado</property>
+
+                            <child>
+                              <object class="AdwComboRow" id="app_combo">
+                                <property name="title">Aplicativo</property>
+                                <!-- Model is set dynamically in setup_app_combo() -->
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="AdwEntryRow" id="custom_app_entry">
+                                <property name="title">Comando Personalizado</property>
+                                <property name="show-apply-button">false</property>
+                                <property name="visible">false</property>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="AdwEntryRow" id="app_args_entry">
+                                <property name="title">Argumentos (opcional)</property>
+                                <property name="show-apply-button">false</property>
+                              </object>
+                            </child>
                           </object>
                         </child>
+                      </object>
+                    </child>
 
+                    <!-- WineGE RemoteApp Settings -->
+                    <child>
+                      <object class="GtkBox" id="winege_container">
+                        <property name="orientation">vertical</property>
+                        <property name="height-request">180</property>
+                        <property name="visible">false</property>
                         <child>
-                          <object class="AdwEntryRow" id="custom_app_entry">
-                            <property name="title">Comando Personalizado</property>
-                            <property name="show-apply-button">false</property>
-                            <property name="visible">false</property>
-                          </object>
-                        </child>
+                          <object class="AdwPreferencesGroup" id="winege_group">
+                            <property name="title">Aplicativo Windows (WineGE)</property>
+                            <property name="description">Configure o executável Windows a ser executado</property>
 
-                        <child>
-                          <object class="AdwEntryRow" id="app_args_entry">
-                            <property name="title">Argumentos (opcional)</property>
-                            <property name="show-apply-button">false</property>
+                            <child>
+                              <object class="AdwActionRow" id="exe_file_row">
+                                <property name="title">Selecionar Arquivo</property>
+                                <property name="subtitle">Escolha o executável .exe do seu computador</property>
+                                <child>
+                                  <object class="GtkButton" id="exe_file_button">
+                                    <property name="label">Selecionar</property>
+                                    <property name="valign">center</property>
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="AdwEntryRow" id="exe_path_entry">
+                                <property name="title">Caminho do Executável</property>
+                                <property name="show-apply-button">false</property>
+                                <property name="editable">true</property>
+                              </object>
+                            </child>
                           </object>
                         </child>
                       </object>

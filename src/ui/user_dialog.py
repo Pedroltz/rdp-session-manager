@@ -31,13 +31,19 @@ class UserDialog(Adw.Dialog):
     password_entry = Gtk.Template.Child()
     confirm_password_entry = Gtk.Template.Child()
     session_type_combo = Gtk.Template.Child()
+    desktop_container = Gtk.Template.Child()
     desktop_group = Gtk.Template.Child()
     de_combo = Gtk.Template.Child()
     install_de_switch = Gtk.Template.Child()
+    remoteapp_container = Gtk.Template.Child()
     remoteapp_group = Gtk.Template.Child()
     app_combo = Gtk.Template.Child()
     custom_app_entry = Gtk.Template.Child()
     app_args_entry = Gtk.Template.Child()
+    winege_container = Gtk.Template.Child()
+    winege_group = Gtk.Template.Child()
+    exe_file_button = Gtk.Template.Child()
+    exe_path_entry = Gtk.Template.Child()
     auto_start_switch = Gtk.Template.Child()
     create_button = Gtk.Template.Child()
     cancel_button = Gtk.Template.Child()
@@ -58,17 +64,20 @@ class UserDialog(Adw.Dialog):
         """Setup signal handlers"""
         self.create_button.connect('clicked', self.on_create_user)
         self.cancel_button.connect('clicked', lambda b: self.close())
+        self.exe_file_button.connect('clicked', self.on_select_exe_file)
 
         # Enable/disable create button based on validation
         self.username_entry.connect('changed', lambda e: self.validate_form())
         self.password_entry.connect('changed', lambda e: self.validate_form())
         self.confirm_password_entry.connect('changed', lambda e: self.validate_form())
+        self.exe_path_entry.connect('changed', lambda e: self.validate_form())
 
     def setup_session_type_combo(self):
-        """Setup session type combo (Desktop vs RemoteApp)"""
+        """Setup session type combo (Desktop vs RemoteApp vs WineGE)"""
         string_list = Gtk.StringList()
         string_list.append("Desktop Completo")
-        string_list.append("RemoteApp (Aplicativo Único)")
+        string_list.append("RemoteApp (Aplicativo Linux)")
+        string_list.append("WineGE RemoteApp (Aplicativo Windows)")
 
         self.session_type_combo.set_model(string_list)
         self.session_type_combo.set_selected(0)  # Default: Desktop
@@ -89,7 +98,7 @@ class UserDialog(Adw.Dialog):
 
         for idx, de in enumerate(des):
             # Add to combo with installation status
-            installed_mark = " ✓" if de['installed'] else ""
+            installed_mark = " OK" if de['installed'] else ""
             label = f"{de['name']} (~{de['size_mb']}MB){installed_mark}"
             string_list.append(label)
 
@@ -114,11 +123,72 @@ class UserDialog(Adw.Dialog):
         selected = combo.get_selected()
 
         if selected == 0:  # Desktop Completo
-            self.desktop_group.set_visible(True)
-            self.remoteapp_group.set_visible(False)
-        else:  # RemoteApp
-            self.desktop_group.set_visible(False)
-            self.remoteapp_group.set_visible(True)
+            self.desktop_container.set_visible(True)
+            self.remoteapp_container.set_visible(False)
+            self.winege_container.set_visible(False)
+        elif selected == 1:  # RemoteApp (Linux)
+            self.desktop_container.set_visible(False)
+            self.remoteapp_container.set_visible(True)
+            self.winege_container.set_visible(False)
+        else:  # WineGE RemoteApp (Windows)
+            self.desktop_container.set_visible(False)
+            self.remoteapp_container.set_visible(False)
+            self.winege_container.set_visible(True)
+
+    def on_select_exe_file(self, button):
+        """Open file chooser dialog to select .exe file"""
+        from gi.repository import Gio
+
+        dialog = Gtk.FileDialog.new()
+        dialog.set_title("Selecionar Executável Windows")
+
+        # Create file filter for .exe files
+        filter_exe = Gtk.FileFilter()
+        filter_exe.set_name("Executáveis Windows (*.exe)")
+        filter_exe.add_pattern("*.exe")
+        filter_exe.add_pattern("*.EXE")
+
+        filter_all = Gtk.FileFilter()
+        filter_all.set_name("Todos os arquivos")
+        filter_all.add_pattern("*")
+
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(filter_exe)
+        filters.append(filter_all)
+
+        dialog.set_filters(filters)
+        dialog.set_default_filter(filter_exe)
+
+        # Open dialog - get root window
+        root = self.get_root()
+        dialog.open(root, None, self.on_exe_file_selected)
+
+    def on_exe_file_selected(self, dialog, result):
+        """Handle file selection"""
+        try:
+            file = dialog.open_finish(result)
+            if file:
+                # Obter caminho do arquivo (não URI)
+                path = file.get_path()
+
+                # Se get_path() retornar None, tentar decodificar a URI
+                if not path:
+                    import urllib.parse
+                    uri = file.get_uri()
+                    # Remover 'file://' e decodificar
+                    path = urllib.parse.unquote(uri.replace('file://', ''))
+
+                # Garantir que o caminho é absoluto
+                if not path.startswith('/'):
+                    path = '/' + path
+
+                self.exe_path_entry.set_text(path)
+                logger.info(f"Selected .exe file: {path}")
+        except Exception as e:
+            # Ignorar erro quando usuário cancela o diálogo
+            error_msg = str(e)
+            if "No file selected" not in error_msg and "dismissed" not in error_msg.lower():
+                logger.error(f"Error selecting file: {e}")
 
 
     def validate_form(self):
@@ -168,7 +238,12 @@ class UserDialog(Adw.Dialog):
 
         # Get session type
         session_type_idx = self.session_type_combo.get_selected()
-        session_type = 'desktop' if session_type_idx == 0 else 'remoteapp'
+        if session_type_idx == 0:
+            session_type = 'desktop'
+        elif session_type_idx == 1:
+            session_type = 'remoteapp'
+        else:
+            session_type = 'winege-remoteapp'
 
         logger.info(f"Dados do formulário:")
         logger.info(f"  - Username: {username}")
@@ -190,7 +265,7 @@ class UserDialog(Adw.Dialog):
 
             logger.info(f"  - Auto-start: {auto_start}")
             logger.info(f"  - Instalar DE: {install_de}")
-        else:  # remoteapp
+        elif session_type == 'remoteapp':
             de_id = 'xfce'  # Default DE (não será usado)
             install_de = False
 
@@ -200,21 +275,43 @@ class UserDialog(Adw.Dialog):
 
             logger.info(f"  - App Command: {app_command}")
             logger.info(f"  - App Args: {app_args}")
+        else:  # winege-remoteapp
+            de_id = 'xfce'  # Default DE (não será usado)
+            install_de = False
+
+            # Get .exe path
+            app_command = self.exe_path_entry.get_text().strip()
+            app_args = ''  # WineGE não usa argumentos separados
+
+            logger.info(f"  - EXE Path: {app_command}")
+
+            # Validar se arquivo .exe existe
+            from pathlib import Path
+            if not Path(app_command).exists():
+                logger.error(f"Arquivo .exe não encontrado: {app_command}")
+                error_dialog = Adw.MessageDialog(
+                    transient_for=self.get_root(),
+                    heading="Arquivo não encontrado",
+                    body=f"O arquivo executável não foi encontrado:\n\n{app_command}\n\nPor favor, selecione um arquivo válido."
+                )
+                error_dialog.add_response("ok", "OK")
+                error_dialog.present()
+                return
 
         # Check if DE needs installation
         de_installed = self.de_installer.is_de_installed(de_id)
         logger.info(f"  - DE '{de_id}' já instalado: {de_installed}")
 
-        # Para RemoteApp, não precisa instalar DE
-        if session_type == 'remoteapp':
-            logger.info(f"→ Criando usuário RemoteApp diretamente")
+        # Para RemoteApp e WineGE, não precisa instalar DE
+        if session_type in ['remoteapp', 'winege-remoteapp']:
+            logger.info(f"→ Criando usuário {session_type} diretamente")
             self.create_user(username, password, fullname, de_id, session_type, app_command, app_args)
         elif install_de and not de_installed:
             logger.info(f"→ Desktop Environment '{de_id}' precisa ser instalado primeiro")
             self.install_de_and_create_user(de_id, username, password, fullname, session_type, app_command, app_args)
         else:
             if not de_installed:
-                logger.warning(f"⚠ DE '{de_id}' não está instalado mas usuário optou por não instalar")
+                logger.warning(f"AVISO DE '{de_id}' não está instalado mas usuário optou por não instalar")
             logger.info(f"→ Criando usuário diretamente (DE instalação: {install_de})")
             self.create_user(username, password, fullname, de_id, session_type, app_command, app_args)
 
@@ -317,18 +414,18 @@ class UserDialog(Adw.Dialog):
             spinner.stop()
 
             if success:
-                logger.info(f"✓ Instalação de {de_name} concluída com SUCESSO")
-                append_log("✓ Instalação concluída com sucesso!")
-                update_status("✓ Instalação concluída!")
+                logger.info(f"OK Instalação de {de_name} concluída com SUCESSO")
+                append_log("OK Instalação concluída com sucesso!")
+                update_status("OK Instalação concluída!")
 
                 # Wait and then create user
                 logger.info("→ Aguardando 1.5s antes de criar usuário...")
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.create_user(username, password, fullname, de_id, session_type, app_command, app_args))
             else:
-                logger.error(f"✗ ERRO na instalação de {de_name}: {message}")
-                append_log(f"✗ ERRO: {message}")
-                update_status("✗ Erro na instalação")
+                logger.error(f"X ERRO na instalação de {de_name}: {message}")
+                append_log(f"X ERRO: {message}")
+                update_status("X Erro na instalação")
 
                 # Wait and show error dialog
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
@@ -404,10 +501,16 @@ class UserDialog(Adw.Dialog):
         logger.info("=" * 60)
 
         # Show progress with terminal log
+        # Mensagem especial para WineGE
+        if session_type == 'winege-remoteapp':
+            body_text = f"Criando usuário {username}...\n\nAVISO️ WineGE RemoteApp requer download de ~750MB.\nPrimeira criação pode levar 10-15 minutos.\nAguarde, não feche esta janela!"
+        else:
+            body_text = f"Criando usuário {username}..."
+
         progress_dialog = Adw.MessageDialog(
             transient_for=self.get_root(),
             heading="Criando Usuário RDP",
-            body=f"Criando usuário {username}..."
+            body=body_text
         )
 
         # Create container with spinner and log
@@ -469,20 +572,20 @@ class UserDialog(Adw.Dialog):
 
             if success:
                 user = user_or_error
-                logger.info(f"✓ USUÁRIO {username} CRIADO COM SUCESSO!")
+                logger.info(f"OK USUÁRIO {username} CRIADO COM SUCESSO!")
                 logger.info(f"  - UID: {user.uid}")
                 logger.info(f"  - Porta RDP: {user.rdp_port}")
                 logger.info(f"  - Home: {user.home_dir}")
                 logger.info(f"  - DE: {user.desktop_env}")
-                append_log("✓ Usuário criado com sucesso!")
+                append_log("OK Usuário criado com sucesso!")
 
                 # Wait a bit before closing
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_success_dialog(username, fullname, de_id, user))
             else:
                 error = user_or_error
-                logger.error(f"✗ ERRO AO CRIAR USUÁRIO {username}: {error}")
-                append_log(f"✗ ERRO: {error}")
+                logger.error(f"X ERRO AO CRIAR USUÁRIO {username}: {error}")
+                append_log(f"X ERRO: {error}")
 
                 # Wait before showing error dialog
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
@@ -492,7 +595,21 @@ class UserDialog(Adw.Dialog):
             try:
                 GLib.idle_add(append_log, "=== Criando Usuário RDP ===")
                 GLib.idle_add(append_log, f"Usuário: {username}")
-                GLib.idle_add(append_log, f"Desktop Environment: {de_id.upper()}")
+
+                if session_type == 'desktop':
+                    GLib.idle_add(append_log, f"Tipo: Desktop Completo")
+                    GLib.idle_add(append_log, f"Desktop Environment: {de_id.upper()}")
+                elif session_type == 'remoteapp':
+                    GLib.idle_add(append_log, f"Tipo: RemoteApp (Linux)")
+                    GLib.idle_add(append_log, f"Aplicativo: {app_command}")
+                elif session_type == 'winege-remoteapp':
+                    GLib.idle_add(append_log, f"Tipo: WineGE RemoteApp (Windows)")
+                    GLib.idle_add(append_log, f"Executável: {app_command}")
+                    GLib.idle_add(append_log, "")
+                    GLib.idle_add(append_log, "AVISO️  AVISO: Primeira criação WineGE demora 10-15 minutos")
+                    GLib.idle_add(append_log, "AVISO️  Download: ~750MB | Extração + Configuração")
+                    GLib.idle_add(append_log, "AVISO️  Aguarde... não feche esta janela!")
+
                 GLib.idle_add(append_log, "")
 
                 # Create user with log callback
@@ -538,12 +655,22 @@ class UserDialog(Adw.Dialog):
 
     def show_success_dialog(self, username, fullname, de_id, user):
         """Show success dialog"""
+        # Construir informações baseadas no tipo de sessão
+        if user.session_type == 'desktop':
+            session_info = f"Desktop: {de_id.upper()}"
+        elif user.session_type == 'remoteapp':
+            session_info = f"Tipo: RemoteApp (Linux)\nAplicativo: {user.app_command}"
+        elif user.session_type == 'winege-remoteapp':
+            session_info = f"Tipo: WineGE RemoteApp (Windows)\nExecutável: {user.app_command}"
+        else:
+            session_info = f"Tipo: {user.session_type}"
+
         success_dialog = Adw.MessageDialog(
             transient_for=self.get_root(),
             heading="Usuário Criado com Sucesso!",
             body=f"""Usuário: {username}
 Nome: {fullname or username}
-Desktop: {de_id.upper()}
+{session_info}
 Porta RDP: {user.rdp_port}
 
 <b>Como Conectar:</b>

@@ -246,14 +246,14 @@ class RDPSessionManagerApp(Adw.Application):
             spinner.stop()
 
             if success:
-                append_log("✓ xrdp instalado e configurado com sucesso!")
-                update_status("✓ Instalação concluída!")
+                append_log("OK xrdp instalado e configurado com sucesso!")
+                update_status("OK Instalação concluída!")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_xrdp_success())
             else:
-                append_log(f"✗ ERRO: {message}")
-                update_status("✗ Erro na instalação")
+                append_log(f"X ERRO: {message}")
+                update_status("X Erro na instalação")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_xrdp_error(message))
@@ -287,7 +287,7 @@ class RDPSessionManagerApp(Adw.Application):
 
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="✓ xrdp Instalado!",
+            heading="OK xrdp Instalado!",
             body="O servidor xrdp foi instalado e configurado com sucesso.\n\nAgora você pode criar usuários RDP!"
         )
         dialog.add_response("ok", "OK")
@@ -360,7 +360,7 @@ sudo systemctl status xrdp"""
 
             # Mostrar toast
             if hasattr(self.window, 'show_toast'):
-                self.window.show_toast("✓ Comandos copiados para a área de transferência!")
+                self.window.show_toast("OK Comandos copiados para a área de transferência!")
 
     def install_freerdp_with_progress(self):
         """Install FreeRDP with progress dialog"""
@@ -441,14 +441,14 @@ sudo systemctl status xrdp"""
             spinner.stop()
 
             if success:
-                append_log("✓ FreeRDP instalado com sucesso!")
-                update_status("✓ Instalação concluída!")
+                append_log("OK FreeRDP instalado com sucesso!")
+                update_status("OK Instalação concluída!")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_freerdp_success())
             else:
-                append_log(f"✗ ERRO: {message}")
-                update_status("✗ Erro na instalação")
+                append_log(f"X ERRO: {message}")
+                update_status("X Erro na instalação")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_freerdp_error(message))
@@ -478,7 +478,7 @@ sudo systemctl status xrdp"""
         """Show FreeRDP installation success"""
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="✓ FreeRDP Instalado!",
+            heading="OK FreeRDP Instalado!",
             body="O cliente FreeRDP foi instalado com sucesso.\n\nAgora você pode conectar aos seus usuários RDP!"
         )
         dialog.add_response("ok", "OK")

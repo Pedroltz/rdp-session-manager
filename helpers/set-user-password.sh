@@ -15,5 +15,5 @@ fi
 # Definir senha usando chpasswd
 echo "$CREDENTIALS" | /usr/sbin/chpasswd
 
-echo "✓ Senha definida com sucesso!"
+echo "OK Senha definida com sucesso!"
 exit 0

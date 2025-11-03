@@ -30,8 +30,8 @@ class RDPUser:
         self.active = active
         self.enabled = enabled  # Se a conta está habilitada (não bloqueada)
         self.is_superuser = is_superuser  # Se o usuário tem privilégios sudo
-        self.session_type = session_type  # 'desktop' ou 'remoteapp'
-        self.app_command = app_command  # Comando do app para RemoteApp (ex: 'firefox')
+        self.session_type = session_type  # 'desktop', 'remoteapp', ou 'winege-remoteapp'
+        self.app_command = app_command  # Comando do app para RemoteApp (ex: 'firefox') ou .exe path para WineGE
         self.app_args = app_args  # Argumentos do app (ex: '--private-window')
 
     def to_dict(self) -> Dict:
@@ -145,8 +145,8 @@ class UserManager:
             password: Senha do usuário
             desktop_env: Ambiente desktop (gnome, xfce, kde) - usado apenas se session_type='desktop'
             full_name: Nome completo do usuário
-            session_type: Tipo de sessão ('desktop' ou 'remoteapp')
-            app_command: Comando do aplicativo para RemoteApp (ex: 'firefox')
+            session_type: Tipo de sessão ('desktop', 'remoteapp', ou 'winege-remoteapp')
+            app_command: Comando do aplicativo para RemoteApp (ex: 'firefox') ou caminho .exe para WineGE
             app_args: Argumentos do aplicativo (ex: '--private-window')
 
         Returns:
@@ -175,14 +175,14 @@ class UserManager:
             if not self._validate_username(username):
                 logger.error(f"Nome de usuário inválido: {username}")
                 raise ValueError(f"Nome de usuário inválido: {username}")
-            log("  ✓ Nome de usuário válido")
+            log("  OK Nome de usuário válido")
 
             # Verificar se usuário já existe
             log("→ Verificando se usuário já existe...")
             if self.user_exists(username):
                 logger.error(f"Usuário já existe: {username}")
                 raise ValueError(f"Usuário já existe: {username}")
-            log("  ✓ Usuário disponível")
+            log("  OK Usuário disponível")
 
             # Obter UID e porta global
             log("→ Alocando UID...")
@@ -209,7 +209,7 @@ class UserManager:
             # Criar usuário via pkexec
             log("")
             log("→ Criando usuário no sistema...")
-            log("  ⚠ Você será solicitado a autenticar (pkexec)")
+            log("  AVISO Você será solicitado a autenticar (pkexec)")
             success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
                                                session_type, app_command, app_args, log_callback=log)
 
@@ -230,7 +230,7 @@ class UserManager:
             )
 
             log("")
-            log("✓ Usuário criado no sistema com sucesso!")
+            log("OK Usuário criado no sistema com sucesso!")
             logger.info("=" * 70)
             logger.info(f"USER_MANAGER: SUCESSO - Usuário RDP criado!")
             logger.info(f"  - Username: {username}")
@@ -253,7 +253,7 @@ class UserManager:
             logger.error(f"  - Mensagem: {e}")
             logger.error("=" * 70)
             if log_callback:
-                log_callback(f"✗ ERRO: {e}")
+                log_callback(f"X ERRO: {e}")
             raise
 
     def _ensure_rdp_group_exists(self, log_callback=None):
@@ -262,13 +262,13 @@ class UserManager:
             grp.getgrnam(self.RDP_GID_NAME)
             logger.info(f"Grupo {self.RDP_GID_NAME} já existe")
             if log_callback:
-                log_callback(f"  ✓ Grupo '{self.RDP_GID_NAME}' já existe")
+                log_callback(f"  OK Grupo '{self.RDP_GID_NAME}' já existe")
         except KeyError:
             # Criar grupo
             logger.info(f"Criando grupo {self.RDP_GID_NAME}...")
             if log_callback:
                 log_callback(f"  → Criando grupo '{self.RDP_GID_NAME}'...")
-                log_callback(f"  ⚠ Você será solicitado a autenticar (pkexec)")
+                log_callback(f"  AVISO Você será solicitado a autenticar (pkexec)")
                 log_callback(f"  $ pkexec /usr/sbin/groupadd {self.RDP_GID_NAME}")
 
             result = subprocess.run(
@@ -291,7 +291,7 @@ class UserManager:
                 raise Exception(f"Falha ao criar grupo rdp-users: {error_msg}")
 
             if log_callback:
-                log_callback(f"  ✓ Grupo '{self.RDP_GID_NAME}' criado com sucesso")
+                log_callback(f"  OK Grupo '{self.RDP_GID_NAME}' criado com sucesso")
 
     def _create_base_directory(self, log_callback=None):
         """Cria diretório base /opt/rdp-users"""
@@ -299,7 +299,7 @@ class UserManager:
             logger.info(f"Criando diretório base {self.rdp_users_home}...")
             if log_callback:
                 log_callback(f"  → Criando diretório {self.rdp_users_home}...")
-                log_callback(f"  ⚠ Você será solicitado a autenticar (pkexec)")
+                log_callback(f"  AVISO Você será solicitado a autenticar (pkexec)")
                 log_callback(f"  $ pkexec mkdir -p {self.rdp_users_home}")
 
             result = subprocess.run(
@@ -335,10 +335,10 @@ class UserManager:
                 logger.warning(f"Aviso ao definir permissões: {chmod_result.stderr}")
 
             if log_callback:
-                log_callback(f"  ✓ Diretório criado com sucesso")
+                log_callback(f"  OK Diretório criado com sucesso")
         else:
             if log_callback:
-                log_callback(f"  ✓ Diretório {self.rdp_users_home} já existe")
+                log_callback(f"  OK Diretório {self.rdp_users_home} já existe")
 
     def _create_system_user(self, username: str, password: str, uid: int,
                            home_dir: str, full_name: str, desktop_env: str,
@@ -367,11 +367,11 @@ class UserManager:
 
             if log_callback:
                 log_callback(f"  → Criando usuário e configurando sistema...")
-                log_callback(f"  ⚠ Você será solicitado a autenticar (apenas uma vez)")
+                log_callback(f"  AVISO Você será solicitado a autenticar (apenas uma vez)")
 
             # Executar script de criação de usuário
             # Passar: username, uid, home_dir, full_name, session_type, de_command_or_app, app_args
-            if session_type == 'remoteapp':
+            if session_type in ['remoteapp', 'winege-remoteapp']:
                 session_command = app_command
                 extra_args = app_args
             else:
@@ -390,7 +390,13 @@ class UserManager:
             ]
 
             logger.info(f"Executando script helper: {create_script.name}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            # Para WineGE, precisamos de timeout maior (download + setup = ~15min)
+            timeout_seconds = 1200 if session_type == 'winege-remoteapp' else 30
+            if session_type == 'winege-remoteapp':
+                logger.info(f"  AVISO WineGE pode levar 10-15 minutos para download e instalação")
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
 
             if result.returncode != 0:
                 # Verificar código de erro
@@ -403,7 +409,7 @@ class UserManager:
 
                 logger.error(f"Criação de usuário falhou: {error_msg}")
                 if log_callback:
-                    log_callback(f"  ✗ Erro na criação: {error_msg}")
+                    log_callback(f"  X Erro na criação: {error_msg}")
                 return False
 
             # Exibir output do script
@@ -416,7 +422,7 @@ class UserManager:
             # Definir senha (segunda autenticação pkexec)
             if log_callback:
                 log_callback(f"  → Definindo senha...")
-                log_callback(f"  ⚠ Você será solicitado a autenticar novamente")
+                log_callback(f"  AVISO Você será solicitado a autenticar novamente")
 
             echo_proc = subprocess.Popen(
                 ['echo', f'{username}:{password}'],
@@ -442,11 +448,11 @@ class UserManager:
 
                 logger.error(f"Definição de senha falhou: {error_msg}")
                 if log_callback:
-                    log_callback(f"  ✗ Erro ao definir senha: {error_msg}")
+                    log_callback(f"  X Erro ao definir senha: {error_msg}")
                 return False
 
             if log_callback:
-                log_callback(f"  ✓ Senha definida com sucesso")
+                log_callback(f"  OK Senha definida com sucesso")
 
             logger.info(f"Usuário {username} criado no sistema com sucesso")
             return True
@@ -454,7 +460,7 @@ class UserManager:
         except Exception as e:
             logger.error(f"Erro ao criar usuário no sistema: {e}")
             if log_callback:
-                log_callback(f"  ✗ Erro: {e}")
+                log_callback(f"  X Erro: {e}")
             return False
 
     def get_user_processes(self, username: str) -> List[int]:
@@ -572,7 +578,7 @@ class UserManager:
                 for line in result.stdout.strip().split('\n'):
                     logger.info(f"  {line}")
 
-            logger.info(f"✓ Usuário {username} removido com sucesso")
+            logger.info(f"OK Usuário {username} removido com sucesso")
             logger.info(f"  - Diretório home removido: {remove_home}")
             logger.info(f"  - Processos terminados: {kill_processes}")
 
@@ -616,7 +622,7 @@ class UserManager:
                 logger.error(f"Falha ao desabilitar usuário: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Usuário {username} desabilitado com sucesso")
+            logger.info(f"OK Usuário {username} desabilitado com sucesso")
 
             # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = False
@@ -657,7 +663,7 @@ class UserManager:
                 logger.error(f"Falha ao habilitar usuário: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Usuário {username} habilitado com sucesso")
+            logger.info(f"OK Usuário {username} habilitado com sucesso")
 
             # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = True
@@ -705,7 +711,7 @@ class UserManager:
                 logger.error(f"Falha ao conceder privilégios sudo: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Privilégios sudo concedidos para {username}")
+            logger.info(f"OK Privilégios sudo concedidos para {username}")
 
             # Encerrar sessões ativas para forçar reconexão
             if active_pids and kill_sessions:
@@ -754,7 +760,7 @@ class UserManager:
                 logger.error(f"Falha ao revogar privilégios sudo: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Privilégios sudo revogados de {username}")
+            logger.info(f"OK Privilégios sudo revogados de {username}")
 
             # Encerrar sessões ativas para forçar reconexão
             if active_pids and kill_sessions:
@@ -937,12 +943,23 @@ class UserManager:
             with open(xsession_file, 'r') as f:
                 content = f.read()
 
+            # Detectar se é WineGE RemoteApp
+            if 'Mode: WineGE RemoteApp' in content or '.launch_winege_app.sh' in content:
+                # WineGE RemoteApp mode - ler o caminho do .exe
+                winege_app_path = Path(home_dir) / '.winege_app_path'
+                if winege_app_path.exists():
+                    with open(winege_app_path, 'r') as f:
+                        exe_path = f.read().strip()
+                        logger.debug(f"Detected WineGE RemoteApp: {exe_path}")
+                        return ('winege-remoteapp', exe_path, '')
+                return ('winege-remoteapp', 'unknown', '')
+
             # Detectar se é RemoteApp ou Desktop (RemoteApp usa openbox)
             if 'Mode: RemoteApp' in content or 'openbox' in content:
                 # RemoteApp mode - extrair comando do app
                 for line in content.split('\n'):
                     line = line.strip()
-                    if line.startswith('exec ') and not any(wm in line for wm in ['openbox', 'metacity', 'dbus-launch']):
+                    if line.startswith('exec ') and not any(wm in line for wm in ['openbox', 'metacity', 'dbus-launch', 'winege']):
                         # Extrair comando e argumentos
                         exec_cmd = line[5:].strip()  # Remove "exec "
                         parts = exec_cmd.split(maxsplit=1)
@@ -978,8 +995,8 @@ class UserManager:
     def _detect_desktop_env(self, home_dir: str) -> str:
         """Detecta o Desktop Environment lendo o arquivo .xsession"""
         session_type, desktop_env_or_cmd, _ = self._detect_session_info(home_dir)
-        if session_type == 'remoteapp':
-            return 'remoteapp'  # Para usuários RemoteApp, retorna 'remoteapp' como DE
+        if session_type in ['remoteapp', 'winege-remoteapp']:
+            return session_type  # Para usuários RemoteApp, retorna o tipo como DE
         return desktop_env_or_cmd
 
     def _detect_rdp_port(self, uid: int) -> int:
@@ -1009,9 +1026,9 @@ class UserManager:
                     session_type, desktop_env_or_cmd, app_args = self._detect_session_info(user_info.pw_dir)
 
                     # Para desktop mode, desktop_env_or_cmd é o DE
-                    # Para remoteapp mode, desktop_env_or_cmd é o comando do app
-                    if session_type == 'remoteapp':
-                        desktop_env = 'remoteapp'
+                    # Para remoteapp/winege-remoteapp mode, desktop_env_or_cmd é o comando do app ou .exe
+                    if session_type in ['remoteapp', 'winege-remoteapp']:
+                        desktop_env = session_type
                         app_command = desktop_env_or_cmd
                     else:
                         desktop_env = desktop_env_or_cmd
@@ -1058,6 +1075,24 @@ class UserManager:
     def _validate_username(self, username: str) -> bool:
         """Valida nome de usuário"""
         import re
+
+        # Lista de nomes de usuário reservados do sistema
+        RESERVED_USERNAMES = {
+            'root', 'admin', 'administrator', 'daemon', 'bin', 'sys', 'sync',
+            'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data',
+            'backup', 'list', 'irc', 'gnats', 'nobody', 'systemd-network',
+            'systemd-resolve', 'messagebus', 'systemd-timesync', 'syslog',
+            'avahi-autoipd', 'usbmux', 'dnsmasq', 'rtkit', 'cups-pk-helper',
+            'speech-dispatcher', 'avahi', 'pulse', 'saned', 'colord', 'hplip',
+            'geoclue', 'gnome-initial-setup', 'gdm', 'postgres', 'mysql',
+            'ftp', 'ssh', 'sshd'
+        }
+
+        # Verificar se é nome reservado
+        if username.lower() in RESERVED_USERNAMES:
+            logger.error(f"Nome de usuário '{username}' é reservado do sistema")
+            return False
+
         # Nome deve começar com letra, conter apenas letras, números, - e _
         # Comprimento entre 3 e 32 caracteres
         pattern = r'^[a-z][a-z0-9_-]{2,31}$'
@@ -1106,7 +1141,7 @@ class UserManager:
                 logger.error(f"Falha ao alterar senha: {error_msg}")
                 return False
 
-            logger.info(f"✓ Senha de {username} alterada com sucesso")
+            logger.info(f"OK Senha de {username} alterada com sucesso")
             return True
 
         except Exception as e:
@@ -1152,7 +1187,7 @@ class UserManager:
                 logger.error(f"Falha ao renomear usuário: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Usuário renomeado: {old_username} -> {new_username}")
+            logger.info(f"OK Usuário renomeado: {old_username} -> {new_username}")
 
             # Atualizar cache de estados
             if old_username in UserManager._user_states_cache:
@@ -1195,23 +1230,69 @@ class UserManager:
                 logger.error(f"Falha ao alterar nome completo: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Nome completo de {username} alterado com sucesso")
+            logger.info(f"OK Nome completo de {username} alterado com sucesso")
             return True
 
         except Exception as e:
             logger.error(f"Erro ao alterar nome completo de {username}: {e}")
             return False
 
-    def change_user_session_type(self, username: str, session_type: str,
-                                 session_command: str = '', app_args: str = '') -> bool:
+    def list_user_executables(self, username: str) -> list:
         """
-        Altera o tipo de sessão de um usuário RDP (desktop <-> remoteapp)
+        Lista todos os executáveis disponíveis para um usuário WineGE
 
         Args:
             username: Nome do usuário
-            session_type: Novo tipo ('desktop' ou 'remoteapp')
-            session_command: Comando DE (desktop) ou app (remoteapp)
-            app_args: Argumentos do app (apenas remoteapp)
+
+        Returns:
+            Lista de caminhos de executáveis disponíveis
+        """
+        try:
+            if not self.user_exists(username):
+                return []
+
+            user_home = self.rdp_users_home / username
+            executables = []
+
+            # Buscar em WindowsApps (portáteis)
+            windows_apps = user_home / "WindowsApps"
+            if windows_apps.exists():
+                for exe in windows_apps.glob("*.exe"):
+                    executables.append(("WindowsApps", str(exe)))
+
+            # Buscar instalados no Wine
+            wine_prefix = user_home / ".wine" / "drive_c"
+            if wine_prefix.exists():
+                program_files = [
+                    wine_prefix / "Program Files",
+                    wine_prefix / "Program Files (x86)"
+                ]
+
+                for pf in program_files:
+                    if pf.exists():
+                        for exe in pf.rglob("*.exe"):
+                            exe_name_lower = exe.name.lower()
+                            # Filtrar aplicativos padrão do Windows e uninstallers
+                            if not any(x in str(exe).lower() for x in [
+                                'unins', 'uninst', 'windows nt', 'internet explorer',
+                                'windows media', 'windows mail', 'windows photo',
+                                'wordpad', 'notepad'
+                            ]):
+                                executables.append(("Wine", str(exe)))
+
+            return executables
+
+        except Exception as e:
+            logger.error(f"Erro ao listar executáveis de {username}: {e}")
+            return []
+
+    def update_winege_executable(self, username: str, new_exe_path: str) -> bool:
+        """
+        Atualiza o executável WineGE de um usuário existente
+
+        Args:
+            username: Nome do usuário
+            new_exe_path: Caminho do novo executável .exe
 
         Returns:
             True se sucesso, False se falha
@@ -1221,7 +1302,47 @@ class UserManager:
                 logger.error(f"Usuário não existe: {username}")
                 return False
 
-            if session_type not in ['desktop', 'remoteapp']:
+            logger.info(f"Atualizando executável WineGE de {username} para: {new_exe_path}")
+
+            # Usar script helper para atualizar .exe
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            update_script = script_dir / "update-winege-exe.sh"
+
+            cmd = ['pkexec', str(update_script), username, new_exe_path]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                logger.error(f"Falha ao atualizar executável: {result.stderr}")
+                return False
+
+            logger.info(f"OK Executável WineGE de {username} atualizado com sucesso")
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao atualizar executável de {username}: {e}")
+            return False
+
+    def change_user_session_type(self, username: str, session_type: str,
+                                 session_command: str = '', app_args: str = '') -> bool:
+        """
+        Altera o tipo de sessão de um usuário RDP (desktop <-> remoteapp <-> winege-remoteapp)
+
+        Args:
+            username: Nome do usuário
+            session_type: Novo tipo ('desktop', 'remoteapp', ou 'winege-remoteapp')
+            session_command: Comando DE (desktop), app (remoteapp), ou .exe path (winege-remoteapp)
+            app_args: Argumentos do app (apenas remoteapp/winege-remoteapp)
+
+        Returns:
+            True se sucesso, False se falha
+        """
+        try:
+            if not self.user_exists(username):
+                logger.error(f"Usuário não existe: {username}")
+                return False
+
+            if session_type not in ['desktop', 'remoteapp', 'winege-remoteapp']:
                 logger.error(f"Tipo de sessão inválido: {session_type}")
                 return False
 
@@ -1244,7 +1365,7 @@ class UserManager:
                 logger.error(f"Falha ao alterar tipo de sessão: {result.stderr}")
                 return False
 
-            logger.info(f"✓ Tipo de sessão de {username} alterado para {session_type}")
+            logger.info(f"OK Tipo de sessão de {username} alterado para {session_type}")
             return True
 
         except Exception as e:

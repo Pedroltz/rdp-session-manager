@@ -203,7 +203,7 @@ class DEInstaller:
         if self.is_de_installed(de_id):
             msg = f"{self.DE_PACKAGES[de_id]['name']} já está instalado"
             logger.info(msg)
-            log(100, f"✓ {msg}")
+            log(100, f"OK {msg}")
             return True, msg
 
         de_info = self.DE_PACKAGES[de_id]
@@ -216,15 +216,15 @@ class DEInstaller:
             has_space, required, available = self.check_disk_space(de_id)
             if not has_space:
                 error_msg = f"Espaço insuficiente. Necessário: {required}MB, Disponível: {available}MB"
-                log(0, f"✗ {error_msg}")
+                log(0, f"X {error_msg}")
                 return False, error_msg
 
-            log(5, f"  ✓ Espaço disponível: {available}MB (necessário: {required}MB)")
+            log(5, f"  OK Espaço disponível: {available}MB (necessário: {required}MB)")
             log(5, "")
 
             # Atualizar cache do apt
             log(10, "→ Atualizando cache de pacotes...")
-            log(10, "  ⚠ Você será solicitado a autenticar (pkexec)")
+            log(10, "  AVISO Você será solicitado a autenticar (pkexec)")
             log(10, "  $ pkexec apt-get update")
 
             update_result = subprocess.run(
@@ -236,9 +236,9 @@ class DEInstaller:
 
             if update_result.returncode != 0:
                 logger.warning(f"apt-get update retornou código {update_result.returncode}")
-                log(10, f"  ⚠ Aviso: apt-get update retornou código {update_result.returncode}")
+                log(10, f"  AVISO Aviso: apt-get update retornou código {update_result.returncode}")
             else:
-                log(15, "  ✓ Cache atualizado com sucesso")
+                log(15, "  OK Cache atualizado com sucesso")
 
             log(15, "")
 
@@ -246,7 +246,7 @@ class DEInstaller:
             log(20, f"→ Instalando {de_info['name']}...")
             log(20, f"  Pacotes: {', '.join(packages)}")
             log(20, "")
-            log(20, "  ⚠ Você será solicitado a autenticar novamente")
+            log(20, "  AVISO Você será solicitado a autenticar novamente")
             log(20, f"  $ pkexec apt-get install -y {' '.join(packages)}")
             log(20, "")
             log(30, "→ Baixando e instalando pacotes...")
@@ -307,7 +307,7 @@ class DEInstaller:
                                         progress = min(progress + 1, 90)
                                         last_log_time = time.time()
                                     elif any(kw in line for kw in ['erro', 'error', 'E:', 'Err:']):
-                                        log(progress, f"  ✗ {line[:150]}")
+                                        log(progress, f"  X {line[:150]}")
                                         last_log_time = time.time()
                     except Exception as e:
                         logger.debug(f"Erro lendo log apt: {e}")
@@ -318,7 +318,7 @@ class DEInstaller:
                 if returncode != 0:
                     error_msg = f"Falha na instalação (código: {returncode})"
                     logger.error(error_msg)
-                    log(progress, f"✗ {error_msg}")
+                    log(progress, f"X {error_msg}")
                     return False, error_msg
 
             except Exception as e:
@@ -330,10 +330,10 @@ class DEInstaller:
                 raise
 
             log(90, "")
-            log(90, "  ✓ Pacotes instalados com sucesso")
-            log(95, f"  ✓ {de_info['name']} configurado")
+            log(90, "  OK Pacotes instalados com sucesso")
+            log(95, f"  OK {de_info['name']} configurado")
             log(100, "")
-            log(100, f"✓ {de_info['name']} instalado com sucesso!")
+            log(100, f"OK {de_info['name']} instalado com sucesso!")
 
             logger.info(f"{de_info['name']} instalado com sucesso")
             return True, f"{de_info['name']} instalado com sucesso"
@@ -341,12 +341,12 @@ class DEInstaller:
         except subprocess.TimeoutExpired:
             error_msg = f"Timeout na instalação de {de_info['name']} (30 minutos)"
             logger.error(error_msg)
-            log(0, f"✗ {error_msg}")
+            log(0, f"X {error_msg}")
             return False, error_msg
         except Exception as e:
             error_msg = f"Erro ao instalar {de_info['name']}: {e}"
             logger.error(error_msg)
-            log(0, f"✗ {error_msg}")
+            log(0, f"X {error_msg}")
             return False, error_msg
 
     def get_de_info(self, de_id: str) -> Optional[Dict]:

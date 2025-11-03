@@ -32,19 +32,19 @@ if [ "$ACTION" = "grant" ]; then
     # Adicionar usuário ao grupo sudo
     /usr/sbin/usermod -aG sudo "$USERNAME"
 
-    echo "✓ Privilégios de superusuário concedidos para $USERNAME"
+    echo "OK Privilégios de superusuário concedidos para $USERNAME"
     echo "  O usuário agora pode executar comandos com sudo"
 else
     echo "Revogando privilégios de superusuário de $USERNAME..."
 
     # Remover usuário do grupo sudo usando gpasswd (mais confiável)
     if /usr/bin/gpasswd -d "$USERNAME" sudo 2>/dev/null; then
-        echo "✓ Privilégios de superusuário revogados de $USERNAME"
+        echo "OK Privilégios de superusuário revogados de $USERNAME"
         echo "  O usuário não pode mais executar comandos com sudo"
     else
         # Fallback para deluser se gpasswd falhar
         if /usr/sbin/deluser "$USERNAME" sudo 2>/dev/null; then
-            echo "✓ Privilégios de superusuário revogados de $USERNAME"
+            echo "OK Privilégios de superusuário revogados de $USERNAME"
             echo "  O usuário não pode mais executar comandos com sudo"
         else
             echo "! Aviso: Comando completado mas verifique os grupos do usuário"

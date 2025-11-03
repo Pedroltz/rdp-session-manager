@@ -42,5 +42,5 @@ EOF
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "✓ Arquivo .xsession criado com sucesso!"
+echo "OK Arquivo .xsession criado com sucesso!"
 exit 0

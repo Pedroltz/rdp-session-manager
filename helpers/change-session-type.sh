@@ -113,5 +113,5 @@ fi
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "✓ Tipo de sessão alterado com sucesso para $SESSION_TYPE"
+echo "OK Tipo de sessão alterado com sucesso para $SESSION_TYPE"
 exit 0

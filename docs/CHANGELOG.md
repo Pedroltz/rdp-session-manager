@@ -132,13 +132,13 @@ All 109 unit tests passing:
 - `test_backup.py` - 20 tests
 
 **Manual Testing**:
-- ✅ User creation with RemoteApp (firefox)
-- ✅ Session type switching (desktop ↔ RemoteApp)
-- ✅ Username rename with active sessions
-- ✅ Full name modification
-- ✅ Password reset with confirmation
-- ✅ RemoteApp window maximization
-- ✅ FreeRDP connection to RemoteApp users
+- User creation with RemoteApp (firefox)
+- Session type switching (desktop ↔ RemoteApp)
+- Username rename with active sessions
+- Full name modification
+- Password reset with confirmation
+- RemoteApp window maximization
+- FreeRDP connection to RemoteApp users
 
 ### Security
 

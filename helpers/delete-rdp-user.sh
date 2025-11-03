@@ -54,7 +54,7 @@ if [ "$KILL_PROCESSES" = true ]; then
             sleep 0.5
         fi
 
-        echo "  ✓ Processos terminados"
+        echo "  OK Processos terminados"
     else
         echo "  Nenhum processo ativo encontrado"
     fi
@@ -65,11 +65,11 @@ echo "→ Deletando usuário $USERNAME..."
 
 if [ "$REMOVE_HOME" = true ]; then
     /usr/sbin/userdel -r "$USERNAME"
-    echo "  ✓ Usuário e diretório home removidos"
+    echo "  OK Usuário e diretório home removidos"
 else
     /usr/sbin/userdel "$USERNAME"
-    echo "  ✓ Usuário removido (diretório home mantido)"
+    echo "  OK Usuário removido (diretório home mantido)"
 fi
 
-echo "✓ Usuário $USERNAME deletado com sucesso!"
+echo "OK Usuário $USERNAME deletado com sucesso!"
 exit 0

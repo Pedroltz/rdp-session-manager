@@ -23,5 +23,5 @@ echo "Alterando nome completo de $USERNAME para: $FULLNAME"
 # Alterar GECOS (nome completo)
 /usr/sbin/usermod -c "$FULLNAME" "$USERNAME"
 
-echo "✓ Nome completo alterado com sucesso"
+echo "OK Nome completo alterado com sucesso"
 exit 0

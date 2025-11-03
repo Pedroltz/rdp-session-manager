@@ -301,7 +301,7 @@ class MainWindow(Adw.ApplicationWindow):
         """Create warning banner for missing xrdp"""
         # Criar Banner
         self.xrdp_banner = Adw.Banner()
-        self.xrdp_banner.set_title("⚠ Servidor xrdp não está instalado - A aplicação não funcionará sem ele")
+        self.xrdp_banner.set_title("AVISO Servidor xrdp não está instalado - A aplicação não funcionará sem ele")
         self.xrdp_banner.set_button_label("Instalar Agora")
         self.xrdp_banner.connect('button-clicked', self.on_install_xrdp_clicked)
         self.xrdp_banner.set_revealed(False)
@@ -396,28 +396,28 @@ class MainWindow(Adw.ApplicationWindow):
                     # Habilitar usuário
                     success = self.user_manager.unlock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"✓ Usuário {username} habilitado")
+                        GLib.idle_add(self.show_toast, f"OK Usuário {username} habilitado")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"✗ Erro ao habilitar {username}")
+                        GLib.idle_add(self.show_toast, f"X Erro ao habilitar {username}")
                 else:
                     # Desabilitar usuário
                     success = self.user_manager.lock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"✓ Usuário {username} desabilitado")
+                        GLib.idle_add(self.show_toast, f"OK Usuário {username} desabilitado")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"✗ Erro ao desabilitar {username}")
+                        GLib.idle_add(self.show_toast, f"X Erro ao desabilitar {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"✗ Erro ao alterar status de {username}")
+                GLib.idle_add(self.show_toast, f"X Erro ao alterar status de {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -442,10 +442,10 @@ class MainWindow(Adw.ApplicationWindow):
             action_text = "conceder" if new_state else "revogar"
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"⚠ {username} está conectado",
+                heading=f"AVISO {username} está conectado",
                 body=f"""Para {action_text} privilégios sudo, a sessão do usuário será encerrada automaticamente.
 
-⚠ IMPORTANTE: Mudanças de grupo só têm efeito após logout/login completo.
+AVISO IMPORTANTE: Mudanças de grupo só têm efeito após logout/login completo.
 
 O usuário precisará reconectar via RDP para que os privilégios {"de superusuário sejam aplicados" if new_state else "sejam removidos"}.
 
@@ -485,28 +485,28 @@ Deseja continuar?"""
                     # Conceder privilégios sudo
                     success = self.user_manager.grant_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, f"✓ Privilégios sudo concedidos - Reconecte para aplicar")
+                        GLib.idle_add(self.show_toast, f"OK Privilégios sudo concedidos - Reconecte para aplicar")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"✗ Erro ao conceder privilégios sudo para {username}")
+                        GLib.idle_add(self.show_toast, f"X Erro ao conceder privilégios sudo para {username}")
                 else:
                     # Revogar privilégios sudo
                     success = self.user_manager.revoke_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, f"✓ Privilégios sudo revogados - Reconecte para aplicar")
+                        GLib.idle_add(self.show_toast, f"OK Privilégios sudo revogados - Reconecte para aplicar")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"✗ Erro ao revogar privilégios sudo de {username}")
+                        GLib.idle_add(self.show_toast, f"X Erro ao revogar privilégios sudo de {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling sudo for user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"✗ Erro ao alterar privilégios sudo de {username}")
+                GLib.idle_add(self.show_toast, f"X Erro ao alterar privilégios sudo de {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -526,7 +526,7 @@ Deseja continuar?"""
 
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"⚠ {username} está ativo",
+                heading=f"AVISO {username} está ativo",
                 body=f"O usuário {username}{session_info}.\n\nPara remover o usuário, suas sessões serão encerradas automaticamente.\n\nDeseja continuar?"
             )
 
@@ -573,10 +573,10 @@ Deseja continuar?"""
 
                 if success:
                     self.load_users()
-                    self.show_toast(f"✓ Usuário {username} removido com sucesso")
+                    self.show_toast(f"OK Usuário {username} removido com sucesso")
                     logger.info(f"User {username} deleted successfully")
                 else:
-                    self.show_toast(f"✗ Erro ao remover {username}")
+                    self.show_toast(f"X Erro ao remover {username}")
                     # Show error dialog
                     error_dialog = Adw.MessageDialog(
                         transient_for=self,
@@ -685,15 +685,16 @@ Deseja continuar?"""
 
         session_type_combo = Gtk.ComboBoxText()
         session_type_combo.append("desktop", "Desktop Completo")
-        session_type_combo.append("remoteapp", "RemoteApp (Aplicativo Único)")
+        session_type_combo.append("remoteapp", "RemoteApp (Linux)")
+        session_type_combo.append("winege-remoteapp", "WineGE RemoteApp (Windows)")
 
         # Set current value
         current_session_type = getattr(user, 'session_type', 'desktop')
         session_type_combo.set_active_id(current_session_type)
         settings_box.append(session_type_combo)
 
-        # Campo: Comando do Aplicativo (para RemoteApp)
-        app_label = Gtk.Label(label="Comando do Aplicativo:")
+        # Campo: Comando do Aplicativo (para RemoteApp Linux)
+        app_label = Gtk.Label(label="Comando do Aplicativo Linux:")
         app_label.set_halign(Gtk.Align.START)
         app_label.set_margin_top(8)
         settings_box.append(app_label)
@@ -706,7 +707,7 @@ Deseja continuar?"""
             custom_app_entry.set_text(user.app_command)
         settings_box.append(custom_app_entry)
 
-        # Campo: Argumentos
+        # Campo: Argumentos (Linux RemoteApp)
         app_args_entry = Gtk.Entry()
         app_args_entry.set_hexpand(True)
         app_args_entry.set_placeholder_text("Argumentos (opcional)...")
@@ -714,12 +715,243 @@ Deseja continuar?"""
             app_args_entry.set_text(user.app_args)
         settings_box.append(app_args_entry)
 
+        # === WineGE RemoteApp Fields ===
+        # Label e descrição
+        winege_label = Gtk.Label()
+        winege_label.set_markup("<b>Aplicativo Windows (WineGE)</b>")
+        winege_label.set_halign(Gtk.Align.START)
+        winege_label.set_margin_top(12)
+        settings_box.append(winege_label)
+
+        winege_desc = Gtk.Label()
+        winege_desc.set_text("Configure o executável Windows a ser executado")
+        winege_desc.set_halign(Gtk.Align.START)
+        winege_desc.add_css_class("dim-label")
+        winege_desc.set_margin_bottom(8)
+        settings_box.append(winege_desc)
+
+        # Box horizontal para botões
+        winege_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+
+        # Botão para selecionar .exe
+        winege_select_button = Gtk.Button()
+        winege_select_button.set_label("Selecionar")
+        winege_select_button.add_css_class("suggested-action")
+
+        def on_select_winege_exe(btn):
+            """File picker for .exe - hide dialog temporarily to allow GTK4 file picker"""
+            logger.info("=== WineGE 'Selecionar' button clicked ===")
+            from gi.repository import Gio
+
+            # Esconder o dialog de configurações temporariamente
+            dialog.set_visible(False)
+
+            # Criar file dialog GTK4
+            file_dialog = Gtk.FileDialog.new()
+            file_dialog.set_title("Selecionar Executável Windows")
+
+            # Definir diretório inicial
+            user_home = f"/opt/rdp-users/{user.username}"
+            try:
+                if Path(user_home).exists():
+                    initial_folder = Gio.File.new_for_path(user_home)
+                    file_dialog.set_initial_folder(initial_folder)
+                    logger.info(f"File picker will start at: {user_home}")
+            except Exception as e:
+                logger.warning(f"Could not set initial folder: {e}")
+
+            # Filters
+            filter_exe = Gtk.FileFilter()
+            filter_exe.set_name("Executáveis Windows (*.exe)")
+            filter_exe.add_pattern("*.exe")
+            filter_exe.add_pattern("*.EXE")
+
+            filter_all = Gtk.FileFilter()
+            filter_all.set_name("Todos os arquivos")
+            filter_all.add_pattern("*")
+
+            filters = Gio.ListStore.new(Gtk.FileFilter)
+            filters.append(filter_exe)
+            filters.append(filter_all)
+
+            file_dialog.set_filters(filters)
+            file_dialog.set_default_filter(filter_exe)
+
+            def on_file_selected(source_object, result):
+                logger.info("=== File selection callback triggered ===")
+
+                # Mostrar o dialog de configurações novamente
+                dialog.set_visible(True)
+
+                try:
+                    file = source_object.open_finish(result)
+                    if file:
+                        # Obter caminho do arquivo
+                        file_path = file.get_path()
+
+                        # Se get_path() retornar None, tentar URI
+                        if not file_path:
+                            import urllib.parse
+                            uri = file.get_uri()
+                            file_path = urllib.parse.unquote(uri.replace('file://', ''))
+
+                        # Garantir que o caminho é absoluto
+                        if file_path and not file_path.startswith('/'):
+                            file_path = '/' + file_path
+
+                        logger.info(f"File selected: {file_path}")
+                        winege_exe_entry.set_text(file_path)
+                except Exception as e:
+                    error_msg = str(e)
+                    if "No file selected" not in error_msg and "dismissed" not in error_msg.lower():
+                        logger.error(f"Error selecting file: {e}")
+
+            # Abrir file dialog com MainWindow como parent
+            file_dialog.open(self, None, on_file_selected)
+
+        winege_select_button.connect('clicked', on_select_winege_exe)
+        winege_buttons_box.append(winege_select_button)
+
+        # Botão para listar executáveis disponíveis
+        winege_list_button = Gtk.Button()
+        winege_list_button.set_label("Listar Disponíveis")
+
+        def on_list_winege_exes(btn):
+            """Show list of available executables for the user"""
+            logger.info("=== Listing available executables ===")
+
+            # Buscar executáveis disponíveis
+            executables = self.user_manager.list_user_executables(user.username)
+
+            if not executables:
+                self.show_toast("X Nenhum executável encontrado")
+                return
+
+            # Criar dialog de seleção
+            list_dialog = Adw.MessageDialog(
+                transient_for=dialog,
+                heading="Executáveis Disponíveis",
+                body=f"Selecione o executável para {user.username}:"
+            )
+
+            # Criar listbox com executáveis
+            scrolled = Gtk.ScrolledWindow()
+            scrolled.set_min_content_height(300)
+            scrolled.set_min_content_width(500)
+
+            listbox = Gtk.ListBox()
+            listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+            listbox.add_css_class("boxed-list")
+
+            for source, exe_path in executables:
+                row = Gtk.ListBoxRow()
+                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+                box.set_margin_top(8)
+                box.set_margin_bottom(8)
+                box.set_margin_start(12)
+                box.set_margin_end(12)
+
+                # Nome do arquivo
+                label_name = Gtk.Label()
+                label_name.set_markup(f"<b>{Path(exe_path).name}</b>")
+                label_name.set_halign(Gtk.Align.START)
+                box.append(label_name)
+
+                # Caminho e fonte
+                label_path = Gtk.Label(label=f" {exe_path}")
+                label_path.set_halign(Gtk.Align.START)
+                label_path.add_css_class("dim-label")
+                label_path.add_css_class("caption")
+                box.append(label_path)
+
+                label_source = Gtk.Label(label=f" {source}")
+                label_source.set_halign(Gtk.Align.START)
+                label_source.add_css_class("dim-label")
+                label_source.add_css_class("caption")
+                box.append(label_source)
+
+                row.set_child(box)
+                row.exe_path = exe_path  # Store path in row
+                listbox.append(row)
+
+            scrolled.set_child(listbox)
+            list_dialog.set_extra_child(scrolled)
+
+            list_dialog.add_response("cancel", "Cancelar")
+            list_dialog.add_response("select", "Selecionar")
+            list_dialog.set_response_appearance("select", Adw.ResponseAppearance.SUGGESTED)
+
+            def on_list_dialog_response(dlg, response):
+                if response == "select":
+                    selected_row = listbox.get_selected_row()
+                    if selected_row and hasattr(selected_row, 'exe_path'):
+                        logger.info(f"Selected executable: {selected_row.exe_path}")
+                        winege_exe_entry.set_text(selected_row.exe_path)
+                        self.show_toast("OK Executável selecionado")
+
+            list_dialog.connect('response', on_list_dialog_response)
+            list_dialog.present()
+
+        winege_list_button.connect('clicked', on_list_winege_exes)
+        winege_buttons_box.append(winege_list_button)
+
+        # Adicionar box de botões
+        settings_box.append(winege_buttons_box)
+
+        # Campo de entrada para caminho do .exe (embaixo dos botões)
+        winege_exe_entry = Gtk.Entry()
+        winege_exe_entry.set_hexpand(True)
+        winege_exe_entry.set_placeholder_text("Caminho completo do arquivo .exe...")
+        winege_exe_entry.set_margin_top(8)
+        if current_session_type == 'winege-remoteapp' and hasattr(user, 'app_command'):
+            winege_exe_entry.set_text(user.app_command)
+
+        # Função para limpar e normalizar o caminho quando o usuário digitar
+        def on_exe_path_changed(entry):
+            """Normalize path when user types it manually"""
+            import urllib.parse
+            text = entry.get_text().strip()
+            if text and not text.endswith('.exe'):
+                return  # Ainda está digitando
+
+            if text:
+                # Decodificar %20 e outros caracteres codificados
+                text = urllib.parse.unquote(text)
+                # Remover file:// se presente
+                text = text.replace('file://', '')
+                # Garantir que começa com /
+                if text and not text.startswith('/'):
+                    text = '/' + text
+                # Atualizar o campo se mudou
+                if text != entry.get_text():
+                    entry.set_text(text)
+
+        # Conectar eventos: quando pressionar Enter ou perder o foco
+        winege_exe_entry.connect('activate', on_exe_path_changed)
+
+        # GTK4 usa controller para eventos de foco
+        focus_controller = Gtk.EventControllerFocus.new()
+        focus_controller.connect('leave', lambda c: on_exe_path_changed(winege_exe_entry))
+        winege_exe_entry.add_controller(focus_controller)
+
+        settings_box.append(winege_exe_entry)
+
         # Função para toggle visibility based on session type
         def on_session_type_changed(combo):
-            is_remoteapp = combo.get_active_id() == 'remoteapp'
+            session_id = combo.get_active_id()
+            is_remoteapp = session_id == 'remoteapp'
+            is_winege = session_id == 'winege-remoteapp'
+
+            # RemoteApp Linux
             app_label.set_visible(is_remoteapp)
             custom_app_entry.set_visible(is_remoteapp)
             app_args_entry.set_visible(is_remoteapp)
+
+            # WineGE RemoteApp
+            winege_label.set_visible(is_winege)
+            winege_desc.set_visible(is_winege)
+            winege_buttons_box.set_visible(is_winege)
+            winege_exe_entry.set_visible(is_winege)
 
         session_type_combo.connect('changed', on_session_type_changed)
 
@@ -771,6 +1003,7 @@ Deseja continuar?"""
         dialog._session_type_combo = session_type_combo
         dialog._custom_app_entry = custom_app_entry
         dialog._app_args_entry = app_args_entry
+        dialog._winege_exe_entry = winege_exe_entry
         dialog._password_entry = password_entry
         dialog._confirm_entry = confirm_entry
         dialog._original_username = user.username
@@ -799,21 +1032,36 @@ Deseja continuar?"""
 
                 # Validar que app command não está vazio
                 if not new_app_command:
-                    self.show_toast("✗ Comando do aplicativo não pode estar vazio para RemoteApp")
+                    self.show_toast("X Comando do aplicativo não pode estar vazio para RemoteApp")
+                    return
+
+            elif new_session_type == 'winege-remoteapp':
+                # Pegar caminho do .exe
+                new_app_command = dialog._winege_exe_entry.get_text().strip()
+                new_app_args = ''  # WineGE não usa argumentos separados
+
+                # Validar que .exe não está vazio e existe
+                if not new_app_command:
+                    self.show_toast("X Caminho do executável não pode estar vazio para WineGE RemoteApp")
+                    return
+
+                from pathlib import Path
+                if not Path(new_app_command).exists():
+                    self.show_toast(f"X Arquivo não encontrado: {new_app_command}")
                     return
 
             # Validar dados
             if not new_username:
-                self.show_toast("✗ Nome de usuário não pode estar vazio")
+                self.show_toast("X Nome de usuário não pode estar vazio")
                 return
 
             # Validar senha se fornecida
             if new_password or confirm_password:
                 if new_password != confirm_password:
-                    self.show_toast("✗ As senhas não coincidem")
+                    self.show_toast("X As senhas não coincidem")
                     return
                 if len(new_password) < 6:
-                    self.show_toast("✗ Senha deve ter pelo menos 6 caracteres")
+                    self.show_toast("X Senha deve ter pelo menos 6 caracteres")
                     return
 
             # Aplicar alterações em thread separada
@@ -835,7 +1083,7 @@ Deseja continuar?"""
                         if success:
                             changes_made.append("nome completo")
                         else:
-                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar nome completo")
+                            GLib.idle_add(self.show_toast, "X Erro ao alterar nome completo")
                             return
 
                     # 2. Alterar senha (se fornecida)
@@ -844,7 +1092,7 @@ Deseja continuar?"""
                         if success:
                             changes_made.append("senha")
                         else:
-                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar senha")
+                            GLib.idle_add(self.show_toast, "X Erro ao alterar senha")
                             return
 
                     # 3. Alterar tipo de sessão (se mudou)
@@ -878,7 +1126,7 @@ Deseja continuar?"""
                         if success:
                             changes_made.append("tipo de sessão")
                         else:
-                            GLib.idle_add(self.show_toast, "✗ Erro ao alterar tipo de sessão")
+                            GLib.idle_add(self.show_toast, "X Erro ao alterar tipo de sessão")
                             return
                     elif new_session_type == 'remoteapp':
                         # Mesmo tipo, mas pode ter mudado app/args
@@ -892,8 +1140,35 @@ Deseja continuar?"""
                             if success:
                                 changes_made.append("aplicativo RemoteApp")
                             else:
-                                GLib.idle_add(self.show_toast, "✗ Erro ao alterar aplicativo")
+                                GLib.idle_add(self.show_toast, "X Erro ao alterar aplicativo")
                                 return
+
+                    elif new_session_type == 'winege-remoteapp':
+                        # Mesmo tipo WineGE, mas pode ter mudado exe/args
+                        original_app = getattr(dialog._user, 'app_command', '')
+                        original_args = getattr(dialog._user, 'app_args', '')
+
+                        if new_app_command != original_app or new_app_args != original_args:
+                            # Atualizar executável se mudou
+                            if new_app_command != original_app:
+                                success = self.user_manager.update_winege_executable(
+                                    original_username, new_app_command
+                                )
+                                if not success:
+                                    GLib.idle_add(self.show_toast, "X Erro ao atualizar executável WineGE")
+                                    return
+                                changes_made.append("executável WineGE")
+
+                            # Atualizar argumentos se mudou
+                            if new_app_args != original_args:
+                                success = self.user_manager.change_user_session_type(
+                                    original_username, 'winege-remoteapp', new_app_command, new_app_args
+                                )
+                                if success:
+                                    changes_made.append("argumentos WineGE")
+                                else:
+                                    GLib.idle_add(self.show_toast, "X Erro ao alterar argumentos")
+                                    return
 
                     # 4. Renomear usuário (último, pois muda o username)
                     if new_username != original_username:
@@ -901,20 +1176,20 @@ Deseja continuar?"""
                         if success:
                             changes_made.append("nome de usuário")
                         else:
-                            GLib.idle_add(self.show_toast, f"✗ Erro ao renomear usuário")
+                            GLib.idle_add(self.show_toast, f"X Erro ao renomear usuário")
                             return
 
                     # Mostrar sucesso
                     if changes_made:
                         changes_text = ", ".join(changes_made)
-                        GLib.idle_add(self.show_toast, f"✓ Alterado: {changes_text}")
+                        GLib.idle_add(self.show_toast, f"OK Alterado: {changes_text}")
                         GLib.timeout_add(300, self.load_users)
                     else:
                         GLib.idle_add(self.show_toast, "ℹ Nenhuma alteração foi feita")
 
                 except Exception as e:
                     logger.error(f"Error updating user settings: {e}")
-                    GLib.idle_add(self.show_toast, f"✗ Erro ao atualizar configurações")
+                    GLib.idle_add(self.show_toast, f"X Erro ao atualizar configurações")
 
             # Executar em thread
             import threading
@@ -930,7 +1205,7 @@ Deseja continuar?"""
         clipboard = self.get_clipboard()
         clipboard.set(connection_string)
 
-        self.show_toast(f"✓ {connection_string} copiado!")
+        self.show_toast(f"OK {connection_string} copiado!")
 
         # Fechar o popover
         popover.popdown()
@@ -1001,7 +1276,7 @@ Deseja continuar?"""
             domain = dialog._domain_entry.get_text().strip()
 
             if not password:
-                self.show_toast("✗ Senha não pode estar vazia")
+                self.show_toast("X Senha não pode estar vazia")
                 return
 
             # Fechar diálogo antes de abrir FreeRDP
@@ -1016,7 +1291,7 @@ Deseja continuar?"""
             # Obter o comando FreeRDP correto
             freerdp_cmd = self.system_deps.get_freerdp_command()
             if not freerdp_cmd:
-                self.show_toast("✗ FreeRDP não encontrado")
+                self.show_toast("X FreeRDP não encontrado")
                 logger.error("FreeRDP command not found")
                 return
 
@@ -1077,11 +1352,11 @@ Deseja continuar?"""
                 self.show_toast(f"Abrindo {freerdp_cmd}{domain_suffix}...")
                 logger.info(f"Launched {freerdp_cmd} for user {user.username}{domain_suffix}")
         except FileNotFoundError:
-            self.show_toast("✗ FreeRDP não encontrado")
+            self.show_toast("X FreeRDP não encontrado")
             logger.error("FreeRDP command not found")
         except Exception as e:
             logger.error(f"Error launching FreeRDP: {e}")
-            self.show_toast(f"✗ Erro ao abrir FreeRDP: {e}")
+            self.show_toast(f"X Erro ao abrir FreeRDP: {e}")
 
     def on_copy_ip(self, button):
         """Copy IP to clipboard"""
@@ -1090,7 +1365,7 @@ Deseja continuar?"""
         clipboard = self.get_clipboard()
         clipboard.set(ip)
 
-        self.show_toast(f"✓ IP {ip} copiado!")
+        self.show_toast(f"OK IP {ip} copiado!")
         logger.info(f"IP {ip} copied to clipboard")
 
     def show_toast(self, message):

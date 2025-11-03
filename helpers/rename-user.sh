@@ -50,5 +50,5 @@ if getent group "$OLD_USERNAME" &>/dev/null; then
     /usr/sbin/groupmod -n "$NEW_USERNAME" "$OLD_USERNAME" 2>/dev/null || true
 fi
 
-echo "✓ Usuário renomeado com sucesso: $OLD_USERNAME -> $NEW_USERNAME"
+echo "OK Usuário renomeado com sucesso: $OLD_USERNAME -> $NEW_USERNAME"
 exit 0

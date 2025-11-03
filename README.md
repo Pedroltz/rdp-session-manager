@@ -21,8 +21,9 @@ RDP Session Manager is a comprehensive desktop application designed for GNOME en
 - Active process detection per user
 - Status monitoring (Connected/Enabled/Disabled)
 
-### Desktop Environment Support
-The application supports seven desktop environments with automatic installation:
+### Session Types
+
+**Desktop Sessions** - Full desktop environments with automatic installation:
 - LXDE (250MB) - Lightweight
 - LXQt (350MB) - Modern and lightweight
 - XFCE (400MB) - Recommended for balance
@@ -31,10 +32,23 @@ The application supports seven desktop environments with automatic installation:
 - GNOME (1.2GB) - Complete desktop
 - KDE Plasma (1.5GB) - Advanced features
 
+**RemoteApp** - Launch single Linux applications:
+- Execute individual applications (Firefox, LibreOffice, etc.)
+- Maximized window mode with minimal window decorations
+- Lightweight alternative to full desktop sessions
+
+**WineGE RemoteApp** - Run Windows applications via WineGE:
+- Execute Windows (.exe) applications through Wine-GE
+- Automatic WineGE installation and configuration
+- Support for installers and portable executables
+- Wine Prefix isolation per user
+- Better compatibility than standard Wine
+
 Features include:
 - Automated desktop environment installation
 - Disk space verification before installation
 - Detection of pre-installed environments
+- Wine Prefix management for Windows apps
 
 ### RDP Connectivity
 - Automatic FreeRDP client detection
@@ -145,8 +159,20 @@ python3 src/main.py
 # Show all available commands
 rdpsm --help
 
-# Example: Create a user
+# Example: Create a desktop session user
 rdpsm user create john -f "John Doe" -d xfce
+
+# Example: Create a RemoteApp user (Linux application)
+rdpsm user create firefox_user \
+    --session-type remoteapp \
+    --app-command firefox \
+    --fullname "Firefox User"
+
+# Example: Create a WineGE RemoteApp user (Windows application)
+rdpsm user create notepad_user \
+    --session-type winege-remoteapp \
+    --app-command /path/to/notepad++.exe \
+    --fullname "Notepad++ User"
 
 # Example: List all users
 rdpsm user list
@@ -156,6 +182,8 @@ rdpsm server info
 ```
 
 For complete CLI documentation, see [CLI.md](CLI.md).
+
+For WineGE RemoteApp detailed guide, see [docs/WINEGE_REMOTEAPP.md](docs/WINEGE_REMOTEAPP.md).
 
 ### Basic Operations (GUI)
 
