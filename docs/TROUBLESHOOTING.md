@@ -318,6 +318,149 @@ async def load_users(self):
 
 ---
 
+### Oracle Database Connectivity (ORA-12154 Error)
+
+**Symptom**: Applications fail to connect to Oracle databases with error `ORA-12154: TNS:could not resolve the connect identifier specified`
+
+**Impact**: High - Applications cannot access Oracle databases
+
+**Causes**:
+- Oracle Instant Client not installed
+- Missing or misconfigured `tnsnames.ora` file
+- Environment variables not set correctly
+- Application cannot find Oracle libraries
+
+**Solutions**:
+
+**Installation** (automated via install.sh):
+
+The `install.sh` script includes optional Oracle Instant Client installation. To use it:
+
+1. Download Oracle Instant Client RPMs (version 21.15 recommended):
+   - Go to: https://www.oracle.com/database/technologies/instant-client/downloads.html
+   - Download:
+     - `oracle-instantclient-basic-21.15.0.0.0-1.x86_64.rpm`
+     - `oracle-instantclient-sqlplus-21.15.0.0.0-1.x86_64.rpm`
+
+2. Place files in `/tmp/`:
+   ```bash
+   sudo mv ~/Downloads/oracle-instantclient-*.rpm /tmp/
+   ```
+
+3. Run install script:
+   ```bash
+   ./install.sh
+   ```
+
+**Manual Installation**:
+
+```bash
+# Install dependencies
+sudo apt-get install -y libaio1 libaio-dev unixodbc unixodbc-dev alien wget
+
+# Convert and install RPMs
+cd /tmp
+sudo alien -i oracle-instantclient-basic-21.15.0.0.0-1.x86_64.rpm
+sudo alien -i oracle-instantclient-sqlplus-21.15.0.0.0-1.x86_64.rpm
+
+# Create Oracle directory
+sudo mkdir -p /opt/oracle
+sudo ln -s /usr/lib/oracle/2115000/client64 /opt/oracle/instantclient_21_15
+
+# Configure environment variables
+sudo tee /etc/profile.d/oracle.sh > /dev/null <<'EOF'
+export ORACLE_HOME=/opt/oracle/instantclient_21_15
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+export TNS_ADMIN=$ORACLE_HOME/network/admin
+EOF
+
+# Create configuration directory
+sudo mkdir -p /opt/oracle/instantclient_21_15/network/admin
+
+# Apply environment variables
+source /etc/profile.d/oracle.sh
+```
+
+**Configure tnsnames.ora**:
+
+Edit `/opt/oracle/instantclient_21_15/network/admin/tnsnames.ora`:
+
+```ini
+# Example Oracle connection configuration
+MYDB =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = your-oracle-server.com)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = your_service_name)
+    )
+  )
+```
+
+Replace:
+- `your-oracle-server.com` with your Oracle server hostname/IP
+- `1521` with your Oracle port (if different)
+- `your_service_name` with your Oracle service name or use `(SID = ORCL)` instead
+
+**Test Connection**:
+
+```bash
+# Test TNS configuration
+tnsping MYDB
+
+# Test actual connection (if you have credentials)
+sqlplus username/password@MYDB
+```
+
+**For RDP Users**:
+
+Environment variables are automatically available via `/etc/profile.d/oracle.sh`. If a specific RDP user cannot connect:
+
+```bash
+# Verify environment for the user
+su - rdp_username
+echo $ORACLE_HOME
+echo $TNS_ADMIN
+
+# If empty, manually add to user's .xsession
+sudo nano /opt/rdp-users/rdp_username/.xsession
+
+# Add before the final "exec" line:
+export ORACLE_HOME=/opt/oracle/instantclient_21_15
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+export TNS_ADMIN=$ORACLE_HOME/network/admin
+```
+
+**Common Oracle Errors**:
+
+- **ORA-12154**: Connection identifier not found in tnsnames.ora
+  - Check alias name (case-sensitive)
+  - Verify file exists and has correct syntax
+
+- **ORA-12541**: No listener
+  - Check network connectivity to Oracle server
+  - Verify Oracle listener is running
+
+- **ORA-12514**: Service not known
+  - Verify SERVICE_NAME or SID is correct
+  - Try using Easy Connect: `hostname:1521/service_name`
+
+- **libaio.so.1 not found**:
+  - Install: `sudo apt-get install libaio1`
+
+**Alternative: Easy Connect (without tnsnames.ora)**:
+
+For simple connections, use Easy Connect syntax in your application:
+```
+hostname:port/service_name
+```
+
+Example: `dbserver.company.com:1521/PROD`
+
+---
+
 ## Priority Matrix
 
 | Problem | Impact | Effort | Priority |

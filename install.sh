@@ -34,7 +34,8 @@ sudo apt-get install -y \
     wget \
     tar \
     cabextract \
-    zenity
+    zenity \
+    openbox
 
 # Optional: Install Wine for WineGE RemoteApp support
 echo ""
@@ -80,6 +81,96 @@ sudo apt-get install -y \
 }
 
 echo "  ✓ Wine dependencies installed"
+
+# Optional: Install Oracle Instant Client for database connectivity
+echo ""
+echo "→ Installing Oracle Instant Client (for Oracle Database connectivity)..."
+echo "  This is required if you want to run applications that connect to Oracle databases."
+echo ""
+
+# Install dependencies for Oracle Instant Client
+echo "  → Installing Oracle dependencies..."
+sudo apt-get install -y \
+    libaio1 \
+    libaio-dev \
+    unixodbc \
+    unixodbc-dev \
+    alien \
+    wget || {
+    echo "⚠ Warning: Failed to install some Oracle dependencies."
+    echo "  Oracle database connectivity may not work properly."
+    echo "  You can install it manually later with: sudo apt install libaio1 unixodbc"
+}
+
+# Download and install Oracle Instant Client
+ORACLE_VERSION="21.15.0.0.0"
+ORACLE_MAJOR="2115000"
+ORACLE_DIR="/opt/oracle"
+ORACLE_CLIENT_DIR="$ORACLE_DIR/instantclient_21_15"
+
+if [ ! -d "$ORACLE_CLIENT_DIR" ]; then
+    echo "  → Downloading Oracle Instant Client..."
+    echo "    Note: This requires accepting Oracle's license agreement."
+    echo "    Download manually from: https://www.oracle.com/database/technologies/instant-client/downloads.html"
+    echo "    Place the following files in /tmp/:"
+    echo "      - oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm"
+    echo "      - oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm"
+    echo ""
+
+    if [ -f "/tmp/oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm" ] && \
+       [ -f "/tmp/oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm" ]; then
+
+        echo "  → Found Oracle Instant Client RPMs, converting to DEB..."
+        cd /tmp
+        sudo alien -i oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm
+        sudo alien -i oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm
+
+        # Create symlinks
+        sudo mkdir -p "$ORACLE_DIR"
+        if [ -d "/usr/lib/oracle/${ORACLE_MAJOR}/client64" ]; then
+            sudo ln -sf "/usr/lib/oracle/${ORACLE_MAJOR}/client64" "$ORACLE_CLIENT_DIR"
+        fi
+
+        # Configure environment
+        echo "  → Configuring Oracle environment..."
+        cat | sudo tee /etc/profile.d/oracle.sh > /dev/null <<EOF
+export ORACLE_HOME=$ORACLE_CLIENT_DIR
+export LD_LIBRARY_PATH=\$ORACLE_HOME/lib:\$LD_LIBRARY_PATH
+export PATH=\$ORACLE_HOME/bin:\$PATH
+export TNS_ADMIN=\$ORACLE_HOME/network/admin
+EOF
+
+        # Create tnsnames.ora directory
+        sudo mkdir -p "$ORACLE_CLIENT_DIR/network/admin"
+
+        # Create sample tnsnames.ora
+        cat | sudo tee "$ORACLE_CLIENT_DIR/network/admin/tnsnames.ora" > /dev/null <<EOF
+# Sample TNS Names Configuration
+# Uncomment and configure your Oracle database connections below:
+#
+# MYDB =
+#   (DESCRIPTION =
+#     (ADDRESS = (PROTOCOL = TCP)(HOST = hostname)(PORT = 1521))
+#     (CONNECT_DATA =
+#       (SERVER = DEDICATED)
+#       (SERVICE_NAME = service_name)
+#     )
+#   )
+EOF
+
+        echo "  ✓ Oracle Instant Client installed"
+        echo "  → Edit $ORACLE_CLIENT_DIR/network/admin/tnsnames.ora to configure connections"
+    else
+        echo "  ⚠ Oracle Instant Client RPMs not found in /tmp/"
+        echo "    Skipping Oracle installation."
+        echo "    To install later:"
+        echo "    1. Download RPMs from Oracle website"
+        echo "    2. Place in /tmp/"
+        echo "    3. Run: sudo alien -i oracle-instantclient-*.rpm"
+    fi
+else
+    echo "  ✓ Oracle Instant Client already installed"
+fi
 
 echo ""
 echo "→ Installing package..."
