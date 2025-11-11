@@ -66,6 +66,65 @@ rdpsm user create winuser3 \
     --fullname "Windows App User"
 ```
 
+## Gerenciar Executáveis WineGE via CLI
+
+### Listar executáveis disponíveis
+
+Liste todos os executáveis .exe encontrados no Wine Prefix e WindowsApps do usuário:
+
+```bash
+rdpsm user winege list USERNAME
+```
+
+Isso mostra:
+- Executáveis portáteis em `WindowsApps/`
+- Aplicativos instalados em `Program Files/` e `Program Files (x86)/`
+- Caminho do executável atual
+
+### Selecionar executável interativamente
+
+Selecione um executável de forma interativa e atualize automaticamente:
+
+```bash
+rdpsm user winege select USERNAME
+```
+
+Este comando:
+1. Lista todos os executáveis disponíveis
+2. Permite selecionar um por número
+3. Confirma a seleção
+4. Atualiza o caminho automaticamente usando `pkexec`
+
+**Exemplo de uso:**
+
+```bash
+$ rdpsm user winege select zionwine
+
+Select Executable for zionwine
+===============================
+
+  1. /opt/rdp-users/zionwine/WindowsApps/App.exe
+  2. /opt/rdp-users/zionwine/.wine/drive_c/Program Files/MyApp/myapp.exe
+  3. /opt/rdp-users/zionwine/.wine/drive_c/Program Files (x86)/Game/game.exe
+
+Select number (1-3) or 'q' to quit: 2
+
+→ Selected: /opt/rdp-users/zionwine/.wine/drive_c/Program Files/MyApp/myapp.exe
+Update executable path? (yes/no): yes
+OK Executable updated successfully
+→ New path: /opt/rdp-users/zionwine/.wine/drive_c/Program Files/MyApp/myapp.exe
+```
+
+### Atualizar executável manualmente
+
+Se você já sabe o caminho do executável:
+
+```bash
+sudo /usr/share/rdp-session-manager/helpers/update-winege-exe.sh \
+    USERNAME \
+    "/path/to/new/app.exe"
+```
+
 ## Adicionar WineGE App a Usuário Existente
 
 Se você já tem um usuário criado e quer convertê-lo para WineGE RemoteApp:
@@ -74,7 +133,7 @@ Se você já tem um usuário criado e quer convertê-lo para WineGE RemoteApp:
 
 ```bash
 # 1. Configurar WineGE no usuário (como root ou com pkexec)
-sudo /usr/local/lib/rdp-session-manager/helpers/setup-winege-app.sh \
+sudo /usr/share/rdp-session-manager/helpers/setup-winege-app.sh \
     USERNAME \
     /opt/rdp-users/USERNAME \
     /path/to/app.exe
@@ -82,6 +141,18 @@ sudo /usr/local/lib/rdp-session-manager/helpers/setup-winege-app.sh \
 # 2. Alterar tipo de sessão do usuário
 rdpsm user session-type USERNAME winege-remoteapp
 ```
+
+## Decoração de Janelas
+
+Todos os RemoteApps (Linux e WineGE) agora incluem **decoração de janela** (window decorations) com botões de minimizar, maximizar e fechar. Isso é especialmente útil para aplicações Wine que precisam ser movimentadas ou redimensionadas.
+
+### Características:
+- **Botões de controle**: Minimizar, maximizar, fechar
+- **Barra de título**: Permite arrastar e mover a janela
+- **Redimensionamento**: Bordas clicáveis para ajustar tamanho
+- **Window Manager**: Usa Openbox para gerenciamento eficiente
+
+Isso resolve o problema comum onde aplicações RemoteApp ficavam "presas" sem controles de janela.
 
 ## Estrutura de Arquivos
 

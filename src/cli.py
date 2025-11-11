@@ -529,6 +529,214 @@ class CLI:
             self.print_error(f"Error revoking sudo privileges: {e}")
             return 1
 
+    def user_winege_list(self, args):
+        """List available WineGE executables for a user"""
+        try:
+            import subprocess
+            username = args.username
+
+            if not self.user_manager.user_exists(username):
+                self.print_error(f"User '{username}' does not exist")
+                return 1
+
+            home_dir = f"/opt/rdp-users/{username}"
+
+            # Check if user is WineGE RemoteApp
+            winege_app_path = f"{home_dir}/.winege_app_path"
+            if not Path(winege_app_path).exists():
+                self.print_error(f"User '{username}' is not a WineGE RemoteApp user")
+                return 1
+
+            self.print_header(f"Available Executables for {username}")
+
+            # List executables from WindowsApps
+            windows_apps_dir = Path(f"{home_dir}/WindowsApps")
+            if windows_apps_dir.exists():
+                print(f"\n{self.CYAN}WindowsApps (Portable):{self.RESET}")
+                exes = list(windows_apps_dir.glob("*.exe"))
+                if exes:
+                    for i, exe in enumerate(exes, 1):
+                        print(f"  {i}. {exe}")
+                else:
+                    print("  (none)")
+
+            # List executables from Wine Prefix
+            wine_prefix = Path(f"{home_dir}/.wine/drive_c")
+            if wine_prefix.exists():
+                print(f"\n{self.CYAN}Installed Applications:{self.RESET}")
+
+                # Search in Program Files
+                program_files = [
+                    wine_prefix / "Program Files",
+                    wine_prefix / "Program Files (x86)"
+                ]
+
+                installed_exes = []
+                for pf in program_files:
+                    if pf.exists():
+                        for exe in pf.rglob("*.exe"):
+                            # Filter out uninstallers and Windows default apps
+                            exe_lower = str(exe).lower()
+                            if not any(x in exe_lower for x in [
+                                'unins', 'uninst', 'windows nt', 'internet explorer',
+                                'windows media', 'windows mail', 'windows photo',
+                                'wordpad', 'notepad'
+                            ]):
+                                installed_exes.append(exe)
+
+                if installed_exes:
+                    for i, exe in enumerate(installed_exes, 1):
+                        print(f"  {i}. {exe}")
+                else:
+                    print("  (none)")
+
+            # Show current executable
+            print(f"\n{self.CYAN}Current Executable:{self.RESET}")
+            try:
+                with open(winege_app_path, 'r') as f:
+                    current = f.read().strip()
+                    print(f"  {current}")
+            except:
+                print("  (none)")
+
+            return 0
+
+        except Exception as e:
+            self.print_error(f"Error listing executables: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
+            return 1
+
+    def user_winege_select(self, args):
+        """Interactively select and update WineGE executable for a user"""
+        try:
+            import subprocess
+            username = args.username
+
+            if not self.user_manager.user_exists(username):
+                self.print_error(f"User '{username}' does not exist")
+                return 1
+
+            home_dir = f"/opt/rdp-users/{username}"
+
+            # Check if user is WineGE RemoteApp
+            winege_app_path = f"{home_dir}/.winege_app_path"
+            if not Path(winege_app_path).exists():
+                self.print_error(f"User '{username}' is not a WineGE RemoteApp user")
+                return 1
+
+            # Collect all available executables
+            all_exes = []
+
+            # From WindowsApps
+            windows_apps_dir = Path(f"{home_dir}/WindowsApps")
+            if windows_apps_dir.exists():
+                all_exes.extend(windows_apps_dir.glob("*.exe"))
+
+            # From Wine Prefix
+            wine_prefix = Path(f"{home_dir}/.wine/drive_c")
+            if wine_prefix.exists():
+                program_files = [
+                    wine_prefix / "Program Files",
+                    wine_prefix / "Program Files (x86)"
+                ]
+
+                for pf in program_files:
+                    if pf.exists():
+                        for exe in pf.rglob("*.exe"):
+                            exe_lower = str(exe).lower()
+                            if not any(x in exe_lower for x in [
+                                'unins', 'uninst', 'windows nt', 'internet explorer',
+                                'windows media', 'windows mail', 'windows photo',
+                                'wordpad', 'notepad'
+                            ]):
+                                all_exes.append(exe)
+
+            if not all_exes:
+                self.print_error("No executables found")
+                return 1
+
+            # Display options
+            self.print_header(f"Select Executable for {username}")
+            print()
+            for i, exe in enumerate(all_exes, 1):
+                print(f"  {self.CYAN}{i}.{self.RESET} {exe}")
+            print()
+
+            # Get user selection
+            try:
+                choice = input(f"Select number (1-{len(all_exes)}) or 'q' to quit: ").strip()
+
+                if choice.lower() == 'q':
+                    self.print_info("Cancelled")
+                    return 0
+
+                choice_num = int(choice)
+                if choice_num < 1 or choice_num > len(all_exes):
+                    self.print_error(f"Invalid selection. Must be between 1 and {len(all_exes)}")
+                    return 1
+
+                selected_exe = str(all_exes[choice_num - 1])
+
+            except ValueError:
+                self.print_error("Invalid input. Must be a number")
+                return 1
+            except KeyboardInterrupt:
+                print()
+                self.print_info("Cancelled")
+                return 0
+
+            # Confirm selection
+            print()
+            self.print_info(f"Selected: {selected_exe}")
+            confirm = input("Update executable path? (yes/no): ").strip().lower()
+
+            if confirm not in ['yes', 'y']:
+                self.print_info("Cancelled")
+                return 0
+
+            # Update using helper script
+            helper_script = "/usr/share/rdp-session-manager/helpers/update-winege-exe.sh"
+            if not Path(helper_script).exists():
+                # Try local path
+                helper_script = "./helpers/update-winege-exe.sh"
+
+            if not Path(helper_script).exists():
+                self.print_error("Helper script not found. Updating manually...")
+                # Fallback to manual update
+                try:
+                    with open(winege_app_path, 'w') as f:
+                        f.write(selected_exe)
+                    subprocess.run(['chown', f'{username}:rdp-users', winege_app_path], check=True)
+                    self.print_success(f"Executable updated to: {selected_exe}")
+                    return 0
+                except Exception as e:
+                    self.print_error(f"Failed to update: {e}")
+                    return 1
+
+            # Use helper script
+            result = subprocess.run(
+                ['pkexec', helper_script, username, selected_exe],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0:
+                self.print_success(f"Executable updated successfully")
+                self.print_info(f"New path: {selected_exe}")
+                return 0
+            else:
+                self.print_error(f"Failed to update executable: {result.stderr}")
+                return 1
+
+        except Exception as e:
+            self.print_error(f"Error selecting executable: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
+            return 1
+
     # ==================== SESSION COMMANDS ====================
 
     def session_list(self, args):
@@ -956,6 +1164,20 @@ class CLI:
         user_sudo_revoke.add_argument('--force', action='store_true',
                                       help='Skip confirmation if user has active session')
         user_sudo_revoke.set_defaults(func=self.user_sudo_revoke)
+
+        # user winege (sub-subcommand)
+        user_winege = user_subparsers.add_parser('winege', help='Manage WineGE RemoteApp executables')
+        user_winege_subparsers = user_winege.add_subparsers(dest='winege_action')
+
+        # user winege list
+        user_winege_list = user_winege_subparsers.add_parser('list', help='List available executables for WineGE user')
+        user_winege_list.add_argument('username', help='Username')
+        user_winege_list.set_defaults(func=self.user_winege_list)
+
+        # user winege select
+        user_winege_select = user_winege_subparsers.add_parser('select', help='Interactively select and update executable')
+        user_winege_select.add_argument('username', help='Username')
+        user_winege_select.set_defaults(func=self.user_winege_select)
 
         # Session commands
         session_parser = subparsers.add_parser('session', help='Session management')

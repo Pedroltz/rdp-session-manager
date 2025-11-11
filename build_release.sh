@@ -141,6 +141,11 @@ fpm -s dir -t deb \
     --depends "libadwaita-1-0" \
     --depends "polkitd | policykit-1" \
     --depends "python3-psutil" \
+    --depends "wget" \
+    --depends "tar" \
+    --depends "cabextract" \
+    --depends "zenity" \
+    --depends "openbox" \
     --after-install "${BUILD_DIR}/DEBIAN_postinst" \
     --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
     -C "${BUILD_DIR}" \
