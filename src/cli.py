@@ -6,6 +6,7 @@ RDP Session Manager - Command Line Interface
 import sys
 import argparse
 import logging
+import time
 from typing import Optional
 from pathlib import Path
 
@@ -815,14 +816,30 @@ class CLI:
 
             self.print_info(f"Killing session for '{username}'...")
 
-            success = self.session_monitor.kill_user_session(username)
+            # Primeiro tenta encerramento gracioso com SIGTERM
+            success = self.user_manager.kill_user_processes(username, force=False)
 
-            if success:
-                self.print_success(f"Session killed for '{username}'")
-                return 0
-            else:
+            if not success:
                 self.print_error("Failed to kill session")
                 return 1
+
+            # Aguarda um momento para os processos encerrarem
+            time.sleep(2)
+
+            # Verifica se ainda há processos ativos
+            remaining_processes = self.user_manager.get_user_processes(username)
+
+            if remaining_processes:
+                self.print_info(f"Some processes still running, forcing termination...")
+                # Força o encerramento com SIGKILL
+                success = self.user_manager.kill_user_processes(username, force=True)
+
+                if not success:
+                    self.print_error("Failed to force kill session")
+                    return 1
+
+            self.print_success(f"Session killed for '{username}'")
+            return 0
 
         except Exception as e:
             self.print_error(f"Error killing session: {e}")
