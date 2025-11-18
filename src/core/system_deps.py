@@ -14,24 +14,34 @@ class SystemDependencies:
     """Gerenciador de dependências do sistema"""
 
     # Pacotes necessários para o funcionamento básico
+    # Formato: distro -> packages
     REQUIRED_PACKAGES = {
         'xrdp': {
             'name': 'xrdp',
-            'packages': ['xrdp', 'xorgxrdp'],
+            'packages': {
+                'debian': ['xrdp', 'xorgxrdp'],
+                'arch': ['xrdp']
+            },
             'description': 'Servidor RDP (Remote Desktop Protocol)',
             'service': 'xrdp',
             'critical': True
         },
         'freerdp': {
             'name': 'FreeRDP',
-            'packages': ['freerdp3-x11'],
+            'packages': {
+                'debian': ['freerdp3-x11'],
+                'arch': ['freerdp']
+            },
             'description': 'Cliente RDP (Remote Desktop Protocol)',
             'service': None,
             'critical': False  # Não é crítico para criar usuários, só para conectar
         },
         'x11': {
             'name': 'X11',
-            'packages': ['xorg', 'x11-xserver-utils'],
+            'packages': {
+                'debian': ['xorg', 'x11-xserver-utils'],
+                'arch': ['xorg-server', 'xorg-server-utils']
+            },
             'description': 'Sistema de janelas X11',
             'service': None,
             'critical': True
@@ -39,18 +49,49 @@ class SystemDependencies:
     }
 
     def __init__(self):
-        pass
+        self.distro = self._detect_distro()
+        self.pkg_manager = self._get_package_manager()
+
+    def _detect_distro(self) -> str:
+        """Detecta a distribuição Linux"""
+        try:
+            with open('/etc/os-release', 'r') as f:
+                for line in f:
+                    if line.startswith('ID='):
+                        distro_id = line.split('=')[1].strip().strip('"')
+                        # Mapear para categorias principais
+                        if distro_id in ['arch', 'manjaro', 'endeavouros', 'cachyos']:
+                            return 'arch'
+                        elif distro_id in ['debian', 'ubuntu', 'linuxmint', 'pop']:
+                            return 'debian'
+                        else:
+                            return 'debian'  # default
+        except:
+            return 'debian'  # default
+
+    def _get_package_manager(self) -> str:
+        """Retorna o gerenciador de pacotes baseado na distro"""
+        return 'pacman' if self.distro == 'arch' else 'apt'
 
     def is_package_installed(self, package_name: str) -> bool:
         """Verifica se um pacote está instalado"""
         try:
-            result = subprocess.run(
-                ['dpkg', '-l', package_name],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            return result.returncode == 0 and 'ii' in result.stdout
+            if self.pkg_manager == 'pacman':
+                result = subprocess.run(
+                    ['pacman', '-Q', package_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                return result.returncode == 0
+            else:  # apt/dpkg
+                result = subprocess.run(
+                    ['dpkg', '-l', package_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                return result.returncode == 0 and 'ii' in result.stdout
 
         except Exception as e:
             logger.error(f"Erro ao verificar pacote {package_name}: {e}")
@@ -78,8 +119,14 @@ class SystemDependencies:
                     logger.info(f"ℹ {dep_info['name']} não está instalado (opcional)")
                 continue
 
+            # Obter pacotes corretos para a distro atual
+            packages = dep_info['packages'].get(self.distro, dep_info['packages'].get('debian', []))
+            if not packages:
+                logger.warning(f"Nenhum pacote definido para {dep_id} na distro {self.distro}")
+                continue
+
             # Verifica o pacote principal
-            main_package = dep_info['packages'][0]
+            main_package = packages[0]
 
             if self.is_package_installed(main_package):
                 installed.append(dep_id)
@@ -111,7 +158,11 @@ class SystemDependencies:
             return False, f"Dependência '{dep_id}' desconhecida"
 
         dep_info = self.REQUIRED_PACKAGES[dep_id]
-        packages = dep_info['packages']
+
+        # Obter pacotes corretos para a distro atual
+        packages = dep_info['packages'].get(self.distro, dep_info['packages'].get('debian', []))
+        if not packages:
+            return False, f"Nenhum pacote definido para {dep_id} na distro {self.distro}"
 
         # Verificar se já está instalado
         if self.is_package_installed(packages[0]):

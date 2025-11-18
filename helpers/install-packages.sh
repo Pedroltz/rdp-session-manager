@@ -4,19 +4,48 @@
 
 set -e
 
+# Detectar distribuição
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        echo "unknown"
+    fi
+}
+
+DISTRO=$(detect_distro)
+
 # Verificar se há pacotes para instalar
 if [ $# -eq 0 ]; then
     echo "Erro: Nenhum pacote especificado"
     exit 1
 fi
 
-# Atualizar cache de pacotes
-echo "Atualizando cache de pacotes..."
-/usr/bin/apt-get update
+case "$DISTRO" in
+    arch|manjaro|endeavouros|cachyos)
+        # Atualizar cache de pacotes
+        echo "Atualizando cache de pacotes..."
+        /usr/bin/pacman -Sy
 
-# Instalar pacotes
-echo "Instalando pacotes: $@"
-DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y "$@"
+        # Instalar pacotes
+        echo "Instalando pacotes: $@"
+        /usr/bin/pacman -S --noconfirm "$@"
+        ;;
+    debian|ubuntu|linuxmint|pop)
+        # Atualizar cache de pacotes
+        echo "Atualizando cache de pacotes..."
+        /usr/bin/apt-get update
+
+        # Instalar pacotes
+        echo "Instalando pacotes: $@"
+        DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y "$@"
+        ;;
+    *)
+        echo "Erro: Distribuição não suportada: $DISTRO"
+        exit 1
+        ;;
+esac
 
 echo "Instalação concluída com sucesso!"
 exit 0

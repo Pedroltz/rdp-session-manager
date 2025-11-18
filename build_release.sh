@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# Build .deb Package - RDP Session Manager
+# Build Package - RDP Session Manager
 ###############################################################################
 
 set -e
@@ -14,18 +14,43 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build_temp"
 RELEASE_DIR="${PROJECT_DIR}/release"
 
+# Detect distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        echo "unknown"
+    fi
+}
+
+DISTRO=$(detect_distro)
+
 echo "========================================="
 echo "  Building RDP Session Manager"
 echo "========================================="
+echo "Detected distribution: $DISTRO"
 echo ""
 
 # Check fpm
 if ! command -v fpm &> /dev/null; then
     echo "ERROR: fpm not installed"
     echo ""
-    echo "Install with:"
-    echo "  sudo apt-get install -y ruby ruby-dev rubygems build-essential"
-    echo "  sudo gem install fpm"
+    case "$DISTRO" in
+        arch|manjaro|endeavouros|cachyos)
+            echo "Install with:"
+            echo "  sudo pacman -S ruby rubygems"
+            echo "  sudo gem install fpm"
+            ;;
+        debian|ubuntu|linuxmint|pop)
+            echo "Install with:"
+            echo "  sudo apt-get install -y ruby ruby-dev rubygems build-essential"
+            echo "  sudo gem install fpm"
+            ;;
+        *)
+            echo "Install fpm from: https://github.com/jordansissel/fpm"
+            ;;
+    esac
     exit 1
 fi
 
@@ -39,7 +64,10 @@ mkdir -p "${BUILD_DIR}/usr/share/polkit-1/actions"
 mkdir -p "${BUILD_DIR}/usr/share/glib-2.0/schemas"
 mkdir -p "${BUILD_DIR}/usr/share/metainfo"
 mkdir -p "${RELEASE_DIR}"
+
+# Clean old packages
 rm -f "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb"
+rm -f "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
 
 # Copy source files
 echo "→ Copying files..."
@@ -123,6 +151,7 @@ echo "✓ RDP Session Manager removido"
 POSTREMOVE
 chmod +x "${BUILD_DIR}/DEBIAN_postrm"
 
+<<<<<<< Updated upstream
 # Build package
 echo "→ Building .deb package..."
 fpm -s dir -t deb \
@@ -151,10 +180,121 @@ fpm -s dir -t deb \
     -C "${BUILD_DIR}" \
     -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
     .
+=======
+# Build package(s)
+case "$DISTRO" in
+    arch|manjaro|endeavouros|cachyos)
+        echo "→ Building Arch package (.pkg.tar.zst)..."
+        fpm -s dir -t pacman \
+            -n "${APP_NAME}" \
+            -v "${APP_VERSION}" \
+            -a any \
+            --description "${APP_DESCRIPTION}" \
+            --maintainer "${APP_MAINTAINER}" \
+            --license "GPL-3.0" \
+            --category "admin" \
+            --depends "python>=3.8" \
+            --depends "python-gobject" \
+            --depends "python-cairo" \
+            --depends "gtk4" \
+            --depends "libadwaita" \
+            --depends "polkit" \
+            --depends "python-psutil" \
+            --after-install "${BUILD_DIR}/DEBIAN_postinst" \
+            --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
+            -C "${BUILD_DIR}" \
+            -p "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst" \
+            .
+
+        echo ""
+        echo "✓ Package created: release/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
+        ;;
+    debian|ubuntu|linuxmint|pop)
+        echo "→ Building Debian package (.deb)..."
+        fpm -s dir -t deb \
+            -n "${APP_NAME}" \
+            -v "${APP_VERSION}" \
+            -a all \
+            --description "${APP_DESCRIPTION}" \
+            --maintainer "${APP_MAINTAINER}" \
+            --license "GPL-3.0" \
+            --category "admin" \
+            --depends "python3 >= 3.8" \
+            --depends "python3-gi" \
+            --depends "python3-gi-cairo" \
+            --depends "gir1.2-gtk-4.0" \
+            --depends "gir1.2-adw-1" \
+            --depends "libadwaita-1-0" \
+            --depends "polkitd | policykit-1" \
+            --depends "python3-psutil" \
+            --after-install "${BUILD_DIR}/DEBIAN_postinst" \
+            --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
+            -C "${BUILD_DIR}" \
+            -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
+            .
+
+        echo ""
+        echo "✓ Package created: release/${APP_NAME}_${APP_VERSION}_all.deb"
+        ;;
+    *)
+        echo "Building both DEB and Arch packages..."
+
+        # Build DEB
+        echo "→ Building Debian package (.deb)..."
+        fpm -s dir -t deb \
+            -n "${APP_NAME}" \
+            -v "${APP_VERSION}" \
+            -a all \
+            --description "${APP_DESCRIPTION}" \
+            --maintainer "${APP_MAINTAINER}" \
+            --license "GPL-3.0" \
+            --category "admin" \
+            --depends "python3 >= 3.8" \
+            --depends "python3-gi" \
+            --depends "python3-gi-cairo" \
+            --depends "gir1.2-gtk-4.0" \
+            --depends "gir1.2-adw-1" \
+            --depends "libadwaita-1-0" \
+            --depends "polkitd | policykit-1" \
+            --depends "python3-psutil" \
+            --after-install "${BUILD_DIR}/DEBIAN_postinst" \
+            --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
+            -C "${BUILD_DIR}" \
+            -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
+            .
+
+        # Build Arch package
+        echo "→ Building Arch package (.pkg.tar.zst)..."
+        fpm -s dir -t pacman \
+            -n "${APP_NAME}" \
+            -v "${APP_VERSION}" \
+            -a any \
+            --description "${APP_DESCRIPTION}" \
+            --maintainer "${APP_MAINTAINER}" \
+            --license "GPL-3.0" \
+            --category "admin" \
+            --depends "python>=3.8" \
+            --depends "python-gobject" \
+            --depends "python-cairo" \
+            --depends "gtk4" \
+            --depends "libadwaita" \
+            --depends "polkit" \
+            --depends "python-psutil" \
+            --after-install "${BUILD_DIR}/DEBIAN_postinst" \
+            --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
+            -C "${BUILD_DIR}" \
+            -p "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst" \
+            .
+
+        echo ""
+        echo "✓ Packages created:"
+        echo "  - release/${APP_NAME}_${APP_VERSION}_all.deb"
+        echo "  - release/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
+        ;;
+esac
+>>>>>>> Stashed changes
 
 rm -rf "${BUILD_DIR}"
 
-echo ""
-echo "✓ Package created: release/${APP_NAME}_${APP_VERSION}_all.deb"
 echo ""
 echo "Install with: ./install.sh"

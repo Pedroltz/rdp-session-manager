@@ -3,14 +3,40 @@
 # Uninstall RDP Session Manager
 ###############################################################################
 
+# Detect distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        echo "unknown"
+    fi
+}
+
+DISTRO=$(detect_distro)
+
 echo "========================================="
 echo "  Uninstalling RDP Session Manager"
 echo "========================================="
+echo "Detected distribution: $DISTRO"
 echo ""
 
 echo "→ Removing package..."
-sudo apt-get remove -y rdp-session-manager 2>/dev/null || true
-sudo dpkg --remove --force-all rdp-session-manager 2>/dev/null || true
+
+case "$DISTRO" in
+    arch|manjaro|endeavouros|cachyos)
+        sudo pacman -R --noconfirm rdp-session-manager 2>/dev/null || true
+        ;;
+    debian|ubuntu|linuxmint|pop)
+        sudo apt-get remove -y rdp-session-manager 2>/dev/null || true
+        sudo dpkg --remove --force-all rdp-session-manager 2>/dev/null || true
+        ;;
+    *)
+        echo "Warning: Unknown distribution, trying both methods..."
+        sudo pacman -R --noconfirm rdp-session-manager 2>/dev/null || true
+        sudo apt-get remove -y rdp-session-manager 2>/dev/null || true
+        ;;
+esac
 
 echo "→ Cleaning up files..."
 sudo rm -rf /usr/bin/rdp-session-manager
