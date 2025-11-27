@@ -469,14 +469,23 @@ rdpsm session kill USERNAME
 rdpsm session kill USERNAME --force
 ```
 
+**How it works:**
+- **Step 1:** Sends SIGTERM (-15) for graceful shutdown
+- **Step 2:** Waits 2 seconds for processes to terminate
+- **Step 3:** If processes remain, sends SIGKILL (-9) to force termination
+- **Privileges:** Requires elevated privileges (uses `pkexec`)
+
 **Example:**
 ```bash
 rdpsm session kill john --force
 
 # Output:
 # → Killing session for 'john'...
+# ℹ Some processes still running, forcing termination...
 # ✓ Session killed for 'john'
 ```
+
+**Note:** You will be prompted for your password via PolicyKit to authorize the session termination.
 
 **GUI Equivalent:** Delete user with active session → "Terminate and Remove"
 

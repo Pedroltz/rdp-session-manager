@@ -13,104 +13,175 @@ logger = logging.getLogger(__name__)
 class DEInstaller:
     """Instalador de ambientes desktop"""
 
-    # Pacotes necessários para cada DE (Debian/Ubuntu)
+    # Pacotes necessários para cada DE por distribuição
     DE_PACKAGES = {
         'gnome': {
             'name': 'GNOME',
-            'packages': [
-                'gnome-session',
-                'gnome-shell',
-                'gnome-terminal',
-                'nautilus',
-                'gnome-control-center',
-                'gnome-tweaks'
-            ],
+            'packages': {
+                'debian': [
+                    'gnome-session',
+                    'gnome-shell',
+                    'gnome-terminal',
+                    'nautilus',
+                    'gnome-control-center',
+                    'gnome-tweaks'
+                ],
+                'arch': [
+                    'gnome',
+                    'gnome-shell',
+                    'gnome-terminal',
+                    'nautilus',
+                    'gnome-control-center',
+                    'gnome-tweaks'
+                ]
+            },
             'size_mb': 1200,
             'startup_cmd': 'gnome-session'
         },
         'xfce': {
             'name': 'XFCE',
-            'packages': [
-                'xfce4',
-                'xfce4-goodies',
-                'xfce4-terminal',
-                'thunar'
-            ],
+            'packages': {
+                'debian': [
+                    'xfce4',
+                    'xfce4-goodies',
+                    'xfce4-terminal',
+                    'thunar'
+                ],
+                'arch': [
+                    'xfce4',
+                    'xfce4-goodies',
+                    'xfce4-terminal',
+                    'thunar'
+                ]
+            },
             'size_mb': 400,
             'startup_cmd': 'startxfce4'
         },
         'xfce4': {  # Alias para xfce
             'name': 'XFCE',
-            'packages': [
-                'xfce4',
-                'xfce4-goodies',
-                'xfce4-terminal',
-                'thunar'
-            ],
+            'packages': {
+                'debian': [
+                    'xfce4',
+                    'xfce4-goodies',
+                    'xfce4-terminal',
+                    'thunar'
+                ],
+                'arch': [
+                    'xfce4',
+                    'xfce4-goodies',
+                    'xfce4-terminal',
+                    'thunar'
+                ]
+            },
             'size_mb': 400,
             'startup_cmd': 'startxfce4'
         },
         'kde': {
             'name': 'KDE Plasma',
-            'packages': [
-                'kde-plasma-desktop',
-                'plasma-workspace',
-                'konsole',
-                'dolphin',
-                'systemsettings'
-            ],
+            'packages': {
+                'debian': [
+                    'kde-plasma-desktop',
+                    'plasma-workspace',
+                    'konsole',
+                    'dolphin',
+                    'systemsettings'
+                ],
+                'arch': [
+                    'plasma-desktop',
+                    'plasma-workspace',
+                    'konsole',
+                    'dolphin',
+                    'systemsettings'
+                ]
+            },
             'size_mb': 1500,
             'startup_cmd': 'startplasma-x11'
         },
         'plasma': {  # Alias para kde
             'name': 'KDE Plasma',
-            'packages': [
-                'kde-plasma-desktop',
-                'plasma-workspace',
-                'konsole',
-                'dolphin',
-                'systemsettings'
-            ],
+            'packages': {
+                'debian': [
+                    'kde-plasma-desktop',
+                    'plasma-workspace',
+                    'konsole',
+                    'dolphin',
+                    'systemsettings'
+                ],
+                'arch': [
+                    'plasma-desktop',
+                    'plasma-workspace',
+                    'konsole',
+                    'dolphin',
+                    'systemsettings'
+                ]
+            },
             'size_mb': 1500,
             'startup_cmd': 'startplasma-x11'
         },
         'mate': {
             'name': 'MATE',
-            'packages': [
-                'mate-desktop-environment',
-                'mate-terminal',
-                'caja'
-            ],
+            'packages': {
+                'debian': [
+                    'mate-desktop-environment',
+                    'mate-terminal',
+                    'caja'
+                ],
+                'arch': [
+                    'mate',
+                    'mate-terminal',
+                    'caja'
+                ]
+            },
             'size_mb': 600,
             'startup_cmd': 'mate-session'
         },
         'cinnamon': {
             'name': 'Cinnamon',
-            'packages': [
-                'cinnamon-desktop-environment',
-                'cinnamon',
-                'nemo'
-            ],
+            'packages': {
+                'debian': [
+                    'cinnamon-desktop-environment',
+                    'cinnamon',
+                    'nemo'
+                ],
+                'arch': [
+                    'cinnamon',
+                    'nemo'
+                ]
+            },
             'size_mb': 800,
             'startup_cmd': 'cinnamon-session'
         },
         'lxde': {
             'name': 'LXDE',
-            'packages': [
-                'lxde',
-                'lxterminal',
-                'pcmanfm'
-            ],
+            'packages': {
+                'debian': [
+                    'lxde',
+                    'lxterminal',
+                    'pcmanfm'
+                ],
+                'arch': [
+                    'lxde-common',
+                    'lxterminal',
+                    'pcmanfm'
+                ]
+            },
             'size_mb': 250,
             'startup_cmd': 'startlxde'
         },
         'lxqt': {
             'name': 'LXQt',
-            'packages': [
-                'lxqt',
-                'qterminal',
-                'pcmanfm-qt'
-            ],
+            'packages': {
+                'debian': [
+                    'lxqt',
+                    'qterminal',
+                    'pcmanfm-qt'
+                ],
+                'arch': [
+                    'lxqt',
+                    'qterminal',
+                    'pcmanfm-qt'
+                ]
+            },
             'size_mb': 350,
             'startup_cmd': 'startlxqt'
         }
@@ -118,6 +189,8 @@ class DEInstaller:
 
     def __init__(self):
         self.distro_info = self._detect_distro()
+        self.distro_type = self._get_distro_type()
+        self.pkg_manager = 'pacman' if self.distro_type == 'arch' else 'apt'
 
     def _detect_distro(self) -> Dict:
         """Detecta a distribuição Linux"""
@@ -140,6 +213,16 @@ class DEInstaller:
         except Exception as e:
             logger.error(f"Erro ao detectar distribuição: {e}")
             return {'id': 'unknown', 'version': 'unknown', 'name': 'Unknown'}
+
+    def _get_distro_type(self) -> str:
+        """Retorna o tipo de distribuição (arch ou debian)"""
+        distro_id = self.distro_info['id']
+        if distro_id in ['arch', 'manjaro', 'endeavouros', 'cachyos']:
+            return 'arch'
+        elif distro_id in ['debian', 'ubuntu', 'linuxmint', 'pop']:
+            return 'debian'
+        else:
+            return 'debian'  # default
 
     def get_available_des(self) -> List[Dict]:
         """Retorna lista de DEs disponíveis para instalação"""
@@ -165,17 +248,31 @@ class DEInstaller:
             return False
 
         de_info = self.DE_PACKAGES[de_id]
-        main_package = de_info['packages'][0]
+
+        # Obter pacotes corretos para a distro atual
+        packages = de_info['packages'].get(self.distro_type, de_info['packages'].get('debian', []))
+        if not packages:
+            return False
+
+        main_package = packages[0]
 
         try:
-            result = subprocess.run(
-                ['dpkg', '-l', main_package],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-
-            return result.returncode == 0 and 'ii' in result.stdout
+            if self.pkg_manager == 'pacman':
+                result = subprocess.run(
+                    ['pacman', '-Q', main_package],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                return result.returncode == 0
+            else:  # dpkg
+                result = subprocess.run(
+                    ['dpkg', '-l', main_package],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                return result.returncode == 0 and 'ii' in result.stdout
 
         except Exception as e:
             logger.error(f"Erro ao verificar instalação de {de_id}: {e}")
@@ -207,7 +304,11 @@ class DEInstaller:
             return True, msg
 
         de_info = self.DE_PACKAGES[de_id]
-        packages = de_info['packages']
+
+        # Obter pacotes corretos para a distro atual
+        packages = de_info['packages'].get(self.distro_type, de_info['packages'].get('debian', []))
+        if not packages:
+            return False, f"Nenhum pacote definido para {de_id} na distro {self.distro_type}"
 
         try:
             log(5, f"→ Verificando espaço em disco...")
@@ -222,21 +323,30 @@ class DEInstaller:
             log(5, f"  OK Espaço disponível: {available}MB (necessário: {required}MB)")
             log(5, "")
 
-            # Atualizar cache do apt
+            # Atualizar cache do gerenciador de pacotes
             log(10, "→ Atualizando cache de pacotes...")
             log(10, "  AVISO Você será solicitado a autenticar (pkexec)")
-            log(10, "  $ pkexec apt-get update")
 
-            update_result = subprocess.run(
-                ['pkexec', '/usr/bin/apt-get', 'update'],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
+            if self.pkg_manager == 'pacman':
+                log(10, "  $ pkexec pacman -Sy")
+                update_result = subprocess.run(
+                    ['pkexec', '/usr/bin/pacman', '-Sy'],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+            else:  # apt
+                log(10, "  $ pkexec apt-get update")
+                update_result = subprocess.run(
+                    ['pkexec', '/usr/bin/apt-get', 'update'],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
 
             if update_result.returncode != 0:
-                logger.warning(f"apt-get update retornou código {update_result.returncode}")
-                log(10, f"  AVISO Aviso: apt-get update retornou código {update_result.returncode}")
+                logger.warning(f"Update retornou código {update_result.returncode}")
+                log(10, f"  AVISO Aviso: Update retornou código {update_result.returncode}")
             else:
                 log(15, "  OK Cache atualizado com sucesso")
 
@@ -247,24 +357,34 @@ class DEInstaller:
             log(20, f"  Pacotes: {', '.join(packages)}")
             log(20, "")
             log(20, "  AVISO Você será solicitado a autenticar novamente")
-            log(20, f"  $ pkexec apt-get install -y {' '.join(packages)}")
-            log(20, "")
-            log(30, "→ Baixando e instalando pacotes...")
-            log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
+
+            if self.pkg_manager == 'pacman':
+                log(20, f"  $ pkexec pacman -S --noconfirm {' '.join(packages)}")
+                log(20, "")
+                log(30, "→ Baixando e instalando pacotes...")
+            else:  # apt
+                log(20, f"  $ pkexec apt-get install -y {' '.join(packages)}")
+                log(20, "")
+                log(30, "→ Baixando e instalando pacotes...")
+                log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
             log(30, "")
 
             # pkexec NÃO permite capturar stdout/stderr via pipe
-            # Solução: Monitorar /var/log/apt/term.log em tempo real
+            # Solução: Monitorar arquivos de log em tempo real
             import time
             import os
 
-            apt_log_file = '/var/log/apt/term.log'
+            if self.pkg_manager == 'pacman':
+                log_file = '/var/log/pacman.log'
+                cmd = ['pkexec', '/usr/bin/pacman', '-S', '--noconfirm'] + packages
+            else:  # apt
+                log_file = '/var/log/apt/term.log'
+                cmd = ['pkexec', '/usr/bin/apt-get', 'install', '-y', '--no-install-recommends'] + packages
+
             try:
-                initial_size = os.path.getsize(apt_log_file)
+                initial_size = os.path.getsize(log_file)
             except:
                 initial_size = 0
-
-            cmd = ['pkexec', '/usr/bin/apt-get', 'install', '-y', '--no-install-recommends'] + packages
 
             # Executar em background (stdout vai para /dev/null pois pkexec bloqueia)
             process = subprocess.Popen(
@@ -288,7 +408,7 @@ class DEInstaller:
                         last_log_time = time.time()
 
                     try:
-                        with open(apt_log_file, 'r') as f:
+                        with open(log_file, 'r') as f:
                             f.seek(last_position)
                             new_lines = f.readlines()
                             last_position = f.tell()
@@ -296,21 +416,31 @@ class DEInstaller:
                             for line in new_lines:
                                 line = line.rstrip()
                                 if line and progress < 90:
-                                    # Filtrar linhas relevantes
-                                    if any(kw in line for kw in ['Desempacotando', 'Unpacking', 'Preparando', 'Preparing', 'Configurando', 'Setting up']):
-                                        log(progress, f"  {line[:100]}")  # Limitar tamanho
-                                        progress = min(progress + 2, 90)
-                                        last_log_time = time.time()
-                                    elif any(kw in line for kw in ['Get:', 'Obter:', 'Fetched', 'Baixados']):
-                                        if 'Get:' in line or 'Obter:' in line:
+                                    if self.pkg_manager == 'pacman':
+                                        # Filtrar linhas relevantes do pacman
+                                        if any(kw in line for kw in ['installing', 'upgrading', 'downloading']):
                                             log(progress, f"  {line[:100]}")
-                                        progress = min(progress + 1, 90)
-                                        last_log_time = time.time()
-                                    elif any(kw in line for kw in ['erro', 'error', 'E:', 'Err:']):
-                                        log(progress, f"  X {line[:150]}")
-                                        last_log_time = time.time()
+                                            progress = min(progress + 2, 90)
+                                            last_log_time = time.time()
+                                        elif 'error' in line.lower():
+                                            log(progress, f"  X {line[:150]}")
+                                            last_log_time = time.time()
+                                    else:  # apt
+                                        # Filtrar linhas relevantes do apt
+                                        if any(kw in line for kw in ['Desempacotando', 'Unpacking', 'Preparando', 'Preparing', 'Configurando', 'Setting up']):
+                                            log(progress, f"  {line[:100]}")
+                                            progress = min(progress + 2, 90)
+                                            last_log_time = time.time()
+                                        elif any(kw in line for kw in ['Get:', 'Obter:', 'Fetched', 'Baixados']):
+                                            if 'Get:' in line or 'Obter:' in line:
+                                                log(progress, f"  {line[:100]}")
+                                            progress = min(progress + 1, 90)
+                                            last_log_time = time.time()
+                                        elif any(kw in line for kw in ['erro', 'error', 'E:', 'Err:']):
+                                            log(progress, f"  X {line[:150]}")
+                                            last_log_time = time.time()
                     except Exception as e:
-                        logger.debug(f"Erro lendo log apt: {e}")
+                        logger.debug(f"Erro lendo log: {e}")
 
                 # Processo terminou, pegar código de retorno
                 returncode = process.wait()
