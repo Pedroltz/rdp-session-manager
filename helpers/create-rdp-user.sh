@@ -71,7 +71,7 @@ if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
 
-# Configure openbox to maximize windows by default
+# Configure openbox with window decorations for RemoteApps
 mkdir -p $HOME_DIR/.config/openbox
 cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -79,7 +79,7 @@ cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
   <applications>
     <application class="*">
       <maximized>yes</maximized>
-      <decor>no</decor>
+      <decor>yes</decor>
     </application>
   </applications>
 </openbox_config>
@@ -115,7 +115,7 @@ if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
 
-# Configure openbox to maximize windows by default
+# Configure openbox with window decorations for RemoteApps
 mkdir -p $HOME_DIR/.config/openbox
 cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -123,7 +123,7 @@ cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
   <applications>
     <application class="*">
       <maximized>yes</maximized>
-      <decor>no</decor>
+      <decor>yes</decor>
     </application>
   </applications>
 </openbox_config>
