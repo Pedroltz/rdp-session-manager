@@ -7,6 +7,8 @@ import subprocess
 import logging
 from typing import Dict, List, Optional, Tuple
 
+from utils.polkit import get_privilege_command, has_display
+
 logger = logging.getLogger(__name__)
 
 
@@ -325,20 +327,24 @@ class DEInstaller:
 
             # Atualizar cache do gerenciador de pacotes
             log(10, "→ Atualizando cache de pacotes...")
-            log(10, "  AVISO Você será solicitado a autenticar (pkexec)")
+
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            priv_method, priv_cmd = get_privilege_command()
+            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
+            log(10, f"  AVISO Você será solicitado a autenticar ({auth_msg})")
 
             if self.pkg_manager == 'pacman':
-                log(10, "  $ pkexec pacman -Sy")
+                log(10, f"  $ {auth_msg} pacman -Sy")
                 update_result = subprocess.run(
-                    ['pkexec', '/usr/bin/pacman', '-Sy'],
+                    priv_cmd + ['/usr/bin/pacman', '-Sy'],
                     capture_output=True,
                     text=True,
                     timeout=120
                 )
             else:  # apt
-                log(10, "  $ pkexec apt-get update")
+                log(10, f"  $ {auth_msg} apt-get update")
                 update_result = subprocess.run(
-                    ['pkexec', '/usr/bin/apt-get', 'update'],
+                    priv_cmd + ['/usr/bin/apt-get', 'update'],
                     capture_output=True,
                     text=True,
                     timeout=120
@@ -356,30 +362,33 @@ class DEInstaller:
             log(20, f"→ Instalando {de_info['name']}...")
             log(20, f"  Pacotes: {', '.join(packages)}")
             log(20, "")
-            log(20, "  AVISO Você será solicitado a autenticar novamente")
+
+            # Se estamos usando sudo e já autenticamos, não precisa autenticar novamente
+            if priv_method == "pkexec":
+                log(20, "  AVISO Você será solicitado a autenticar novamente")
 
             if self.pkg_manager == 'pacman':
-                log(20, f"  $ pkexec pacman -S --noconfirm {' '.join(packages)}")
+                log(20, f"  $ {auth_msg} pacman -S --noconfirm {' '.join(packages)}")
                 log(20, "")
                 log(30, "→ Baixando e instalando pacotes...")
             else:  # apt
-                log(20, f"  $ pkexec apt-get install -y {' '.join(packages)}")
+                log(20, f"  $ {auth_msg} apt-get install -y {' '.join(packages)}")
                 log(20, "")
                 log(30, "→ Baixando e instalando pacotes...")
-                log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
+                if priv_method == "pkexec":
+                    log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
             log(30, "")
 
-            # pkexec NÃO permite capturar stdout/stderr via pipe
-            # Solução: Monitorar arquivos de log em tempo real
+            # Monitorar arquivos de log em tempo real
             import time
             import os
 
             if self.pkg_manager == 'pacman':
                 log_file = '/var/log/pacman.log'
-                cmd = ['pkexec', '/usr/bin/pacman', '-S', '--noconfirm'] + packages
+                cmd = priv_cmd + ['/usr/bin/pacman', '-S', '--noconfirm'] + packages
             else:  # apt
                 log_file = '/var/log/apt/term.log'
-                cmd = ['pkexec', '/usr/bin/apt-get', 'install', '-y', '--no-install-recommends'] + packages
+                cmd = priv_cmd + ['/usr/bin/apt-get', 'install', '-y', '--no-install-recommends'] + packages
 
             try:
                 initial_size = os.path.getsize(log_file)

@@ -7,6 +7,8 @@ import subprocess
 import logging
 from typing import Tuple, Optional, Callable
 
+from utils.polkit import get_privilege_command
+
 logger = logging.getLogger(__name__)
 
 
@@ -175,10 +177,15 @@ class SystemDependencies:
             log(5, f"  Descrição: {dep_info['description']}")
             log(5, f"  Pacotes: {', '.join(packages)}")
             log(5, "")
-            log(10, "  AVISO Você será solicitado a autenticar (apenas uma vez)")
+
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            priv_method, priv_cmd = get_privilege_command()
+            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
+
+            log(10, f"  AVISO Você será solicitado a autenticar ({auth_msg})")
             log(10, "")
 
-            # Usar script helper que agrupa update + install em um único pkexec
+            # Usar script helper que agrupa update + install
             from pathlib import Path
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             install_script = script_dir / "install-packages.sh"
@@ -186,7 +193,7 @@ class SystemDependencies:
             log(15, f"→ Executando instalação integrada...")
             log(15, "")
 
-            cmd = ['pkexec', str(install_script)] + packages
+            cmd = priv_cmd + [str(install_script)] + packages
 
             process = subprocess.Popen(
                 cmd,
@@ -232,14 +239,14 @@ class SystemDependencies:
 
                 # Habilitar serviço
                 subprocess.run(
-                    ['pkexec', '/usr/bin/systemctl', 'enable', dep_info['service']],
+                    priv_cmd + ['/usr/bin/systemctl', 'enable', dep_info['service']],
                     capture_output=True,
                     timeout=10
                 )
 
                 # Iniciar serviço
                 start_result = subprocess.run(
-                    ['pkexec', '/usr/bin/systemctl', 'start', dep_info['service']],
+                    priv_cmd + ['/usr/bin/systemctl', 'start', dep_info['service']],
                     capture_output=True,
                     timeout=10
                 )

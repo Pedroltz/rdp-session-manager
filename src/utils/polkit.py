@@ -1,13 +1,77 @@
 #!/usr/bin/env python3
 """
 Helper para integração com PolicyKit
+Suporta fallback para sudo em ambientes sem interface gráfica (headless)
 """
 
 import subprocess
 import logging
-from typing import Optional, List
+import os
+import shutil
+from typing import Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+def has_display() -> bool:
+    """
+    Detecta se há um ambiente gráfico (display) disponível.
+
+    Verifica:
+    - DISPLAY (X11)
+    - WAYLAND_DISPLAY (Wayland)
+
+    Returns:
+        True se há ambiente gráfico, False caso contrário (headless)
+    """
+    display = os.environ.get('DISPLAY')
+    wayland = os.environ.get('WAYLAND_DISPLAY')
+
+    has_gui = bool(display or wayland)
+    logger.debug(f"Display detection: DISPLAY={display}, WAYLAND_DISPLAY={wayland}, has_gui={has_gui}")
+
+    return has_gui
+
+
+def has_polkit_agent() -> bool:
+    """
+    Verifica se há um agente PolicyKit disponível para autenticação.
+    Em servidores headless, geralmente não há agente gráfico instalado.
+
+    Returns:
+        True se há agente PolicyKit, False caso contrário
+    """
+    # Verificar se pkexec está disponível
+    if not shutil.which('pkexec'):
+        logger.debug("pkexec não encontrado no PATH")
+        return False
+
+    # Se não há display, não há agente gráfico
+    if not has_display():
+        logger.debug("Sem display - assumindo que não há agente PolicyKit")
+        return False
+
+    return True
+
+
+def get_privilege_command() -> Tuple[str, List[str]]:
+    """
+    Retorna o comando apropriado para elevação de privilégios.
+
+    Em ambientes com GUI: usa pkexec (PolicyKit)
+    Em ambientes headless: usa sudo
+
+    Returns:
+        Tuple (nome_do_método, lista_de_argumentos_base)
+        Ex: ('pkexec', ['pkexec', '--user', 'root'])
+        Ex: ('sudo', ['sudo'])
+    """
+    if has_polkit_agent():
+        logger.debug("Usando pkexec para elevação de privilégios")
+        return ('pkexec', ['pkexec', '--user', 'root'])
+    else:
+        logger.debug("Usando sudo para elevação de privilégios (ambiente headless)")
+        return ('sudo', ['sudo'])
 
 
 class PolicyKitHelper:
@@ -43,7 +107,7 @@ class PolicyKitHelper:
     @staticmethod
     def execute_with_polkit(action_id: str, command: List[str]) -> tuple:
         """
-        Executa comando com privilégios via PolicyKit
+        Executa comando com privilégios via PolicyKit ou sudo (em headless)
 
         Args:
             action_id: ID da ação PolicyKit
@@ -53,8 +117,11 @@ class PolicyKitHelper:
             Tuple (success, output, error)
         """
         try:
-            # Usar pkexec para executar comando
-            full_command = ['pkexec', '--user', 'root'] + command
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            method, base_cmd = get_privilege_command()
+            full_command = base_cmd + command
+
+            logger.debug(f"Executando com {method}: {' '.join(full_command)}")
 
             result = subprocess.run(
                 full_command,
