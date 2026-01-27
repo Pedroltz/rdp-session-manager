@@ -25,9 +25,12 @@ class DEInstaller:
                 'gnome-terminal',
                 'nautilus',
                 'gnome-control-center',
-                'gnome-tweaks'
+                'gnome-tweaks',
+                'mutter',              # Window manager
+                'gnome-settings-daemon',
+                'dbus-x11'
             ],
-            'size_mb': 1200,
+            'size_mb': 1400,
             'startup_cmd': 'gnome-session'
         },
         'xfce': {
@@ -36,9 +39,12 @@ class DEInstaller:
                 'xfce4',
                 'xfce4-goodies',
                 'xfce4-terminal',
-                'thunar'
+                'thunar',
+                'xfwm4',               # Window manager
+                'xfce4-settings',
+                'dbus-x11'
             ],
-            'size_mb': 400,
+            'size_mb': 450,
             'startup_cmd': 'startxfce4'
         },
         'xfce4': {  # Alias para xfce
@@ -47,9 +53,12 @@ class DEInstaller:
                 'xfce4',
                 'xfce4-goodies',
                 'xfce4-terminal',
-                'thunar'
+                'thunar',
+                'xfwm4',
+                'xfce4-settings',
+                'dbus-x11'
             ],
-            'size_mb': 400,
+            'size_mb': 450,
             'startup_cmd': 'startxfce4'
         },
         'kde': {
@@ -57,11 +66,14 @@ class DEInstaller:
             'packages': [
                 'kde-plasma-desktop',
                 'plasma-workspace',
+                'kwin-x11',            # Window manager (essential!)
                 'konsole',
                 'dolphin',
-                'systemsettings'
+                'systemsettings',
+                'plasma-desktop',
+                'dbus-x11'
             ],
-            'size_mb': 1500,
+            'size_mb': 1800,
             'startup_cmd': 'startplasma-x11'
         },
         'plasma': {  # Alias para kde
@@ -69,11 +81,14 @@ class DEInstaller:
             'packages': [
                 'kde-plasma-desktop',
                 'plasma-workspace',
+                'kwin-x11',
                 'konsole',
                 'dolphin',
-                'systemsettings'
+                'systemsettings',
+                'plasma-desktop',
+                'dbus-x11'
             ],
-            'size_mb': 1500,
+            'size_mb': 1800,
             'startup_cmd': 'startplasma-x11'
         },
         'mate': {
@@ -81,9 +96,13 @@ class DEInstaller:
             'packages': [
                 'mate-desktop-environment',
                 'mate-terminal',
-                'caja'
+                'caja',
+                'marco',               # Window manager
+                'mate-settings-daemon',
+                'mate-panel',
+                'dbus-x11'
             ],
-            'size_mb': 600,
+            'size_mb': 700,
             'startup_cmd': 'mate-session'
         },
         'cinnamon': {
@@ -91,9 +110,12 @@ class DEInstaller:
             'packages': [
                 'cinnamon-desktop-environment',
                 'cinnamon',
-                'nemo'
+                'nemo',
+                'muffin',              # Window manager
+                'cinnamon-settings-daemon',
+                'dbus-x11'
             ],
-            'size_mb': 800,
+            'size_mb': 900,
             'startup_cmd': 'cinnamon-session'
         },
         'lxde': {
@@ -101,9 +123,12 @@ class DEInstaller:
             'packages': [
                 'lxde',
                 'lxterminal',
-                'pcmanfm'
+                'pcmanfm',
+                'openbox',             # Window manager
+                'lxpanel',
+                'dbus-x11'
             ],
-            'size_mb': 250,
+            'size_mb': 300,
             'startup_cmd': 'startlxde'
         },
         'lxqt': {
@@ -111,9 +136,12 @@ class DEInstaller:
             'packages': [
                 'lxqt',
                 'qterminal',
-                'pcmanfm-qt'
+                'pcmanfm-qt',
+                'openbox',             # Window manager
+                'lxqt-panel',
+                'dbus-x11'
             ],
-            'size_mb': 350,
+            'size_mb': 400,
             'startup_cmd': 'startlxqt'
         }
     }
