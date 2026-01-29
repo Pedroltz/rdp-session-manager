@@ -25,6 +25,25 @@ SESSION_COMMAND="${SESSION_COMMAND:-startxfce4}"
 
 echo "Criando usuário RDP: $USERNAME"
 
+# Detectar layout de teclado do sistema
+XKBLAYOUT="us"
+XKBVARIANT=""
+XKBMODEL="pc105"
+
+if [ -f /etc/default/keyboard ]; then
+    source /etc/default/keyboard
+    echo "→ Layout de teclado detectado: $XKBLAYOUT"
+fi
+
+# Construir comando setxkbmap
+SETXKBMAP_CMD="setxkbmap -layout $XKBLAYOUT"
+if [ -n "$XKBVARIANT" ]; then
+    SETXKBMAP_CMD="$SETXKBMAP_CMD -variant $XKBVARIANT"
+fi
+if [ -n "$XKBMODEL" ]; then
+    SETXKBMAP_CMD="$SETXKBMAP_CMD -model $XKBMODEL"
+fi
+
 # 1. Criar grupo rdp-users se não existir
 if ! getent group rdp-users > /dev/null 2>&1; then
     echo "→ Criando grupo rdp-users..."
@@ -71,6 +90,9 @@ if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
 
+# Configure keyboard layout (inherited from host system)
+$SETXKBMAP_CMD
+
 # Configure openbox with window decorations for RemoteApps
 mkdir -p $HOME_DIR/.config/openbox
 cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
@@ -98,6 +120,7 @@ EOFSCRIPT
     sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
     sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
     sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
+    sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
 elif [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
     # WineGE RemoteApp mode - lançar aplicativo Windows via WineGE
     cat > "$XSESSION_FILE" <<'EOFSCRIPT'
@@ -114,6 +137,9 @@ export LOGNAME=$USERNAME
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
+
+# Configure keyboard layout (inherited from host system)
+$SETXKBMAP_CMD
 
 # Configure openbox with window decorations for RemoteApps
 mkdir -p $HOME_DIR/.config/openbox
@@ -141,6 +167,7 @@ EOFSCRIPT
     sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
     sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
     sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
+    sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
 else
     # Desktop mode - lançar desktop completo
     cat > "$XSESSION_FILE" <<EOF
@@ -157,6 +184,9 @@ export LOGNAME=$USERNAME
 if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval \$(dbus-launch --sh-syntax --exit-with-session)
 fi
+
+# Configure keyboard layout (inherited from host system)
+$SETXKBMAP_CMD
 
 # Start desktop environment
 exec $SESSION_COMMAND
@@ -193,4 +223,5 @@ if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
 fi
 
 echo "OK Usuário $USERNAME criado com sucesso!"
+echo "  - Layout de teclado: $XKBLAYOUT"
 exit 0
