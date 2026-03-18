@@ -15,11 +15,17 @@ detect_distro() {
 }
 
 DISTRO=$(detect_distro)
+SCRIPT_VERSION="0.3.0"
+
 echo "========================================="
-echo " Installing RDP Session Manager"
+echo "  Installing RDP Session Manager"
 echo "========================================="
 echo "Detected distribution: $DISTRO"
+echo "Script version: $SCRIPT_VERSION"
 echo ""
+
+# Exporta para evitar travamento em prompts interativos (debconf, tzdata, etc.)
+export DEBIAN_FRONTEND=noninteractive
 
 # Check package based on distro
 case "$DISTRO" in
@@ -42,32 +48,73 @@ if [ ! -f "$PKG_FILE" ]; then
     exit 1
 fi
 
-# Install dependencies
-echo "→ Installing dependencies..."
+# =========================================
+#   1/5 - Core System Dependencies
+# =========================================
+echo "========================================="
+echo "  1/5 - Core System Dependencies"
+echo "========================================="
+echo "These packages are required for the application to run."
+
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
+        echo "→ Installing Python and GTK4 dependencies..."
         sudo pacman -Sy --noconfirm \
             python python-gobject python-cairo gtk4 libadwaita polkit python-psutil \
             wget tar cabextract zenity openbox
         ;;
     debian|ubuntu|linuxmint|pop)
-        sudo apt-get update
+        echo "→ Updating package cache..."
+        sudo apt-get update -qq
+
+        echo "→ Installing Python and GTK4 dependencies..."
         sudo apt-get install -y \
             python3 python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 \
             libadwaita-1-0 polkitd python3-psutil wget tar cabextract zenity openbox
         ;;
 esac
 
-# Optional: Install Wine for WineGE RemoteApp support
+# =========================================
+#   2/5 - RDP Server Dependencies
+# =========================================
 echo ""
-echo "→ Installing Wine and dependencies (for WineGE RemoteApp support)..."
-echo " This is required if you want to run Windows applications via WineGE."
+echo "========================================="
+echo "  2/5 - RDP Server Dependencies"
+echo "========================================="
+echo "These packages enable RDP connections to this machine."
+
+case "$DISTRO" in
+    arch|manjaro|endeavouros|cachyos)
+        echo "→ Installing xrdp and X11 packages..."
+        sudo pacman -S --noconfirm xrdp xorgxrdp
+        ;;
+    debian|ubuntu|linuxmint|pop)
+        echo "→ Installing xrdp and X11 packages..."
+        sudo apt-get install -y \
+            xrdp xorgxrdp \
+            xserver-xorg-core \
+            dbus-x11 \
+            x11-xserver-utils \
+            xauth
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp || true
+        echo "  ✓ xrdp installed and started"
+        ;;
+esac
+
+# =========================================
+#   3/5 - Wine (WineGE RemoteApp support)
+# =========================================
 echo ""
+echo "========================================="
+echo "  3/5 - Wine (WineGE RemoteApp support)"
+echo "========================================="
+echo "Required to run Windows applications via WineGE."
 
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-            echo " → Enabling multilib repository..."
+            echo "→ Enabling multilib repository..."
             echo "[multilib]" | sudo tee -a /etc/pacman.conf
             echo "Include = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
             sudo pacman -Sy
@@ -82,18 +129,15 @@ case "$DISTRO" in
 
     debian|ubuntu|linuxmint|pop)
         sudo dpkg --add-architecture i386
-        sudo apt-get update
+        sudo apt-get update -qq
 
-        # Wine oficial + pacotes básicos
         sudo apt-get install -y wine wine64 wine32 cabextract p7zip-full unzip curl || true
 
-        # winetricks manual (não existe mais no repositório oficial desde 2022)
-        echo " → Installing latest winetricks from upstream..."
+        echo "→ Installing latest winetricks from upstream..."
         sudo wget -q https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
             -O /usr/local/bin/winetricks
         sudo chmod +x /usr/local/bin/winetricks
 
-        # Bibliotecas 32-bit comuns
         sudo apt-get install -y \
             libfreetype6:i386 libfontconfig1:i386 libxrender1:i386 libxinerama1:i386 \
             libxxf86vm1:i386 libxcomposite1:i386 libxrandr2:i386 libxi6:i386 libxcursor1:i386 \
@@ -102,24 +146,27 @@ case "$DISTRO" in
         ;;
 esac
 
-echo " ✓ Wine + winetricks installed"
+echo "  ✓ Wine + winetricks installed"
 
-# Optional: Install Oracle Instant Client
+# =========================================
+#   4/5 - Oracle Instant Client (opcional)
+# =========================================
 echo ""
-echo "→ Installing Oracle Instant Client (for Oracle Database connectivity)..."
-echo " This is required if you want to run applications that connect to Oracle databases."
-echo ""
+echo "========================================="
+echo "  4/5 - Oracle Instant Client (optional)"
+echo "========================================="
+echo "Required only for applications that connect to Oracle databases."
 
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         sudo pacman -S --noconfirm libaio unixodbc wget || true
-        echo " ⚠ On Arch: install oracle-instantclient from AUR if needed"
+        echo "  ⚠ On Arch: install oracle-instantclient from AUR if needed"
         ;;
 
     debian|ubuntu|linuxmint|pop)
-        # libaio1 ou libaio1t64 (dependendo da versão do Debian/Ubuntu)
         sudo apt-get install -y libaio-dev unixodbc unixodbc-dev alien wget || true
-        sudo apt-get install -y libaio1 libaio1t64 2>/dev/null || true   # ← correção aqui
+        sudo apt-get install -y libaio1 2>/dev/null || \
+        sudo apt-get install -y libaio1t64 2>/dev/null || true
 
         ORACLE_VERSION="21.15.0.0.0"
         ORACLE_MAJOR="2115000"
@@ -127,10 +174,6 @@ case "$DISTRO" in
         ORACLE_CLIENT_DIR="$ORACLE_DIR/instantclient_21_15"
 
         if [ ! -d "$ORACLE_CLIENT_DIR" ]; then
-            echo " → Place these files in /tmp/ to install Oracle Instant Client automatically:"
-            echo "   oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm"
-            echo "   oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm"
-            echo ""
             if [ -f "/tmp/oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm" ] && \
                [ -f "/tmp/oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm" ]; then
                 cd /tmp
@@ -147,19 +190,27 @@ export PATH=\$ORACLE_HOME/bin:\$PATH
 export TNS_ADMIN=\$ORACLE_HOME/network/admin
 EOF
                 sudo mkdir -p "$ORACLE_CLIENT_DIR/network/admin"
-                echo " ✓ Oracle Instant Client installed"
+                echo "  ✓ Oracle Instant Client installed"
             else
-                echo " ⚠ Oracle RPMs not found in /tmp/ → skipped"
+                echo "  ⚠ Oracle RPMs not found in /tmp/ → skipped"
+                echo "    Place oracle-instantclient-basic-${ORACLE_VERSION}-1.x86_64.rpm"
+                echo "    and oracle-instantclient-sqlplus-${ORACLE_VERSION}-1.x86_64.rpm"
+                echo "    in /tmp/ and re-run to install Oracle support."
             fi
         else
-            echo " ✓ Oracle Instant Client already installed"
+            echo "  ✓ Oracle Instant Client already installed"
         fi
         ;;
 esac
 
-# Install package
+# =========================================
+#   5/5 - Install package
+# =========================================
 echo ""
-echo "→ Installing package..."
+echo "========================================="
+echo "  5/5 - Installing package"
+echo "========================================="
+
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         sudo pacman -U --noconfirm "$PKG_FILE"
@@ -175,12 +226,14 @@ echo ""
 echo "→ Configuring system..."
 if [ ! -e /opt/rdp-user ]; then
     sudo ln -s /opt/rdp-users /opt/rdp-user
-    echo " ✓ Created symlink /opt/rdp-user → /opt/rdp-users"
+    echo "  ✓ Created symlink /opt/rdp-user → /opt/rdp-users"
 else
-    echo " ✓ Symlink /opt/rdp-user already exists"
+    echo "  ✓ Symlink /opt/rdp-user already exists"
 fi
 
 echo ""
-echo "✓ Installation complete!"
+echo "========================================="
+echo "  ✓ Installation complete!"
+echo "========================================="
 echo ""
 echo "Run: rdp-session-manager"
