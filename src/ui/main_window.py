@@ -676,24 +676,18 @@ Deseja continuar?"""
         uid_row = Adw.ActionRow()
         uid_row.set_title("UID do Sistema")
         uid_row.set_subtitle(f"{user.uid}")
-        uid_icon = Gtk.Image.new_from_icon_name("fingerprint2-symbolic")
-        uid_row.add_prefix(uid_icon)
         status_banner.add(uid_row)
 
         # Porta RDP Row
         port_row = Adw.ActionRow()
         port_row.set_title("Porta RDP")
         port_row.set_subtitle(f"{user.rdp_port}")
-        port_icon = Gtk.Image.new_from_icon_name("network-server-symbolic")
-        port_row.add_prefix(port_icon)
         status_banner.add(port_row)
 
         # Diretório Home Row
         home_row = Adw.ActionRow()
         home_row.set_title("Diretório Home")
         home_row.set_subtitle(f"{user.home_dir}")
-        home_icon = Gtk.Image.new_from_icon_name("folder-home-symbolic")
-        home_row.add_prefix(home_icon)
         status_banner.add(home_row)
 
         settings_box.append(status_banner)
@@ -708,8 +702,6 @@ Deseja continuar?"""
         username_entry.set_title("Nome de Usuário")
         username_entry.set_text(user.username)
         username_entry.set_show_apply_button(False)
-        username_icon = Gtk.Image.new_from_icon_name("user-symbolic")
-        username_entry.add_prefix(username_icon)
         basic_info_group.add(username_entry)
 
         # Campo: Nome completo
@@ -725,8 +717,6 @@ Deseja continuar?"""
         fullname_entry.set_title("Nome Completo")
         fullname_entry.set_text(current_fullname)
         fullname_entry.set_show_apply_button(False)
-        fullname_icon = Gtk.Image.new_from_icon_name("avatar-default-symbolic")
-        fullname_entry.add_prefix(fullname_icon)
         basic_info_group.add(fullname_entry)
 
         settings_box.append(basic_info_group)
@@ -739,9 +729,6 @@ Deseja continuar?"""
         # Campo: Tipo de Sessão usando AdwComboRow
         session_type_combo = Adw.ComboRow()
         session_type_combo.set_title("Modo de Conexão")
-        session_icon = Gtk.Image.new_from_icon_name("preferences-system-symbolic")
-        session_type_combo.add_prefix(session_icon)
-
         # Create string list for session types
         session_string_list = Gtk.StringList()
         session_string_list.append("Desktop Completo")
@@ -767,8 +754,6 @@ Deseja continuar?"""
         custom_app_entry = Adw.EntryRow()
         custom_app_entry.set_title("Comando do Aplicativo")
         custom_app_entry.set_show_apply_button(False)
-        app_icon = Gtk.Image.new_from_icon_name("application-x-executable-symbolic")
-        custom_app_entry.add_prefix(app_icon)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_command'):
             custom_app_entry.set_text(user.app_command)
         remoteapp_group.add(custom_app_entry)
@@ -777,8 +762,6 @@ Deseja continuar?"""
         app_args_entry = Adw.EntryRow()
         app_args_entry.set_title("Argumentos (opcional)")
         app_args_entry.set_show_apply_button(False)
-        args_icon = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic")
-        app_args_entry.add_prefix(args_icon)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_args'):
             app_args_entry.set_text(user.app_args)
         remoteapp_group.add(app_args_entry)
@@ -794,9 +777,6 @@ Deseja continuar?"""
         winege_buttons_row = Adw.ActionRow()
         winege_buttons_row.set_title("Selecionar Arquivo")
         winege_buttons_row.set_subtitle("Escolha o executável .exe do seu computador")
-        file_icon = Gtk.Image.new_from_icon_name("document-open-symbolic")
-        winege_buttons_row.add_prefix(file_icon)
-
         # Box horizontal para botões
         winege_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         winege_buttons_box.set_valign(Gtk.Align.CENTER)
@@ -971,8 +951,6 @@ Deseja continuar?"""
         winege_exe_entry = Adw.EntryRow()
         winege_exe_entry.set_title("Caminho do Executável")
         winege_exe_entry.set_show_apply_button(False)
-        exe_icon = Gtk.Image.new_from_icon_name("text-x-generic-symbolic")
-        winege_exe_entry.add_prefix(exe_icon)
         if current_session_type == 'winege-remoteapp' and hasattr(user, 'app_command'):
             winege_exe_entry.set_text(user.app_command)
 

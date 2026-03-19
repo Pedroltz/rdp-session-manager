@@ -206,6 +206,7 @@ class TestSessionMonitor(unittest.TestCase):
                 self.assertEqual(ip, '192.168.1.99')
 
     @patch('psutil.net_if_addrs')
+    @patch.dict('sys.modules', {'netifaces': None})
     def test_get_all_network_ips(self, mock_net_if_addrs):
         """Test get_all_network_ips method"""
         # Criar mock de interfaces de rede
