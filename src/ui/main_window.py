@@ -629,36 +629,82 @@ Deseja continuar?"""
         # Fechar o popover
         popover.popdown()
 
-        # Criar dialog de configurações
-        dialog = Adw.MessageDialog(
-            transient_for=self,
-            heading=f"Configurações de {user.username}",
-            body="Altere as informações do usuário:"
-        )
+        # Criar dialog de configurações usando Adw.Dialog (não MessageDialog) para ter controle total do tamanho
+        dialog = Adw.Dialog()
+        dialog.set_title(f"Editar Usuário RDP")
+        dialog.set_content_width(500)
+        dialog.set_content_height(680)
+        dialog.set_can_close(True)
+
+        # Criar toolbar view com header bar
+        toolbar_view = Adw.ToolbarView()
+
+        # Header bar com botões
+        header_bar = Adw.HeaderBar()
+
+        # Botão Cancelar
+        cancel_button = Gtk.Button(label="Cancelar")
+        cancel_button.connect('clicked', lambda b: dialog.close())
+        header_bar.pack_start(cancel_button)
+
+        # Botão Salvar
+        save_button = Gtk.Button(label="Salvar Alterações")
+        save_button.add_css_class("suggested-action")
+        header_bar.pack_end(save_button)
+
+        toolbar_view.add_top_bar(header_bar)
+
+        # Criar container principal com as mesmas dimensões da tela de criação
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(500)
+        clamp.set_margin_top(24)
+        clamp.set_margin_bottom(24)
+        clamp.set_margin_start(12)
+        clamp.set_margin_end(12)
 
         # Criar container para os campos
-        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        settings_box.set_margin_top(12)
-        settings_box.set_margin_bottom(12)
-        settings_box.set_margin_start(12)
-        settings_box.set_margin_end(12)
+        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+
+        # === Banner de Status no Topo ===
+        status_banner = Adw.PreferencesGroup()
+        status_banner.set_title("Informações do Usuário")
+
+        # UID Row
+        uid_row = Adw.ActionRow()
+        uid_row.set_title("UID do Sistema")
+        uid_row.set_subtitle(f"{user.uid}")
+        status_banner.add(uid_row)
+
+        # Porta RDP Row
+        port_row = Adw.ActionRow()
+        port_row.set_title("Porta RDP")
+        port_row.set_subtitle(f"{user.rdp_port}")
+        status_banner.add(port_row)
+
+        # Diretório Home Row
+        home_row = Adw.ActionRow()
+        home_row.set_title("Diretório Home")
+        home_row.set_subtitle(f"{user.home_dir}")
+        status_banner.add(home_row)
+
+        settings_box.append(status_banner)
+
+        # === Grupo: Informações Básicas ===
+        basic_info_group = Adw.PreferencesGroup()
+        basic_info_group.set_title("Informações Básicas")
+        basic_info_group.set_description("Identidade e nome de exibição do usuário")
 
         # Campo: Nome de usuário
-        username_label = Gtk.Label(label="Nome de usuário:")
-        username_label.set_halign(Gtk.Align.START)
-        settings_box.append(username_label)
-
-        username_entry = Gtk.Entry()
+        username_entry = Adw.EntryRow()
+        username_entry.set_title("Nome de Usuário")
         username_entry.set_text(user.username)
-        username_entry.set_hexpand(True)
-        settings_box.append(username_entry)
+        username_entry.set_show_apply_button(False)
+        basic_info_group.add(username_entry)
 
         # Campo: Nome completo
-        fullname_label = Gtk.Label(label="Nome completo:")
-        fullname_label.set_halign(Gtk.Align.START)
-        fullname_label.set_margin_top(8)
-        settings_box.append(fullname_label)
-
         # Obter nome completo atual
         try:
             import pwd
@@ -667,71 +713,73 @@ Deseja continuar?"""
         except:
             current_fullname = ""
 
-        fullname_entry = Gtk.Entry()
+        fullname_entry = Adw.EntryRow()
+        fullname_entry.set_title("Nome Completo")
         fullname_entry.set_text(current_fullname)
-        fullname_entry.set_hexpand(True)
-        settings_box.append(fullname_entry)
+        fullname_entry.set_show_apply_button(False)
+        basic_info_group.add(fullname_entry)
 
-        # Separator
-        separator1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        separator1.set_margin_top(12)
-        separator1.set_margin_bottom(8)
-        settings_box.append(separator1)
+        settings_box.append(basic_info_group)
 
-        # Campo: Tipo de Sessão
-        session_type_label = Gtk.Label(label="Tipo de Sessão:")
-        session_type_label.set_halign(Gtk.Align.START)
-        settings_box.append(session_type_label)
+        # === Grupo: Tipo de Sessão ===
+        session_group = Adw.PreferencesGroup()
+        session_group.set_title("Tipo de Sessão")
+        session_group.set_description("Escolha entre desktop completo ou aplicativo único")
 
-        session_type_combo = Gtk.ComboBoxText()
-        session_type_combo.append("desktop", "Desktop Completo")
-        session_type_combo.append("remoteapp", "RemoteApp (Linux)")
-        session_type_combo.append("winege-remoteapp", "WineGE RemoteApp (Windows)")
+        # Campo: Tipo de Sessão usando AdwComboRow
+        session_type_combo = Adw.ComboRow()
+        session_type_combo.set_title("Modo de Conexão")
+        # Create string list for session types
+        session_string_list = Gtk.StringList()
+        session_string_list.append("Desktop Completo")
+        session_string_list.append("RemoteApp (Aplicativo Linux)")
+        session_string_list.append("WineGE RemoteApp (Aplicativo Windows)")
 
-        # Set current value
+        session_type_combo.set_model(session_string_list)
+
+        # Set current value (map session type to index)
         current_session_type = getattr(user, 'session_type', 'desktop')
-        session_type_combo.set_active_id(current_session_type)
-        settings_box.append(session_type_combo)
+        session_type_map = {'desktop': 0, 'remoteapp': 1, 'winege-remoteapp': 2}
+        session_type_combo.set_selected(session_type_map.get(current_session_type, 0))
 
-        # Campo: Comando do Aplicativo (para RemoteApp Linux)
-        app_label = Gtk.Label(label="Comando do Aplicativo Linux:")
-        app_label.set_halign(Gtk.Align.START)
-        app_label.set_margin_top(8)
-        settings_box.append(app_label)
+        session_group.add(session_type_combo)
+        settings_box.append(session_group)
+
+        # === Grupo: RemoteApp (Linux) ===
+        remoteapp_group = Adw.PreferencesGroup()
+        remoteapp_group.set_title("RemoteApp Linux")
+        remoteapp_group.set_description("Configure o aplicativo Linux a ser executado")
 
         # Campo de entrada para comando personalizado
-        custom_app_entry = Gtk.Entry()
-        custom_app_entry.set_hexpand(True)
-        custom_app_entry.set_placeholder_text("Ex: firefox, thunderbird, libreoffice...")
+        custom_app_entry = Adw.EntryRow()
+        custom_app_entry.set_title("Comando do Aplicativo")
+        custom_app_entry.set_show_apply_button(False)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_command'):
             custom_app_entry.set_text(user.app_command)
-        settings_box.append(custom_app_entry)
+        remoteapp_group.add(custom_app_entry)
 
         # Campo: Argumentos (Linux RemoteApp)
-        app_args_entry = Gtk.Entry()
-        app_args_entry.set_hexpand(True)
-        app_args_entry.set_placeholder_text("Argumentos (opcional)...")
+        app_args_entry = Adw.EntryRow()
+        app_args_entry.set_title("Argumentos (opcional)")
+        app_args_entry.set_show_apply_button(False)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_args'):
             app_args_entry.set_text(user.app_args)
-        settings_box.append(app_args_entry)
+        remoteapp_group.add(app_args_entry)
 
-        # === WineGE RemoteApp Fields ===
-        # Label e descrição
-        winege_label = Gtk.Label()
-        winege_label.set_markup("<b>Aplicativo Windows (WineGE)</b>")
-        winege_label.set_halign(Gtk.Align.START)
-        winege_label.set_margin_top(12)
-        settings_box.append(winege_label)
+        settings_box.append(remoteapp_group)
 
-        winege_desc = Gtk.Label()
-        winege_desc.set_text("Configure o executável Windows a ser executado")
-        winege_desc.set_halign(Gtk.Align.START)
-        winege_desc.add_css_class("dim-label")
-        winege_desc.set_margin_bottom(8)
-        settings_box.append(winege_desc)
+        # === Grupo: WineGE RemoteApp ===
+        winege_group = Adw.PreferencesGroup()
+        winege_group.set_title("Aplicativo Windows (WineGE)")
+        winege_group.set_description("Configure o executável Windows a ser executado via Wine-GE")
 
+        # Row com botões de seleção
+        winege_buttons_row = Adw.ActionRow()
+        winege_buttons_row.set_title("Selecionar Arquivo")
+        winege_buttons_row.set_subtitle("Escolha o executável .exe do seu computador")
         # Box horizontal para botões
         winege_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        winege_buttons_box.set_valign(Gtk.Align.CENTER)
 
         # Botão para selecionar .exe
         winege_select_button = Gtk.Button()
@@ -895,14 +943,14 @@ Deseja continuar?"""
         winege_list_button.connect('clicked', on_list_winege_exes)
         winege_buttons_box.append(winege_list_button)
 
-        # Adicionar box de botões
-        settings_box.append(winege_buttons_box)
+        # Adicionar box de botões à row
+        winege_buttons_row.add_suffix(winege_buttons_box)
+        winege_group.add(winege_buttons_row)
 
-        # Campo de entrada para caminho do .exe (embaixo dos botões)
-        winege_exe_entry = Gtk.Entry()
-        winege_exe_entry.set_hexpand(True)
-        winege_exe_entry.set_placeholder_text("Caminho completo do arquivo .exe...")
-        winege_exe_entry.set_margin_top(8)
+        # Campo de entrada para caminho do .exe
+        winege_exe_entry = Adw.EntryRow()
+        winege_exe_entry.set_title("Caminho do Executável")
+        winege_exe_entry.set_show_apply_button(False)
         if current_session_type == 'winege-remoteapp' and hasattr(user, 'app_command'):
             winege_exe_entry.set_text(user.app_command)
 
@@ -927,108 +975,79 @@ Deseja continuar?"""
                     entry.set_text(text)
 
         # Conectar eventos: quando pressionar Enter ou perder o foco
-        winege_exe_entry.connect('activate', on_exe_path_changed)
+        winege_exe_entry.connect('apply', lambda e: on_exe_path_changed(winege_exe_entry))
 
         # GTK4 usa controller para eventos de foco
         focus_controller = Gtk.EventControllerFocus.new()
         focus_controller.connect('leave', lambda c: on_exe_path_changed(winege_exe_entry))
         winege_exe_entry.add_controller(focus_controller)
 
-        settings_box.append(winege_exe_entry)
+        winege_group.add(winege_exe_entry)
+        settings_box.append(winege_group)
 
         # Função para toggle visibility based on session type
-        def on_session_type_changed(combo):
-            session_id = combo.get_active_id()
-            is_remoteapp = session_id == 'remoteapp'
-            is_winege = session_id == 'winege-remoteapp'
+        def on_session_type_changed(combo, param=None):
+            selected = combo.get_selected()
+            is_desktop = selected == 0
+            is_remoteapp = selected == 1
+            is_winege = selected == 2
 
             # RemoteApp Linux
-            app_label.set_visible(is_remoteapp)
-            custom_app_entry.set_visible(is_remoteapp)
-            app_args_entry.set_visible(is_remoteapp)
+            remoteapp_group.set_visible(is_remoteapp)
 
             # WineGE RemoteApp
-            winege_label.set_visible(is_winege)
-            winege_desc.set_visible(is_winege)
-            winege_buttons_box.set_visible(is_winege)
-            winege_exe_entry.set_visible(is_winege)
+            winege_group.set_visible(is_winege)
 
-        session_type_combo.connect('changed', on_session_type_changed)
+        session_type_combo.connect('notify::selected', on_session_type_changed)
 
         # Initialize visibility
         on_session_type_changed(session_type_combo)
 
-        # Separator
-        separator2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        separator2.set_margin_top(12)
-        separator2.set_margin_bottom(8)
-        settings_box.append(separator2)
+        # === Grupo: Segurança (Senha) ===
+        security_group = Adw.PreferencesGroup()
+        security_group.set_title("Segurança")
+        security_group.set_description("Alterar senha de acesso RDP (deixe vazio para manter a atual)")
 
-        # Campo: Nova senha
-        password_label = Gtk.Label(label="Nova senha (deixe em branco para não alterar):")
-        password_label.set_halign(Gtk.Align.START)
-        password_label.set_margin_top(8)
-        settings_box.append(password_label)
-
-        password_entry = Gtk.Entry()
-        password_entry.set_visibility(False)
-        password_entry.set_invisible_char('•')
-        password_entry.set_hexpand(True)
-        password_entry.set_placeholder_text("Digite a nova senha ou deixe vazio")
-        settings_box.append(password_entry)
+        password_entry = Adw.PasswordEntryRow()
+        password_entry.set_title("Nova Senha")
+        security_group.add(password_entry)
 
         # Confirmação de senha
-        confirm_label = Gtk.Label(label="Confirmar senha:")
-        confirm_label.set_halign(Gtk.Align.START)
-        confirm_label.set_margin_top(4)
-        settings_box.append(confirm_label)
+        confirm_entry = Adw.PasswordEntryRow()
+        confirm_entry.set_title("Confirmar Senha")
+        security_group.add(confirm_entry)
 
-        confirm_entry = Gtk.Entry()
-        confirm_entry.set_visibility(False)
-        confirm_entry.set_invisible_char('•')
-        confirm_entry.set_hexpand(True)
-        settings_box.append(confirm_entry)
+        settings_box.append(security_group)
 
-        dialog.set_extra_child(settings_box)
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("save", "Salvar Alterações")
-        dialog.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("save")
-        dialog.set_close_response("cancel")
+        # Montar hierarquia: settings_box -> clamp -> scrolled -> toolbar_view -> dialog
+        clamp.set_child(settings_box)
+        scrolled.set_child(clamp)
+        toolbar_view.set_content(scrolled)
+        dialog.set_child(toolbar_view)
 
-        # Store references
-        dialog._user = user
-        dialog._username_entry = username_entry
-        dialog._fullname_entry = fullname_entry
-        dialog._session_type_combo = session_type_combo
-        dialog._custom_app_entry = custom_app_entry
-        dialog._app_args_entry = app_args_entry
-        dialog._winege_exe_entry = winege_exe_entry
-        dialog._password_entry = password_entry
-        dialog._confirm_entry = confirm_entry
-        dialog._original_username = user.username
+        # Conectar botão de salvar
+        def on_save_clicked(button):
+            """Handle save button click"""
+            new_username = username_entry.get_text().strip()
+            new_fullname = fullname_entry.get_text().strip()
 
-        dialog.connect("response", self.on_user_settings_response)
-        dialog.present()
+            # Map index back to session type (AdwComboRow returns index)
+            session_index = session_type_combo.get_selected()
+            session_type_reverse_map = {0: 'desktop', 1: 'remoteapp', 2: 'winege-remoteapp'}
+            new_session_type = session_type_reverse_map.get(session_index, 'desktop')
 
-    def on_user_settings_response(self, dialog, response):
-        """Handle user settings dialog response"""
-        if response == "save":
-            new_username = dialog._username_entry.get_text().strip()
-            new_fullname = dialog._fullname_entry.get_text().strip()
-            new_session_type = dialog._session_type_combo.get_active_id()
-            new_password = dialog._password_entry.get_text()
-            confirm_password = dialog._confirm_entry.get_text()
-            original_username = dialog._original_username
-            original_session_type = getattr(dialog._user, 'session_type', 'desktop')
+            new_password = password_entry.get_text()
+            confirm_password = confirm_entry.get_text()
+            original_username = user.username
+            original_session_type = getattr(user, 'session_type', 'desktop')
 
             # Get RemoteApp data
             new_app_command = ''
             new_app_args = ''
             if new_session_type == 'remoteapp':
                 # Pegar comando direto do campo de entrada
-                new_app_command = dialog._custom_app_entry.get_text().strip()
-                new_app_args = dialog._app_args_entry.get_text().strip()
+                new_app_command = custom_app_entry.get_text().strip()
+                new_app_args = app_args_entry.get_text().strip()
 
                 # Validar que app command não está vazio
                 if not new_app_command:
@@ -1037,7 +1056,7 @@ Deseja continuar?"""
 
             elif new_session_type == 'winege-remoteapp':
                 # Pegar caminho do .exe
-                new_app_command = dialog._winege_exe_entry.get_text().strip()
+                new_app_command = winege_exe_entry.get_text().strip()
                 new_app_args = ''  # WineGE não usa argumentos separados
 
                 # Validar que .exe não está vazio e existe
@@ -1064,138 +1083,152 @@ Deseja continuar?"""
                     self.show_toast("X Senha deve ter pelo menos 6 caracteres")
                     return
 
-            # Aplicar alterações em thread separada
-            def apply_changes():
+            # Call the existing save handler
+            self._apply_user_changes(dialog, user, new_username, new_fullname, new_session_type,
+                                     new_password, new_app_command, new_app_args, original_username,
+                                     original_session_type)
+            dialog.close()
+
+        save_button.connect('clicked', on_save_clicked)
+
+        dialog.present(self)
+
+    def _apply_user_changes(self, dialog, user, new_username, new_fullname, new_session_type,
+                           new_password, new_app_command, new_app_args, original_username,
+                           original_session_type):
+        """Apply user setting changes"""
+        # Aplicar alterações em thread separada
+        def apply_changes():
+            try:
+                changes_made = []
+
+                # Obter nome completo original
                 try:
-                    changes_made = []
+                    import pwd
+                    user_info = pwd.getpwnam(original_username)
+                    original_fullname = user_info.pw_gecos.split(',')[0] if user_info.pw_gecos else ""
+                except:
+                    original_fullname = ""
 
-                    # Obter nome completo original
-                    try:
-                        import pwd
-                        user_info = pwd.getpwnam(original_username)
-                        original_fullname = user_info.pw_gecos.split(',')[0] if user_info.pw_gecos else ""
-                    except:
-                        original_fullname = ""
+                # 1. Alterar nome completo (se mudou)
+                if new_fullname and new_fullname != original_fullname:
+                    success = self.user_manager.change_user_fullname(original_username, new_fullname)
+                    if success:
+                        changes_made.append("nome completo")
+                    else:
+                        GLib.idle_add(self.show_toast, "X Erro ao alterar nome completo")
+                        return
 
-                    # 1. Alterar nome completo (se mudou)
-                    if new_fullname and new_fullname != original_fullname:
-                        success = self.user_manager.change_user_fullname(original_username, new_fullname)
-                        if success:
-                            changes_made.append("nome completo")
+                # 2. Alterar senha (se fornecida)
+                if new_password:
+                    success = self.user_manager.change_password(original_username, new_password)
+                    if success:
+                        changes_made.append("senha")
+                    else:
+                        GLib.idle_add(self.show_toast, "X Erro ao alterar senha")
+                        return
+
+                # 3. Alterar tipo de sessão (se mudou)
+                if new_session_type != original_session_type:
+                    # Determinar comando correto
+                    if new_session_type == 'remoteapp':
+                        session_command = new_app_command
+                        session_args = new_app_args
+                    else:
+                        # Para desktop, usar o DE atual do usuário
+                        user_obj = self.user_manager.get_user(original_username)
+                        if user_obj and user_obj.desktop_env != 'remoteapp':
+                            # Mapear DE para comando
+                            de_commands = {
+                                'xfce': 'startxfce4',
+                                'gnome': 'gnome-session',
+                                'kde': 'startplasma-x11',
+                                'mate': 'mate-session',
+                                'cinnamon': 'cinnamon-session',
+                                'lxde': 'startlxde',
+                                'lxqt': 'startlxqt'
+                            }
+                            session_command = de_commands.get(user_obj.desktop_env, 'startxfce4')
                         else:
-                            GLib.idle_add(self.show_toast, "X Erro ao alterar nome completo")
-                            return
+                            session_command = 'startxfce4'  # Default
+                        session_args = ''
 
-                    # 2. Alterar senha (se fornecida)
-                    if new_password:
-                        success = self.user_manager.change_password(original_username, new_password)
-                        if success:
-                            changes_made.append("senha")
-                        else:
-                            GLib.idle_add(self.show_toast, "X Erro ao alterar senha")
-                            return
+                    success = self.user_manager.change_user_session_type(
+                        original_username, new_session_type, session_command, session_args
+                    )
+                    if success:
+                        changes_made.append("tipo de sessão")
+                    else:
+                        GLib.idle_add(self.show_toast, "X Erro ao alterar tipo de sessão")
+                        return
+                elif new_session_type == 'remoteapp':
+                    # Mesmo tipo, mas pode ter mudado app/args
+                    original_app = getattr(user, 'app_command', '')
+                    original_args = getattr(user, 'app_args', '')
 
-                    # 3. Alterar tipo de sessão (se mudou)
-                    if new_session_type != original_session_type:
-                        # Determinar comando correto
-                        if new_session_type == 'remoteapp':
-                            session_command = new_app_command
-                            session_args = new_app_args
-                        else:
-                            # Para desktop, usar o DE atual do usuário
-                            user_obj = self.user_manager.get_user(original_username)
-                            if user_obj and user_obj.desktop_env != 'remoteapp':
-                                # Mapear DE para comando
-                                de_commands = {
-                                    'xfce': 'startxfce4',
-                                    'gnome': 'gnome-session',
-                                    'kde': 'startplasma-x11',
-                                    'mate': 'mate-session',
-                                    'cinnamon': 'cinnamon-session',
-                                    'lxde': 'startlxde',
-                                    'lxqt': 'startlxqt'
-                                }
-                                session_command = de_commands.get(user_obj.desktop_env, 'startxfce4')
-                            else:
-                                session_command = 'startxfce4'  # Default
-                            session_args = ''
-
+                    if new_app_command != original_app or new_app_args != original_args:
                         success = self.user_manager.change_user_session_type(
-                            original_username, new_session_type, session_command, session_args
+                            original_username, 'remoteapp', new_app_command, new_app_args
                         )
                         if success:
-                            changes_made.append("tipo de sessão")
+                            changes_made.append("aplicativo RemoteApp")
                         else:
-                            GLib.idle_add(self.show_toast, "X Erro ao alterar tipo de sessão")
+                            GLib.idle_add(self.show_toast, "X Erro ao alterar aplicativo")
                             return
-                    elif new_session_type == 'remoteapp':
-                        # Mesmo tipo, mas pode ter mudado app/args
-                        original_app = getattr(dialog._user, 'app_command', '')
-                        original_args = getattr(dialog._user, 'app_args', '')
 
-                        if new_app_command != original_app or new_app_args != original_args:
+                elif new_session_type == 'winege-remoteapp':
+                    # Mesmo tipo WineGE, mas pode ter mudado exe/args
+                    original_app = getattr(user, 'app_command', '')
+                    original_args = getattr(user, 'app_args', '')
+
+                    if new_app_command != original_app or new_app_args != original_args:
+                        # Atualizar executável se mudou
+                        if new_app_command != original_app:
+                            success = self.user_manager.update_winege_executable(
+                                original_username, new_app_command
+                            )
+                            if not success:
+                                GLib.idle_add(self.show_toast, "X Erro ao atualizar executável WineGE")
+                                return
+                            changes_made.append("executável WineGE")
+
+                        # Atualizar argumentos se mudou
+                        if new_app_args != original_args:
                             success = self.user_manager.change_user_session_type(
-                                original_username, 'remoteapp', new_app_command, new_app_args
+                                original_username, 'winege-remoteapp', new_app_command, new_app_args
                             )
                             if success:
-                                changes_made.append("aplicativo RemoteApp")
+                                changes_made.append("argumentos WineGE")
                             else:
-                                GLib.idle_add(self.show_toast, "X Erro ao alterar aplicativo")
+                                GLib.idle_add(self.show_toast, "X Erro ao alterar argumentos")
                                 return
 
-                    elif new_session_type == 'winege-remoteapp':
-                        # Mesmo tipo WineGE, mas pode ter mudado exe/args
-                        original_app = getattr(dialog._user, 'app_command', '')
-                        original_args = getattr(dialog._user, 'app_args', '')
-
-                        if new_app_command != original_app or new_app_args != original_args:
-                            # Atualizar executável se mudou
-                            if new_app_command != original_app:
-                                success = self.user_manager.update_winege_executable(
-                                    original_username, new_app_command
-                                )
-                                if not success:
-                                    GLib.idle_add(self.show_toast, "X Erro ao atualizar executável WineGE")
-                                    return
-                                changes_made.append("executável WineGE")
-
-                            # Atualizar argumentos se mudou
-                            if new_app_args != original_args:
-                                success = self.user_manager.change_user_session_type(
-                                    original_username, 'winege-remoteapp', new_app_command, new_app_args
-                                )
-                                if success:
-                                    changes_made.append("argumentos WineGE")
-                                else:
-                                    GLib.idle_add(self.show_toast, "X Erro ao alterar argumentos")
-                                    return
-
-                    # 4. Renomear usuário (último, pois muda o username)
-                    if new_username != original_username:
-                        success = self.user_manager.rename_user(original_username, new_username)
-                        if success:
-                            changes_made.append("nome de usuário")
-                        else:
-                            GLib.idle_add(self.show_toast, f"X Erro ao renomear usuário")
-                            return
-
-                    # Mostrar sucesso
-                    if changes_made:
-                        changes_text = ", ".join(changes_made)
-                        GLib.idle_add(self.show_toast, f"OK Alterado: {changes_text}")
-                        GLib.timeout_add(300, self.load_users)
+                # 4. Renomear usuário (último, pois muda o username)
+                if new_username != original_username:
+                    success = self.user_manager.rename_user(original_username, new_username)
+                    if success:
+                        changes_made.append("nome de usuário")
                     else:
-                        GLib.idle_add(self.show_toast, "ℹ Nenhuma alteração foi feita")
+                        GLib.idle_add(self.show_toast, f"X Erro ao renomear usuário")
+                        return
 
-                except Exception as e:
-                    logger.error(f"Error updating user settings: {e}")
-                    GLib.idle_add(self.show_toast, f"X Erro ao atualizar configurações")
+                # Mostrar sucesso
+                if changes_made:
+                    changes_text = ", ".join(changes_made)
+                    GLib.idle_add(self.show_toast, f"OK Alterado: {changes_text}")
+                    GLib.timeout_add(300, self.load_users)
+                else:
+                    GLib.idle_add(self.show_toast, "ℹ Nenhuma alteração foi feita")
 
-            # Executar em thread
-            import threading
-            thread = threading.Thread(target=apply_changes)
-            thread.daemon = True
-            thread.start()
+            except Exception as e:
+                logger.error(f"Error updating user settings: {e}")
+                GLib.idle_add(self.show_toast, f"X Erro ao atualizar configurações")
+
+        # Executar em thread
+        import threading
+        thread = threading.Thread(target=apply_changes)
+        thread.daemon = True
+        thread.start()
 
     def on_copy_user_ip(self, user, popover):
         """Copy user connection string to clipboard"""
