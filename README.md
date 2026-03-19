@@ -493,7 +493,7 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ## Version Information
 
-**Current Version**: 0.3.0
+**Current Version**: 0.3.1
 **Status**: Production Ready
 **Last Updated**: 2025-10-30
 

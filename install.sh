@@ -102,17 +102,17 @@ export DEBIAN_FRONTEND=noninteractive
 print_header "Installing RDP Session Manager"
 
 echo "Detected distribution: $DISTRO"
-echo "Script version: 0.3.0"
+echo "Script version: 0.3.1"
 echo ""
 
 # Verify supported distro
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
-        PKG_FILE="release/rdp-session-manager-0.3.0-1-any.pkg.tar.zst"
+        PKG_FILE="release/rdp-session-manager-0.3.1-1-any.pkg.tar.zst"
         DISTRO_TYPE="arch"
         ;;
     debian|ubuntu|linuxmint|pop)
-        PKG_FILE="release/rdp-session-manager_0.3.0_all.deb"
+        PKG_FILE="release/rdp-session-manager_0.3.1_all.deb"
         DISTRO_TYPE="debian"
         ;;
     *)
