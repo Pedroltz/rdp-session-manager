@@ -38,7 +38,7 @@
   </provides>
 
   <releases>
-    <release version="0.1.0" date="2025-10-17">
+    <release version="0.3.1" date="2026-03-19">
       <description>
         <p>Versão inicial do RDP Session Manager</p>
       </description>

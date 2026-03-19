@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from utils.polkit import get_privilege_command
+
 logger = logging.getLogger(__name__)
 
 
@@ -266,13 +268,18 @@ class UserManager:
         except KeyError:
             # Criar grupo
             logger.info(f"Criando grupo {self.RDP_GID_NAME}...")
+
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            priv_method, priv_cmd = get_privilege_command()
+            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
+
             if log_callback:
                 log_callback(f"  → Criando grupo '{self.RDP_GID_NAME}'...")
-                log_callback(f"  AVISO Você será solicitado a autenticar (pkexec)")
-                log_callback(f"  $ pkexec /usr/sbin/groupadd {self.RDP_GID_NAME}")
+                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+                log_callback(f"  $ {auth_msg} /usr/sbin/groupadd {self.RDP_GID_NAME}")
 
             result = subprocess.run(
-                ['pkexec', '/usr/sbin/groupadd', self.RDP_GID_NAME],
+                priv_cmd + ['/usr/sbin/groupadd', self.RDP_GID_NAME],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -283,7 +290,7 @@ class UserManager:
                 if result.returncode == 126:
                     error_msg = "Autenticação cancelada pelo usuário"
                 elif result.returncode == 127:
-                    error_msg = "pkexec não encontrado - instale o policykit-1"
+                    error_msg = f"{auth_msg} não encontrado"
                 else:
                     error_msg = f"Código: {result.returncode}, stderr: {result.stderr}"
 
@@ -297,13 +304,18 @@ class UserManager:
         """Cria diretório base /opt/rdp-users"""
         if not self.rdp_users_home.exists():
             logger.info(f"Criando diretório base {self.rdp_users_home}...")
+
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            priv_method, priv_cmd = get_privilege_command()
+            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
+
             if log_callback:
                 log_callback(f"  → Criando diretório {self.rdp_users_home}...")
-                log_callback(f"  AVISO Você será solicitado a autenticar (pkexec)")
-                log_callback(f"  $ pkexec mkdir -p {self.rdp_users_home}")
+                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+                log_callback(f"  $ {auth_msg} mkdir -p {self.rdp_users_home}")
 
             result = subprocess.run(
-                ['pkexec', '/usr/bin/mkdir', '-p', str(self.rdp_users_home)],
+                priv_cmd + ['/usr/bin/mkdir', '-p', str(self.rdp_users_home)],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -313,7 +325,7 @@ class UserManager:
                 if result.returncode == 126:
                     error_msg = "Autenticação cancelada pelo usuário"
                 elif result.returncode == 127:
-                    error_msg = "pkexec não encontrado - instale o policykit-1"
+                    error_msg = f"{auth_msg} não encontrado"
                 else:
                     error_msg = f"Código: {result.returncode}, stderr: {result.stderr}"
 
@@ -322,10 +334,10 @@ class UserManager:
 
             # Definir permissões
             if log_callback:
-                log_callback(f"  $ pkexec chmod 755 {self.rdp_users_home}")
+                log_callback(f"  $ {auth_msg} chmod 755 {self.rdp_users_home}")
 
             chmod_result = subprocess.run(
-                ['pkexec', '/usr/bin/chmod', '755', str(self.rdp_users_home)],
+                priv_cmd + ['/usr/bin/chmod', '755', str(self.rdp_users_home)],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -344,12 +356,16 @@ class UserManager:
                            home_dir: str, full_name: str, desktop_env: str,
                            session_type: str = 'desktop', app_command: str = '',
                            app_args: str = '', log_callback=None) -> bool:
-        """Cria usuário no sistema via pkexec usando script helper"""
+        """Cria usuário no sistema via pkexec/sudo usando script helper"""
         try:
             # Obter caminho do script helper
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             create_script = script_dir / "create-rdp-user.sh"
             password_script = script_dir / "set-user-password.sh"
+
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            priv_method, priv_cmd = get_privilege_command()
+            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
 
             # Mapear desktop_env para comando DE (usado apenas para desktop mode)
             de_commands = {
@@ -367,7 +383,7 @@ class UserManager:
 
             if log_callback:
                 log_callback(f"  → Criando usuário e configurando sistema...")
-                log_callback(f"  AVISO Você será solicitado a autenticar (apenas uma vez)")
+                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
 
             # Executar script de criação de usuário
             # Passar: username, uid, home_dir, full_name, session_type, de_command_or_app, app_args
@@ -378,8 +394,8 @@ class UserManager:
                 session_command = de_command
                 extra_args = ""
 
-            cmd = [
-                'pkexec', str(create_script),
+            cmd = priv_cmd + [
+                str(create_script),
                 username,
                 str(uid),
                 home_dir,
@@ -419,10 +435,12 @@ class UserManager:
                     if log_callback:
                         log_callback(f"  {line}")
 
-            # Definir senha (segunda autenticação pkexec)
+            # Definir senha
             if log_callback:
                 log_callback(f"  → Definindo senha...")
-                log_callback(f"  AVISO Você será solicitado a autenticar novamente")
+                # Só avisa sobre autenticação novamente se for pkexec
+                if priv_method == "pkexec":
+                    log_callback(f"  AVISO Você será solicitado a autenticar novamente")
 
             echo_proc = subprocess.Popen(
                 ['echo', f'{username}:{password}'],
@@ -430,7 +448,7 @@ class UserManager:
             )
 
             passwd_proc = subprocess.Popen(
-                ['pkexec', str(password_script)],
+                priv_cmd + [str(password_script)],
                 stdin=echo_proc.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
@@ -508,9 +526,12 @@ class UserManager:
 
             logger.info(f"Terminando processos do usuário {username} (signal: {signal})...")
 
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
             # Primeiro tentar SIGTERM
             result = subprocess.run(
-                ['pkexec', '/usr/bin/pkill', signal, '-u', username],
+                priv_cmd + ['/usr/bin/pkill', signal, '-u', username],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -557,8 +578,11 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             delete_script = script_dir / "delete-rdp-user.sh"
 
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
             # Montar comando com flags
-            cmd = ['pkexec', str(delete_script), username]
+            cmd = priv_cmd + [str(delete_script), username]
 
             if remove_home:
                 cmd.append('--remove-home')
@@ -614,7 +638,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             toggle_script = script_dir / "toggle-user-lock.sh"
 
-            cmd = ['pkexec', str(toggle_script), username, 'lock']
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(toggle_script), username, 'lock']
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -655,7 +682,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             toggle_script = script_dir / "toggle-user-lock.sh"
 
-            cmd = ['pkexec', str(toggle_script), username, 'unlock']
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(toggle_script), username, 'unlock']
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -703,7 +733,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             sudo_script = script_dir / "toggle-user-sudo.sh"
 
-            cmd = ['pkexec', str(sudo_script), username, 'grant']
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(sudo_script), username, 'grant']
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -752,7 +785,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             sudo_script = script_dir / "toggle-user-sudo.sh"
 
-            cmd = ['pkexec', str(sudo_script), username, 'revoke']
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(sudo_script), username, 'revoke']
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -1120,6 +1156,9 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             password_script = script_dir / "set-user-password.sh"
 
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
             # Usar echo e pipe para passar a senha
             echo_proc = subprocess.Popen(
                 ['echo', f'{username}:{new_password}'],
@@ -1127,7 +1166,7 @@ class UserManager:
             )
 
             passwd_proc = subprocess.Popen(
-                ['pkexec', str(password_script)],
+                priv_cmd + [str(password_script)],
                 stdin=echo_proc.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
@@ -1179,7 +1218,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             rename_script = script_dir / "rename-user.sh"
 
-            cmd = ['pkexec', str(rename_script), old_username, new_username]
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(rename_script), old_username, new_username]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -1222,7 +1264,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             chfn_script = script_dir / "change-user-fullname.sh"
 
-            cmd = ['pkexec', str(chfn_script), username, new_fullname]
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(chfn_script), username, new_fullname]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -1308,7 +1353,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             update_script = script_dir / "update-winege-exe.sh"
 
-            cmd = ['pkexec', str(update_script), username, new_exe_path]
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(update_script), username, new_exe_path]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
@@ -1357,7 +1405,10 @@ class UserManager:
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             change_script = script_dir / "change-session-type.sh"
 
-            cmd = ['pkexec', str(change_script), username, session_type, session_command, app_args]
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
+            cmd = priv_cmd + [str(change_script), username, session_type, session_command, app_args]
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 

@@ -1,13 +1,149 @@
 #!/usr/bin/env python3
 """
 Helper para integração com PolicyKit
+Suporta fallback para sudo em ambientes sem interface gráfica (headless)
+ou em ambientes onde PolicyKit não funciona (ex: WSL)
 """
 
 import subprocess
 import logging
-from typing import Optional, List
+import os
+import shutil
+from typing import Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Flag global para forçar modo CLI (usa sudo ao invés de pkexec)
+_force_cli_mode = False
+
+
+def set_cli_mode(enabled: bool = True) -> None:
+    """
+    Define o modo CLI (headless), forçando o uso de sudo ao invés de pkexec.
+
+    Args:
+        enabled: True para forçar sudo, False para comportamento automático
+    """
+    global _force_cli_mode
+    _force_cli_mode = enabled
+    if enabled:
+        logger.debug("Modo CLI ativado - forçando uso de sudo")
+
+
+def is_cli_mode() -> bool:
+    """
+    Verifica se o modo CLI está ativo.
+
+    Returns:
+        True se modo CLI está forçado, False caso contrário
+    """
+    return _force_cli_mode
+
+
+def is_wsl() -> bool:
+    """
+    Detecta se está rodando no Windows Subsystem for Linux (WSL).
+
+    PolicyKit não funciona corretamente no WSL porque não há um agente
+    de autenticação rodando, mesmo quando há um display disponível (WSLg).
+
+    Returns:
+        True se estiver rodando no WSL, False caso contrário
+    """
+    # Método 1: Verificar variável de ambiente WSL_DISTRO_NAME
+    if os.environ.get('WSL_DISTRO_NAME'):
+        logger.debug("WSL detectado via WSL_DISTRO_NAME")
+        return True
+
+    # Método 2: Verificar /proc/version
+    try:
+        with open('/proc/version', 'r') as f:
+            version = f.read().lower()
+            if 'microsoft' in version or 'wsl' in version:
+                logger.debug("WSL detectado via /proc/version")
+                return True
+    except (FileNotFoundError, PermissionError):
+        pass
+
+    # Método 3: Verificar existência do WSLInterop
+    if os.path.exists('/proc/sys/fs/binfmt_misc/WSLInterop'):
+        logger.debug("WSL detectado via WSLInterop")
+        return True
+
+    return False
+
+
+def has_display() -> bool:
+    """
+    Detecta se há um ambiente gráfico (display) disponível.
+
+    Verifica:
+    - DISPLAY (X11)
+    - WAYLAND_DISPLAY (Wayland)
+
+    Returns:
+        True se há ambiente gráfico, False caso contrário (headless)
+    """
+    display = os.environ.get('DISPLAY')
+    wayland = os.environ.get('WAYLAND_DISPLAY')
+
+    has_gui = bool(display or wayland)
+    logger.debug(f"Display detection: DISPLAY={display}, WAYLAND_DISPLAY={wayland}, has_gui={has_gui}")
+
+    return has_gui
+
+
+def has_polkit_agent() -> bool:
+    """
+    Verifica se há um agente PolicyKit disponível para autenticação.
+    Em servidores headless, geralmente não há agente gráfico instalado.
+    No WSL, PolicyKit não funciona mesmo com display disponível.
+    No modo CLI, sempre usa sudo para melhor experiência no terminal.
+
+    Returns:
+        True se há agente PolicyKit, False caso contrário
+    """
+    # Modo CLI forçado - sempre usar sudo
+    if is_cli_mode():
+        logger.debug("Modo CLI ativo - usando sudo")
+        return False
+
+    # Verificar se pkexec está disponível
+    if not shutil.which('pkexec'):
+        logger.debug("pkexec não encontrado no PATH")
+        return False
+
+    # WSL não suporta PolicyKit corretamente (não há agente de autenticação)
+    if is_wsl():
+        logger.debug("WSL detectado - PolicyKit não funciona, usando sudo")
+        return False
+
+    # Se não há display, não há agente gráfico
+    if not has_display():
+        logger.debug("Sem display - assumindo que não há agente PolicyKit")
+        return False
+
+    return True
+
+
+def get_privilege_command() -> Tuple[str, List[str]]:
+    """
+    Retorna o comando apropriado para elevação de privilégios.
+
+    Em ambientes com GUI: usa pkexec (PolicyKit)
+    Em ambientes headless: usa sudo
+
+    Returns:
+        Tuple (nome_do_método, lista_de_argumentos_base)
+        Ex: ('pkexec', ['pkexec', '--user', 'root'])
+        Ex: ('sudo', ['sudo'])
+    """
+    if has_polkit_agent():
+        logger.debug("Usando pkexec para elevação de privilégios")
+        return ('pkexec', ['pkexec', '--user', 'root'])
+    else:
+        logger.debug("Usando sudo para elevação de privilégios (ambiente headless)")
+        return ('sudo', ['sudo'])
 
 
 class PolicyKitHelper:
@@ -43,7 +179,7 @@ class PolicyKitHelper:
     @staticmethod
     def execute_with_polkit(action_id: str, command: List[str]) -> tuple:
         """
-        Executa comando com privilégios via PolicyKit
+        Executa comando com privilégios via PolicyKit ou sudo (em headless)
 
         Args:
             action_id: ID da ação PolicyKit
@@ -53,8 +189,11 @@ class PolicyKitHelper:
             Tuple (success, output, error)
         """
         try:
-            # Usar pkexec para executar comando
-            full_command = ['pkexec', '--user', 'root'] + command
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            method, base_cmd = get_privilege_command()
+            full_command = base_cmd + command
+
+            logger.debug(f"Executando com {method}: {' '.join(full_command)}")
 
             result = subprocess.run(
                 full_command,

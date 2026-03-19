@@ -30,6 +30,25 @@ fi
 
 echo "Alterando tipo de sessão de $USERNAME para: $SESSION_TYPE"
 
+# Detectar layout de teclado do sistema
+XKBLAYOUT="us"
+XKBVARIANT=""
+XKBMODEL="pc105"
+
+if [ -f /etc/default/keyboard ]; then
+    source /etc/default/keyboard
+    echo "Layout de teclado detectado: $XKBLAYOUT"
+fi
+
+# Construir comando setxkbmap
+SETXKBMAP_CMD="setxkbmap -layout $XKBLAYOUT"
+if [ -n "$XKBVARIANT" ]; then
+    SETXKBMAP_CMD="$SETXKBMAP_CMD -variant $XKBVARIANT"
+fi
+if [ -n "$XKBMODEL" ]; then
+    SETXKBMAP_CMD="$SETXKBMAP_CMD -model $XKBMODEL"
+fi
+
 # Verificar se usuário tem processos ativos
 ACTIVE_PIDS=$(pgrep -u "$USERNAME" 2>/dev/null || true)
 if [ -n "$ACTIVE_PIDS" ]; then
@@ -61,6 +80,9 @@ if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
 
+# Configure keyboard layout (inherited from host system)
+$SETXKBMAP_CMD
+
 # Configure openbox with window decorations for RemoteApps
 mkdir -p $HOME_DIR/.config/openbox
 cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
@@ -88,6 +110,7 @@ EOFSCRIPT
     /usr/bin/sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
     /usr/bin/sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
     /usr/bin/sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
+    /usr/bin/sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
 else
     # Desktop mode
     cat > "$XSESSION_FILE" <<EOF
@@ -105,6 +128,9 @@ if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval \$(dbus-launch --sh-syntax --exit-with-session)
 fi
 
+# Configure keyboard layout (inherited from host system)
+$SETXKBMAP_CMD
+
 # Start desktop environment
 exec $SESSION_COMMAND
 EOF
@@ -114,4 +140,5 @@ fi
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
 echo "OK Tipo de sessão alterado com sucesso para $SESSION_TYPE"
+echo "  - Layout de teclado: $XKBLAYOUT"
 exit 0

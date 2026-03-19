@@ -16,6 +16,10 @@ from core.de_installer import DEInstaller
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
 from utils.logger import setup_logger
+from utils.polkit import get_privilege_command, set_cli_mode
+
+# Ativar modo CLI - força uso de sudo ao invés de pkexec
+set_cli_mode(True)
 
 logger = logging.getLogger(__name__)
 
@@ -717,8 +721,11 @@ class CLI:
                     return 1
 
             # Use helper script
+            # Obter comando de elevação apropriado (pkexec ou sudo)
+            _, priv_cmd = get_privilege_command()
+
             result = subprocess.run(
-                ['pkexec', helper_script, username, selected_exe],
+                priv_cmd + [helper_script, username, selected_exe],
                 capture_output=True,
                 text=True
             )
