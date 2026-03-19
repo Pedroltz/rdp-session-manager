@@ -116,7 +116,7 @@ class RDPSessionManagerApp(Adw.Application):
             application_name="RDP Session Manager",
             application_icon="com.rdp.SessionManager",
             developer_name="Pedroltz",
-            version="0.3.0",
+            version="0.3.1",
             developers=["Pedroltz"],
             copyright="© 2025 Pedroltz",
             license_type=Gtk.License.GPL_3_0,
