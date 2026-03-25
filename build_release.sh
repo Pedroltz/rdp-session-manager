@@ -6,7 +6,7 @@
 set -e
 
 APP_NAME="rdp-session-manager"
-APP_VERSION="0.3.0"
+APP_VERSION="$(python3 -c "import re; print(re.search(r\"version='([^']+)'\", open('setup.py').read()).group(1))")"
 APP_DESCRIPTION="Gerenciador de Sessões RDP com Interface GTK4"
 APP_MAINTAINER="Your Name <your.email@example.com>"
 
