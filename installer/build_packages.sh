@@ -6,13 +6,15 @@
 set -e
 
 APP_NAME="rdp-session-manager"
-APP_VERSION="$(python3 -c "import re; print(re.search(r\"version='([^']+)'\", open('setup.py').read()).group(1))")"
+APP_VERSION="$(sed -n 's/^__version__ = \"\(.*\)\"/\1/p' src/version.py)"
+[ -n "${APP_VERSION}" ] || { echo "ERROR: could not determine application version" >&2; exit 1; }
 APP_DESCRIPTION="Gerenciador de Sessões RDP com Interface GTK4"
 APP_MAINTAINER="Your Name <your.email@example.com>"
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build_temp"
 RELEASE_DIR="${PROJECT_DIR}/release"
+cd "${PROJECT_DIR}"
 
 # Detect distribution
 detect_distro() {
@@ -66,8 +68,10 @@ mkdir -p "${BUILD_DIR}/usr/share/metainfo"
 mkdir -p "${RELEASE_DIR}"
 
 # Clean old packages
-rm -f "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb"
-rm -f "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
+# Stable asset names are used by the direct GitHub installer.  The package
+# metadata still contains APP_VERSION, so upgrades remain version-aware.
+rm -f "${RELEASE_DIR}/${APP_NAME}.deb"
+rm -f "${RELEASE_DIR}/${APP_NAME}.pkg.tar.zst"
 
 # Copy source files
 echo "→ Copying files..."
@@ -152,7 +156,7 @@ POSTREMOVE
 chmod +x "${BUILD_DIR}/DEBIAN_postrm"
 
 # Build package(s)
-case "$DISTRO" in
+case "all" in
     arch|manjaro|endeavouros|cachyos)
         echo "→ Building Arch package (.pkg.tar.zst)..."
         fpm -s dir -t pacman \
@@ -173,11 +177,11 @@ case "$DISTRO" in
             --after-install "${BUILD_DIR}/DEBIAN_postinst" \
             --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
             -C "${BUILD_DIR}" \
-            -p "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst" \
+            -p "${RELEASE_DIR}/${APP_NAME}.pkg.tar.zst" \
             .
 
         echo ""
-        echo "✓ Package created: release/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
+        echo "✓ Package created: release/${APP_NAME}.pkg.tar.zst"
         ;;
     debian|ubuntu|linuxmint|pop)
         echo "→ Building Debian package (.deb)..."
@@ -200,11 +204,11 @@ case "$DISTRO" in
             --after-install "${BUILD_DIR}/DEBIAN_postinst" \
             --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
             -C "${BUILD_DIR}" \
-            -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
+            -p "${RELEASE_DIR}/${APP_NAME}.deb" \
             .
 
         echo ""
-        echo "✓ Package created: release/${APP_NAME}_${APP_VERSION}_all.deb"
+        echo "✓ Package created: release/${APP_NAME}.deb"
         ;;
     *)
         echo "Building both DEB and Arch packages..."
@@ -230,7 +234,7 @@ case "$DISTRO" in
             --after-install "${BUILD_DIR}/DEBIAN_postinst" \
             --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
             -C "${BUILD_DIR}" \
-            -p "${RELEASE_DIR}/${APP_NAME}_${APP_VERSION}_all.deb" \
+            -p "${RELEASE_DIR}/${APP_NAME}.deb" \
             .
 
         # Build Arch package
@@ -253,17 +257,17 @@ case "$DISTRO" in
             --after-install "${BUILD_DIR}/DEBIAN_postinst" \
             --after-remove "${BUILD_DIR}/DEBIAN_postrm" \
             -C "${BUILD_DIR}" \
-            -p "${RELEASE_DIR}/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst" \
+            -p "${RELEASE_DIR}/${APP_NAME}.pkg.tar.zst" \
             .
 
         echo ""
         echo "✓ Packages created:"
-        echo "  - release/${APP_NAME}_${APP_VERSION}_all.deb"
-        echo "  - release/${APP_NAME}-${APP_VERSION}-1-any.pkg.tar.zst"
+        echo "  - release/${APP_NAME}.deb"
+        echo "  - release/${APP_NAME}.pkg.tar.zst"
         ;;
 esac
 
 rm -rf "${BUILD_DIR}"
 
 echo ""
-echo "Install with: ./install.sh"
+echo "Install the local build with: python -m installer --local"

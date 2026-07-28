@@ -19,6 +19,7 @@ from core.de_installer import DEInstaller
 from core.session_monitor import SessionMonitor
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
+from version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class RDPSessionManagerApp(Adw.Application):
             application_name="RDP Session Manager",
             application_icon="com.rdp.SessionManager",
             developer_name="Pedroltz",
-            version="0.3.1",
+            version=__version__,
             developers=["Pedroltz"],
             copyright="© 2025 Pedroltz",
             license_type=Gtk.License.GPL_3_0,

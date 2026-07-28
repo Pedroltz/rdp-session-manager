@@ -1,0 +1,2 @@
+# Terminal UI used only by the standalone installer.
+rich>=14,<16

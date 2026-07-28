@@ -30,8 +30,8 @@
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://github.com/yourusername/rdp-session-manager</url>
-  <url type="bugtracker">https://github.com/yourusername/rdp-session-manager/issues</url>
+  <url type="homepage">https://github.com/Pedroltz/rdp-session-manager</url>
+  <url type="bugtracker">https://github.com/Pedroltz/rdp-session-manager/issues</url>
 
   <provides>
     <binary>rdp-session-manager</binary>
