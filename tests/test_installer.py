@@ -148,6 +148,13 @@ class InstallerHelpersTest(unittest.TestCase):
             ["--dry-run", "--yes", "--with-wine", "--os-release", "/etc/os-release"]
         )
         instance = installer.Installer(args)
+        instance.distro = installer.Distro(
+            family="arch",
+            identifier="arch",
+            version="rolling",
+            name="Arch Linux",
+            id_like=("arch",),
+        )
         try:
             packages = instance.package_names()
             self.assertIn("7zip", packages)
