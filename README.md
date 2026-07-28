@@ -1,539 +1,82 @@
-# RDP Session Manager
-
-A professional GTK4-based application for managing Remote Desktop Protocol (RDP) sessions on Linux systems.
-
-![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![GTK](https://img.shields.io/badge/GTK-4.0-green.svg)
+<div align="center">
+  <h1>RDP Session Manager</h1>
+  <p>A GTK-based Linux application for managing Remote Desktop Protocol (RDP) users and sessions.</p>
+  <img src="imgs/RDPSM.png" alt="RDP Session Manager" width="220">
+  <br><br>
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="GPL-3.0 license">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue.svg" alt="Python 3.9 or later">
+  <img src="https://img.shields.io/badge/GTK-4.0-green.svg" alt="GTK 4">
+</div>
 
 ## Overview
 
-RDP Session Manager is a comprehensive desktop application designed for GNOME environments, providing centralized management of RDP user accounts and sessions. Built with GTK4 and libadwaita, it offers a native Linux experience for administering remote desktop access through the xrdp server.
+RDP Session Manager provides a graphical interface for administering RDP access through xrdp on supported Linux distributions. It centralizes account management, session configuration, and dependency checks in a native GTK 4 and libadwaita application.
 
-## Key Features
+## Features
 
-### User Management
-- Create RDP user accounts with automated configuration
-- Delete users with complete data removal
-- Enable/disable user accounts via graphical toggle
-- Automatic termination of active sessions during deletion
-- Real-time input validation
-- Active process detection per user
-- Status monitoring (Connected/Enabled/Disabled)
+- Create, remove, enable, and disable RDP user accounts.
+- Configure full desktop sessions with supported desktop environments.
+- Run Linux applications as RemoteApp sessions.
+- Run Windows applications as WineGE RemoteApp sessions.
+- Check and install required RDP components when needed.
+- Monitor user status and active sessions.
 
-### Session Types
+## Technology
 
-**Desktop Sessions** - Full desktop environments with automatic installation:
-- LXDE (250MB) - Lightweight
-- LXQt (350MB) - Modern and lightweight
-- XFCE (400MB) - Recommended for balance
-- MATE (600MB) - Traditional desktop
-- Cinnamon (800MB) - Feature-rich
-- GNOME (1.2GB) - Complete desktop
-- KDE Plasma (1.5GB) - Advanced features
+- Python 3.9+
+- GTK 4 and libadwaita
+- xrdp and FreeRDP
+- PolicyKit for privileged system operations
 
-**RemoteApp** - Launch single Linux applications:
-- Execute individual applications (Firefox, LibreOffice, etc.)
-- Maximized window mode with minimal window decorations
-- Lightweight alternative to full desktop sessions
+## Requirements
 
-**WineGE RemoteApp** - Run Windows applications via WineGE:
-- Execute Windows (.exe) applications through Wine-GE
-- Automatic WineGE installation and configuration
-- Support for installers and portable executables
-- Wine Prefix isolation per user
-- Better compatibility than standard Wine
+Supported distributions:
 
-Features include:
-- Automated desktop environment installation
-- Disk space verification before installation
-- Detection of pre-installed environments
-- Wine Prefix management for Windows apps
-
-### RDP Connectivity
-- Automatic FreeRDP client detection
-- On-demand FreeRDP installation with progress tracking
-- Graphical credential input dialog
-- Support for Windows domain authentication
-- Direct RDP client launching
-- Automatic clipboard integration
-- Connection string auto-copy
-
-### System Dependencies
-- Automatic xrdp server verification on startup
-- Warning banner for missing dependencies
-- One-click dependency installation
-- Real-time installation progress
-- On-demand dependency resolution
-
-### Monitoring and Logging
-- Real-time session monitoring
-- Server IP and port visualization
-- Comprehensive structured logging
-- Centralized log management
-- Automatic log rotation
-
-### Security Features
-- PolicyKit integration for administrative operations
-- User isolation via dedicated group (rdp-users)
-- UID allocation starting at 5000
-- Isolated home directories (/opt/rdp-users)
-- Strong password validation
-- Absolute path usage for all system commands
-- Reduced privilege escalation prompts through helper scripts
-
-## System Requirements
-
-### Supported Platforms
-- Ubuntu 22.04 LTS or later and derivados (Linux Mint, Pop!_OS)
+- Ubuntu 22.04 LTS or later and derivatives
 - Debian 12 or later
-- Arch Linux, Manjaro, EndeavourOS and CachyOS
+- Arch Linux and derivatives, including Manjaro, EndeavourOS, and CachyOS
 
-### Runtime Dependencies
-- Python 3.8 or higher
-- GTK 4.0
-- libadwaita 1.0
-- PolicyKit (policykit-1)
-- xrdp server (installable via application)
-- FreeRDP client (installable via application)
+The application requires Python, GTK 4, libadwaita, and PolicyKit. The installer can set up xrdp and FreeRDP; see the installation guide for the complete dependency list.
 
 ## Installation
 
-### Quick Installation
+Run the official installer:
 
 ```bash
-curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
 ```
 
-The installer detects the platform, shows the complete plan, validates
-checksums, installs the application and xrdp, and records a full log. WineGE
-is offered as an optional component in the interactive assistant:
+For manual installation, installer options, and platform-specific notes, see the [installation guide](docs/INSTALL.md).
+
+## Running the Application
+
+From a development clone with the required dependencies installed:
 
 ```bash
-curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash -s -- --with-wine
+./run.sh
 ```
 
-Useful options are `--yes`, `--without-xrdp`, `--release vX.Y.Z`, `--dry-run`
-and `--verbose`. Logs are stored in
-`~/.local/state/rdp-session-manager/install.log`.
-
-The release includes a self-contained Python zipapp with the Rich terminal UI,
-so users do not need to install Python libraries manually.
-
-On Arch and derivatives, the installer supplies the official runtime packages,
-enables `multilib` transparently when Wine is selected, and installs the AUR
-build toolchain plus declared PGP keys when no `yay` or `paru` helper exists.
-
-To inspect the bootstrap before running it:
+You can also start the graphical interface directly:
 
 ```bash
-curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh -o install.sh
-less install.sh
-bash install.sh
-```
-
-To preview the visual installer from a development clone:
-
-```bash
-python3 -m venv .venv-installer
-. .venv-installer/bin/activate
-python -m pip install -r installer/requirements.txt
-python -m installer --dry-run
-```
-
-After building the packages, install the current clone instead of a GitHub
-release with:
-
-```bash
-./installer/build_packages.sh
-python -m installer --local
-```
-
-### Manual Installation
-
-For detailed manual installation instructions, refer to [docs/INSTALL.md](docs/INSTALL.md).
-
-#### System Dependencies (Debian/Ubuntu)
-```bash
-sudo apt-get install -y \
-    python3 python3-pip python3-venv python3-dev \
-    libgtk-4-1 libgtk-4-dev \
-    libadwaita-1-0 libadwaita-1-dev \
-    gir1.2-gtk-4.0 gir1.2-adw-1 \
-    python3-gi python3-gi-cairo \
-    policykit-1
-```
-
-#### Python Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-RDP Session Manager can be used via graphical interface (GUI) or command line (CLI).
-
-### Running the Graphical Interface
-
-```bash
-# With virtual environment
-source venv/bin/activate
-python3 src/main.py
-
-# Without virtual environment
 python3 src/main.py
 ```
 
-### Running the Command Line Interface
-
-```bash
-# Show all available commands
-rdpsm --help
-
-# Example: Create a desktop session user
-rdpsm user create john -f "John Doe" -d xfce
-
-# Example: Create a RemoteApp user (Linux application)
-rdpsm user create firefox_user \
-    --session-type remoteapp \
-    --app-command firefox \
-    --fullname "Firefox User"
-
-# Example: Create a WineGE RemoteApp user (Windows application)
-rdpsm user create notepad_user \
-    --session-type winege-remoteapp \
-    --app-command /path/to/notepad++.exe \
-    --fullname "Notepad++ User"
-
-# Example: List all users
-rdpsm user list
-
-# Example: View server information
-rdpsm server info
-```
-
-For complete CLI documentation, see [CLI.md](CLI.md).
-
-For WineGE RemoteApp detailed guide, see [docs/WINEGE_REMOTEAPP.md](docs/WINEGE_REMOTEAPP.md).
-
-### Basic Operations (GUI)
-
-#### Creating an RDP User
-1. Click the "+" button in the header bar
-2. Enter user details:
-   - Username (lowercase letters, numbers, hyphens, underscores)
-   - Full name
-   - Password (minimum 8 characters)
-   - Confirm password
-3. Select desktop environment
-4. Optionally enable desktop environment installation
-5. Authenticate when prompted
-6. Wait for user creation to complete
-
-#### Connecting to RDP Session
-1. Click the network icon on the user card
-2. Select "Open FreeRDP"
-3. Enter credentials:
-   - Domain (optional, for Windows domains)
-   - Password
-4. Click "Connect"
-
-Alternative connection methods:
-```bash
-# Linux (FreeRDP)
-xfreerdp /v:SERVER_IP:3389 /u:USERNAME /cert:ignore
-
-# Windows (Remote Desktop Connection)
-# Enter in client: SERVER_IP:3389
-```
-
-#### Deleting a User
-1. Click the trash icon on the user card
-2. Confirm deletion
-3. Authenticate when prompted
-
-Note: All user data including home directory, configuration files, and active processes will be removed.
-
-#### Enabling/Disabling Users
-1. Toggle the switch next to the user status
-2. Authenticate when prompted
-3. Status will update to reflect the change
-
-Disabled users cannot authenticate via RDP until re-enabled.
-
-## Command Line Interface
-
-RDP Session Manager includes a comprehensive CLI that provides access to all GUI functionality via terminal.
-
-### Installation
-
-The CLI is automatically available after installing the .deb package. The `rdpsm` command will be available system-wide.
-
-### Quick Reference
-
-**User Management:**
-```bash
-rdpsm user create USERNAME              # Create user
-rdpsm user delete USERNAME              # Delete user
-rdpsm user list                         # List all users
-rdpsm user info USERNAME                # User details
-rdpsm user enable USERNAME              # Enable user
-rdpsm user disable USERNAME             # Disable user
-rdpsm user password USERNAME            # Change password
-```
-
-**Session Management:**
-```bash
-rdpsm session list                      # Active sessions
-rdpsm session info USERNAME             # Session details
-rdpsm session kill USERNAME             # Kill session
-```
-
-**Desktop Environments:**
-```bash
-rdpsm de list                           # Available DEs
-rdpsm de install DE_ID                  # Install DE
-rdpsm de check DE_ID                    # Check if installed
-```
-
-**Server & Configuration:**
-```bash
-rdpsm server info                       # Server information
-rdpsm server status                     # Check xrdp status
-rdpsm config get port                   # Get RDP port
-rdpsm config set port 3390              # Set RDP port
-```
-
-**Dependencies:**
-```bash
-rdpsm deps check                        # Check dependencies
-rdpsm deps install xrdp                 # Install xrdp
-rdpsm deps install freerdp              # Install freerdp
-```
-
-### Output Formats
-
-Most commands support JSON output for scripting:
-
-```bash
-# Table format (default)
-rdpsm user list
-
-# JSON format
-rdpsm user list --format json
-
-# Use with jq for parsing
-rdpsm user list --format json | jq -r '.[].username'
-```
-
-### Scripting Examples
-
-**Batch user creation:**
-```bash
-for user in alice bob charlie; do
-    rdpsm user create "$user" -p "TempPass123" -d xfce
-done
-```
-
-**Monitor sessions:**
-```bash
-watch -n 5 'rdpsm session list'
-```
-
-**System health check:**
-```bash
-rdpsm server status && rdpsm deps check
-```
-
-### Testing CLI Commands
-
-Test all CLI commands after installing the application:
-
-```bash
-# Run automated test suite (tests all safe read-only commands)
-bash tests/test_cli.sh
-
-# Manual testing
-rdpsm --version
-rdpsm user list
-rdpsm server info
-```
-
-For complete CLI documentation, testing guide, and GUI-to-CLI equivalents, see:
-- [CLI.md](CLI.md) - Complete CLI reference and usage guide
-- [CLI_TESTING.md](CLI_TESTING.md) - Comprehensive testing guide with all commands and expected outputs
-
-## Architecture
-
-```
-RemoteApps-RDP/
-├── src/
-│   ├── core/                    # Core functionality modules
-│   │   ├── user_manager.py      # User account management
-│   │   ├── rdp_config.py        # RDP configuration
-│   │   ├── de_installer.py      # Desktop environment installer
-│   │   ├── system_deps.py       # System dependency management
-│   │   ├── session_monitor.py   # Session monitoring
-│   │   └── config.py            # Application configuration
-│   ├── ui/                      # GTK4 interface
-│   │   ├── main_window.py       # Main application window
-│   │   ├── user_dialog.py       # User creation dialog
-│   │   └── preferences_dialog.py # Settings dialog
-│   ├── utils/                   # Utility modules
-│   │   ├── logger.py            # Logging system
-│   │   ├── validator.py         # Input validation
-│   │   └── polkit.py            # PolicyKit integration
-│   ├── cli.py                   # Command-line interface
-│   ├── application.py           # Main application class
-│   └── main.py                  # GUI entry point
-├── data/
-│   ├── ui/                      # GTK Builder UI files
-│   └── icons/                   # Application icons
-├── helpers/                     # Privileged helper scripts
-│   ├── install-packages.sh      # Package installation
-│   ├── create-rdp-user.sh       # User creation
-│   ├── delete-rdp-user.sh       # User deletion
-│   ├── toggle-user-lock.sh      # User enable/disable
-│   └── set-user-password.sh     # Password management
-├── installer/                   # Installation and release tooling
-│   ├── core.py                  # Rich terminal installer
-│   ├── install.sh               # Public release bootstrap
-│   ├── build_packages.sh        # DEB and Arch package builder
-│   ├── uninstall.sh             # Application removal
-│   └── requirements.txt         # Installer UI dependencies
-├── docs/                        # Documentation
-├── tests/                       # Unit tests
-│   └── test_cli.sh              # CLI test suite
-├── CLI.md                       # CLI documentation
-├── CLI_TESTING.md               # CLI testing guide
-└── requirements.txt             # Python dependencies
-```
-
-## Security
-
-### Privilege Escalation
-The application uses PolicyKit (pkexec) for secure privilege escalation:
-- User creation: `pkexec useradd`
-- User deletion: `pkexec userdel`
-- User lock/unlock: `pkexec usermod`
-- Package installation: `pkexec apt-get`
-- Process termination: `pkexec pkill`
-
-Helper scripts in the `helpers/` directory group multiple privileged operations to minimize authentication prompts while maintaining security.
-
-### User Isolation
-- RDP users are created in a dedicated group (rdp-users)
-- UIDs start at 5000, outside the normal user range
-- Home directories are isolated in /opt/rdp-users/
-- Each user operates on a dedicated RDP port
-
-### Input Validation
-- Username pattern: `^[a-z][a-z0-9_-]{2,31}$`
-- Password requirements: minimum 8 characters, alphanumeric
-- Port validation: range 1-65535, availability check
-- All system commands use absolute paths
-
-## Logging
-
-### Log Locations
-```bash
-# Application logs
-~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
-
-# xrdp logs
-/var/log/xrdp/
-
-# Monitor logs in real-time
-tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
-```
-
-### Log Contents
-- User creation and deletion operations
-- Package and desktop environment installations
-- RDP connections and disconnections
-- Error messages and warnings
-- Process terminations
-- System dependency checks
-
-## Troubleshooting
-
-### xrdp Not Installed
-**Symptom**: Warning banner displayed in application window
-
-**Solution**:
-- Click "Install Now" in the banner, or
-- Manual installation: `sudo apt install xrdp xorgxrdp`
-
-### FreeRDP Not Available
-**Symptom**: Installation prompt when attempting to connect
-
-**Solution**:
-- Click "Install FreeRDP" in the dialog, or
-- Manual installation: `sudo apt install freerdp2-x11`
-
-### Desktop Environment Not Starting
-**Symptom**: Black screen after RDP connection
-
-**Solution**:
-1. Check xrdp logs: `tail /var/log/xrdp/xrdp.log`
-2. Test desktop environment: `su - username -c "startxfce4"`
-3. Reinstall desktop environment via application
-
-### Port Conflicts
-**Symptom**: Error during user creation
-
-**Solution**: The application automatically detects and assigns available ports. Check firewall rules if issues persist.
-
-## Development
-
-### Running Tests
-```bash
-# Using pytest
-pytest tests/ -v
-
-# With coverage
-pytest tests/ --cov=src --cov-report=html
-```
-
-### Code Style
-The project follows PEP 8 guidelines. Use the following tools:
-```bash
-# Format code
-black src/
-
-# Check style
-flake8 src/
-
-# Type checking
-mypy src/
-```
+Command-line usage and available commands are documented in the [CLI reference](docs/CLI.md).
+
+## Documentation
+
+- [Installation guide](docs/INSTALL.md)
+- [CLI reference](docs/CLI.md)
+- [WineGE RemoteApp guide](docs/WINEGE_REMOTEAPP.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Development guide](docs/DEVELOPMENT.md)
+- [Changelog](CHANGELOG.md)
 
 ## Contributing
 
-Contributions are welcome. Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/description`)
-3. Commit your changes (`git commit -m 'Add feature description'`)
-4. Push to the branch (`git push origin feature/description`)
-5. Open a Pull Request
+Contributions are welcome. Fork the repository, create a focused branch, and open a pull request describing the change.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- Documentation: [docs/](docs/)
-- Bug Reports: GitHub Issues
-- Discussions: GitHub Discussions
-
-## Version Information
-
-**Current Version**: 0.3.2
-**Status**: Production Ready
-**Last Updated**: 2025-10-30
-
----
-
-Copyright (C) 2025 - RDP Session Manager Contributors
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
