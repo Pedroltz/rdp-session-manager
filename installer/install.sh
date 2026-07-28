@@ -98,7 +98,7 @@ log "Baixando instalador visual da release ${release_tag}..."
 download "${release_url}/installer.pyz" "$TMP_DIR/installer.pyz"
 download "${release_url}/SHA256SUMS" "$TMP_DIR/SHA256SUMS"
 
-expected="$(awk '$2 == "installer.pyz" {print $1; exit}' "$TMP_DIR/SHA256SUMS")"
+expected="$(awk '$2 == "installer.pyz" || $2 == "*installer.pyz" {print $1; exit}' "$TMP_DIR/SHA256SUMS")"
 [ -n "$expected" ] || fail "SHA256SUMS não contém o checksum de installer.pyz."
 actual="$(sha256sum "$TMP_DIR/installer.pyz" | awk '{print $1}')"
 [ "$expected" = "$actual" ] || fail "Checksum inválido para installer.pyz."

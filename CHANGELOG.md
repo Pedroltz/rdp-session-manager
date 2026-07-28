@@ -1,5 +1,14 @@
 # Changelog - RDP Session Manager
 
+## [0.3.3] - 2026-07-28
+
+### Changed
+- O link público do instalador acompanha automaticamente a release estável mais recente
+- O workflow de release valida todos os artefatos e executa os testes do bootstrap antes da publicação
+
+### Fixed
+- O bootstrap agora aceita entradas `SHA256SUMS` nos formatos texto (`installer.pyz`) e binário (`*installer.pyz`)
+
 ## [0.3.2] - 2026-07-28
 
 ### Added
@@ -59,4 +68,3 @@
 - Wine stack overflow errors (ulimit + registry configuration)
 - Wine DISPLAY configuration for xrdp sessions
 - Application file path issues with symlink and file copying
-

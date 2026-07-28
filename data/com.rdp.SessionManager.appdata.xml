@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.3.3" date="2026-07-28">
+      <description>
+        <p>Corrige a validação de checksum do autoinstaller e reforça os testes dos artefatos de release.</p>
+      </description>
+    </release>
     <release version="0.3.2" date="2026-07-28">
       <description>
         <p>Instalador multiplataforma renovado, com progresso, logs e suporte aprimorado a Arch e Ubuntu/Debian.</p>
