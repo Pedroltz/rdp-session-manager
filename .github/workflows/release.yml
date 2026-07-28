@@ -1,0 +1,62 @@
+name: Stable release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag version
+        shell: bash
+        run: |
+          version="$(python3 - <<'PY'
+          import re
+          text = open('src/version.py', encoding='utf-8').read()
+          print(re.search(r'__version__\s*=\s*["\']([^"\']+)', text).group(1))
+          PY
+          )"
+          tag_version="${GITHUB_REF_NAME#v}"
+          test "$version" = "$tag_version" || {
+            echo "Tag $tag_version does not match src/version.py version $version" >&2
+            exit 1
+          }
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential zstd
+          sudo gem install --no-document fpm
+
+      - name: Build Debian and Arch packages
+        run: ./installer/build_packages.sh
+
+      - name: Assemble release assets
+        run: |
+          mkdir -p release-assets
+          cp release/rdp-session-manager.deb release-assets/
+          cp release/rdp-session-manager.pkg.tar.zst release-assets/
+          cp installer/install.sh release-assets/install.sh
+          cp installer/core.py release-assets/installer.py
+          python3 -m pip install -r installer/requirements.txt --target release-assets/installer-bundle
+          cp installer/core.py release-assets/installer-bundle/__main__.py
+          python3 -m zipapp release-assets/installer-bundle \
+            --output release-assets/installer.pyz \
+            --python '/usr/bin/env python3'
+          rm -rf release-assets/installer-bundle
+          (cd release-assets && sha256sum * > SHA256SUMS)
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --title "RDP Session Manager $GITHUB_REF_NAME" \
+            --generate-notes

@@ -26,7 +26,8 @@ case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         # Atualizar cache de pacotes
         echo "Atualizando cache de pacotes..."
-        /usr/bin/pacman -Sy
+        # Avoid partial upgrades: Arch requires a full sync before installing.
+        /usr/bin/pacman -Syu --needed --noconfirm
 
         # Instalar pacotes
         echo "Instalando pacotes: $@"
