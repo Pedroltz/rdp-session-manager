@@ -4,7 +4,7 @@
 # Public installer:
 #   curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 #
-# This file deliberately stays small. It resolves the latest published GitHub
+# This file deliberately stays small. It resolves the latest stable GitHub
 # release, then delegates platform detection, checksums, and package-manager
 # operations to the versioned Python installer.
 set -Eeuo pipefail
@@ -67,24 +67,27 @@ for ((index = 0; index < ${#bootstrap_args[@]}; index++)); do
 done
 
 if [ -z "$release_tag" ]; then
-    releases_file="$TMP_DIR/releases.json"
-    log "Consultando a release mais recente..."
-    download "${API_BASE}/releases" "$releases_file"
-    release_tag="$(python3 - "$releases_file" <<'PY'
+    release_file="$TMP_DIR/release.json"
+    log "Consultando a release estável mais recente..."
+    download "${API_BASE}/releases/latest" "$release_file"
+    release_tag="$(python3 - "$release_file" <<'PY'
 import json
 import sys
 
 try:
-    releases = json.load(open(sys.argv[1], encoding="utf-8"))
+    release = json.load(open(sys.argv[1], encoding="utf-8"))
 except (OSError, json.JSONDecodeError) as exc:
-    raise SystemExit(f"Não foi possível interpretar a resposta de releases: {exc}")
+    raise SystemExit(f"Não foi possível interpretar a resposta da release: {exc}")
 
-for release in releases:
-    if isinstance(release, dict) and not release.get("draft") and release.get("tag_name"):
-        print(release["tag_name"])
-        break
-else:
-    raise SystemExit("Nenhuma release publicada foi encontrada no GitHub.")
+if (
+    not isinstance(release, dict)
+    or release.get("draft")
+    or release.get("prerelease")
+    or not release.get("tag_name")
+):
+    raise SystemExit("Nenhuma release estável foi encontrada no GitHub.")
+
+print(release["tag_name"])
 PY
 )" || fail "Não foi possível determinar a release mais recente."
 fi

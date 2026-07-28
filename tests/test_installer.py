@@ -47,23 +47,18 @@ class InstallerHelpersTest(unittest.TestCase):
             with self.assertRaises(installer.InstallerError):
                 installer.detect_distro(path)
 
-    def test_selects_the_first_published_release(self):
-        releases = [
-            {"tag_name": "v0.4.0-Beta", "draft": False, "prerelease": True},
-            {"tag_name": "v0.3.2", "draft": False, "prerelease": False},
-        ]
-        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0-Beta")
+    def test_accepts_latest_stable_release(self):
+        release = {"tag_name": "v0.3.2", "draft": False, "prerelease": False}
+        self.assertEqual(installer.validate_stable_release(release)["tag_name"], "v0.3.2")
 
-    def test_skips_draft_releases_when_selecting_latest(self):
-        releases = [
-            {"tag_name": "v0.5.0", "draft": True},
-            {"tag_name": "v0.4.0", "draft": False},
-        ]
-        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0")
-
-    def test_rejects_an_empty_release_list(self):
+    def test_rejects_prerelease_as_latest_stable(self):
+        release = {"tag_name": "v0.3.2-Beta", "draft": False, "prerelease": True}
         with self.assertRaises(installer.InstallerError):
-            installer.latest_published_release([])
+            installer.validate_stable_release(release)
+
+    def test_rejects_invalid_latest_release_response(self):
+        with self.assertRaises(installer.InstallerError):
+            installer.validate_stable_release([])
 
     def test_parses_sha256sum_formats(self):
         checksums = installer.parse_checksums(
