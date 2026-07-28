@@ -42,7 +42,7 @@ echo "→ Cleaning up files..."
 sudo rm -rf /usr/bin/rdp-session-manager
 sudo rm -rf /usr/bin/rdpsm
 sudo rm -rf /usr/share/rdp-session-manager
-sudo rm-rf /usr/share/applications/com.rdp.SessionManager.desktop
+sudo rm -rf /usr/share/applications/com.rdp.SessionManager.desktop
 sudo rm -rf /usr/share/icons/hicolor/scalable/apps/com.rdp.SessionManager.png
 sudo rm -rf /usr/share/polkit-1/actions/com.rdp.SessionManager.policy
 sudo rm -rf /usr/share/glib-2.0/schemas/com.rdp.SessionManager.gschema.xml

@@ -4,7 +4,7 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
   <vendor>RDP Session Manager</vendor>
-  <vendor_url>https://github.com/yourusername/rdp-session-manager</vendor_url>
+  <vendor_url>https://github.com/Pedroltz/rdp-session-manager</vendor_url>
 
   <action id="com.rdp.SessionManager.create-user">
     <description>Create a new RDP user</description>

@@ -3,7 +3,7 @@
 # ======================================
 #
 # Python Dependencies for RDP Session Manager
-# Compatible with: Ubuntu 20.04+, Debian 11+, WSL
+# Compatible with: Ubuntu 22.04+, Debian 12+, Arch Linux and derivatives
 #
 # Installation:
 #   pip install -r requirements.txt
