@@ -455,14 +455,16 @@ def http_json(url: str) -> object:
         raise InstallerError(f"Falha ao consultar GitHub ({url}): {exc}") from exc
 
 
-def latest_published_release(releases: object) -> Mapping[str, object]:
-    """Return the newest non-draft release returned by the GitHub API."""
-    if not isinstance(releases, list):
-        raise InstallerError("Resposta inválida da API de releases do GitHub.")
-    for release in releases:
-        if isinstance(release, dict) and not release.get("draft") and release.get("tag_name"):
-            return release
-    raise InstallerError("Nenhuma release publicada foi encontrada no GitHub.")
+def validate_stable_release(release: object) -> Mapping[str, object]:
+    """Validate the stable release returned by GitHub's /releases/latest endpoint."""
+    if (
+        not isinstance(release, dict)
+        or release.get("draft")
+        or release.get("prerelease")
+        or not release.get("tag_name")
+    ):
+        raise InstallerError("Nenhuma release estável foi encontrada no GitHub.")
+    return release
 
 
 def download(url: str, destination: Path, ui: UI, log: InstallLog, retries: int = 3) -> None:
@@ -564,8 +566,8 @@ class Installer:
                 raise InstallerError("Resposta inválida da API de releases do GitHub.")
             self.release = release
         else:
-            with self.ui.running("Consultando a release mais recente no GitHub…"):
-                self.release = latest_published_release(http_json(f"{API_BASE}/releases"))
+            with self.ui.running("Consultando a release estável mais recente no GitHub…"):
+                self.release = validate_stable_release(http_json(f"{API_BASE}/releases/latest"))
         if bool(self.release.get("draft")):
             raise InstallerError("A release selecionada é um draft e ainda não pode ser instalada.")
         return self.release
