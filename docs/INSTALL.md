@@ -31,7 +31,7 @@ Complete installation instructions for RDP Session Manager on Ubuntu/Debian and 
 ## Automated Installation (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 ```
 
 The installer shows the exact plan, downloads the correct package, validates
@@ -41,13 +41,13 @@ optional WineGE support should be installed. It is safe to run again.
 
 ```bash
 # Plan only, without changing the system
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --dry-run
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --dry-run
 
 # Optional WineGE dependencies
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --with-wine
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --with-wine
 
 # A specific beta release
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --release v0.3.2-Beta
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --release v0.3.2-Beta
 ```
 
 The complete log is written to `~/.local/state/rdp-session-manager/install.log`.
@@ -68,7 +68,7 @@ configuration as `/etc/pacman.conf.rdpsm.bak`. It then installs both 64-bit and
 To inspect the bootstrap before executing it:
 
 ```bash
-curl -fL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh -o install.sh
+curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh -o install.sh
 less install.sh
 bash install.sh
 ```

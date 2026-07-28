@@ -2,7 +2,7 @@
 # RDP Session Manager release bootstrap
 #
 # Public installer:
-#   curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
+#   curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 #
 # This file deliberately stays small. It resolves the latest published GitHub
 # release, then delegates platform detection, checksums, and package-manager

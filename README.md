@@ -43,7 +43,7 @@ The application requires Python, GTK 4, libadwaita, and PolicyKit. The installer
 Run the official installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 ```
 
 For manual installation, installer options, and platform-specific notes, see the [installation guide](docs/INSTALL.md).
