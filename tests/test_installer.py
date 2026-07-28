@@ -47,6 +47,24 @@ class InstallerHelpersTest(unittest.TestCase):
             with self.assertRaises(installer.InstallerError):
                 installer.detect_distro(path)
 
+    def test_selects_the_first_published_release(self):
+        releases = [
+            {"tag_name": "v0.4.0-Beta", "draft": False, "prerelease": True},
+            {"tag_name": "v0.3.2", "draft": False, "prerelease": False},
+        ]
+        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0-Beta")
+
+    def test_skips_draft_releases_when_selecting_latest(self):
+        releases = [
+            {"tag_name": "v0.5.0", "draft": True},
+            {"tag_name": "v0.4.0", "draft": False},
+        ]
+        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0")
+
+    def test_rejects_an_empty_release_list(self):
+        with self.assertRaises(installer.InstallerError):
+            installer.latest_published_release([])
+
     def test_parses_sha256sum_formats(self):
         checksums = installer.parse_checksums(
             "a" * 64 + "  installer.py\n" + "b" * 64 + " *rdp-session-manager.deb\n"
