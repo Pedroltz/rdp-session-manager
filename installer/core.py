@@ -53,7 +53,6 @@ except ImportError as exc:
 REPOSITORY = "Pedroltz/rdp-session-manager"
 API_BASE = f"https://api.github.com/repos/{REPOSITORY}"
 DOWNLOAD_BASE = f"https://github.com/{REPOSITORY}/releases"
-DEFAULT_RELEASE_TAG = "v0.3.2-Beta"
 APP_DEB = "rdp-session-manager.deb"
 APP_ARCH = "rdp-session-manager.pkg.tar.zst"
 SUPPORTED_UBUNTU = (22, 4)
@@ -447,13 +446,23 @@ def pkgbuild_pgp_keys(text: str) -> list[str]:
     return list(dict.fromkeys(key.upper() for key in re.findall(r"(?i)\b[0-9a-f]{40}\b", match.group(1))))
 
 
-def http_json(url: str) -> Mapping[str, object]:
+def http_json(url: str) -> object:
     request = Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "rdp-session-manager-installer"})
     try:
         with urlopen(request, timeout=15) as response:
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise InstallerError(f"Falha ao consultar GitHub ({url}): {exc}") from exc
+
+
+def latest_published_release(releases: object) -> Mapping[str, object]:
+    """Return the newest non-draft release returned by the GitHub API."""
+    if not isinstance(releases, list):
+        raise InstallerError("Resposta inválida da API de releases do GitHub.")
+    for release in releases:
+        if isinstance(release, dict) and not release.get("draft") and release.get("tag_name"):
+            return release
+    raise InstallerError("Nenhuma release publicada foi encontrada no GitHub.")
 
 
 def download(url: str, destination: Path, ui: UI, log: InstallLog, retries: int = 3) -> None:
@@ -544,15 +553,19 @@ class Installer:
             self.release = {"tag_name": "código local", "assets": [], "prerelease": False, "draft": False}
             return self.release
         if self.args.dry_run:
-            self.release = {"tag_name": self.args.release or DEFAULT_RELEASE_TAG, "assets": [], "prerelease": True, "draft": False}
+            self.release = {"tag_name": self.args.release or "release publicada mais recente", "assets": [], "prerelease": False, "draft": False}
             return self.release
         if self.args.release:
             tag = self.args.release if self.args.release.startswith("v") else f"v{self.args.release}"
             endpoint = f"{API_BASE}/releases/tags/{tag}"
+            with self.ui.running(f"Consultando a release {tag} no GitHub…"):
+                release = http_json(endpoint)
+            if not isinstance(release, dict):
+                raise InstallerError("Resposta inválida da API de releases do GitHub.")
+            self.release = release
         else:
-            endpoint = f"{API_BASE}/releases/tags/{DEFAULT_RELEASE_TAG}"
-        with self.ui.running("Consultando a release estável no GitHub…"):
-            self.release = http_json(endpoint)
+            with self.ui.running("Consultando a release mais recente no GitHub…"):
+                self.release = latest_published_release(http_json(f"{API_BASE}/releases"))
         if bool(self.release.get("draft")):
             raise InstallerError("A release selecionada é um draft e ainda não pode ser instalada.")
         return self.release

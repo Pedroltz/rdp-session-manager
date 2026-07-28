@@ -6,7 +6,7 @@ RDP Session Manager.
 ## Files
 
 - `core.py`: visual Python installer and distribution-specific logic.
-- `install.sh`: small bootstrap published as the beta GitHub installation link.
+- `install.sh`: small bootstrap that resolves the latest published GitHub release.
 - `build_packages.sh`: builds the Debian and Arch application packages.
 - `uninstall.sh`: removes an installed application.
 - `requirements.txt`: dependencies used only by the development copy of the installer.
