@@ -1,4 +1,4 @@
-name: Beta release
+name: Release
 
 on:
   push:
@@ -52,7 +52,37 @@ jobs:
             --output release-assets/installer.pyz \
             --python '/usr/bin/env python3'
           rm -rf release-assets/installer-bundle
-          (cd release-assets && sha256sum * > SHA256SUMS)
+          (
+            cd release-assets
+            sha256sum --binary \
+              install.sh \
+              installer.py \
+              installer.pyz \
+              rdp-session-manager.deb \
+              rdp-session-manager.pkg.tar.zst \
+              > SHA256SUMS
+          )
+
+      - name: Validate release assets
+        shell: bash
+        run: |
+          required_assets=(
+            install.sh
+            installer.py
+            installer.pyz
+            rdp-session-manager.deb
+            rdp-session-manager.pkg.tar.zst
+            SHA256SUMS
+          )
+          for asset in "${required_assets[@]}"; do
+            test -s "release-assets/$asset" || {
+              echo "Missing or empty release asset: $asset" >&2
+              exit 1
+            }
+          done
+          (cd release-assets && sha256sum --check SHA256SUMS)
+          RDPSM_RELEASE_ASSETS_DIR="$PWD/release-assets" \
+            bash tests/test_installer_bootstrap.sh
 
       - name: Publish GitHub release
         env:
