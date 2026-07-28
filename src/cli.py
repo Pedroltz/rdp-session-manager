@@ -17,6 +17,7 @@ from core.system_deps import SystemDependencies
 from core.config import AppConfig
 from utils.logger import setup_logger
 from utils.polkit import get_privilege_command, set_cli_mode
+from version import __version__
 
 # Ativar modo CLI - força uso de sudo ao invés de pkexec
 set_cli_mode(True)
@@ -1109,7 +1110,7 @@ class CLI:
 
         parser.add_argument('-v', '--verbose', action='store_true',
                           help='Verbose output')
-        parser.add_argument('--version', action='version', version='RDPSM 0.3.0')
+        parser.add_argument('--version', action='version', version=f'RDPSM {__version__}')
 
         subparsers = parser.add_subparsers(dest='command', help='Available commands')
 

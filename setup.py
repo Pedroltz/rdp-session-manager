@@ -7,13 +7,16 @@ Gerenciador de sessões RDP com interface GTK4 para GNOME
 from setuptools import setup, find_packages
 from pathlib import Path
 import glob
+import re
+
+VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', Path('src/version.py').read_text()).group(1)
 
 # Get all helper scripts
 helper_scripts = glob.glob('helpers/*.sh')
 
 setup(
     name='rdp-session-manager',
-    version='0.3.1',
+    version=VERSION,
     description='Gerenciador de sessões RDP com interface GTK4',
     author='Pedroltz',
     author_email='your.email@example.com',
