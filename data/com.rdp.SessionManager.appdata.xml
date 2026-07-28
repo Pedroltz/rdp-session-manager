@@ -30,14 +30,19 @@
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://github.com/yourusername/rdp-session-manager</url>
-  <url type="bugtracker">https://github.com/yourusername/rdp-session-manager/issues</url>
+  <url type="homepage">https://github.com/Pedroltz/rdp-session-manager</url>
+  <url type="bugtracker">https://github.com/Pedroltz/rdp-session-manager/issues</url>
 
   <provides>
     <binary>rdp-session-manager</binary>
   </provides>
 
   <releases>
+    <release version="0.3.2" date="2026-07-28">
+      <description>
+        <p>Instalador multiplataforma renovado, com progresso, logs e suporte aprimorado a Arch e Ubuntu/Debian.</p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-03-19">
       <description>
         <p>Versão inicial do RDP Session Manager</p>

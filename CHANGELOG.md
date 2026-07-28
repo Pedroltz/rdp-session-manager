@@ -1,5 +1,27 @@
 # Changelog - RDP Session Manager
 
+## [0.3.2] - 2026-07-28
+
+### Added
+- Novo instalador visual em Python com interface Rich, barras de progresso e logs detalhados
+- Bootstrap seguro para instalação direta pela release estável do GitHub, com validação SHA-256
+- Suporte documentado a Ubuntu/Debian e Arch/Manjaro/EndeavourOS/CachyOS
+- Instalação opcional de Wine, bibliotecas de 32 bits e `multilib` no Arch
+- Fallback transparente para compilar `xrdp` e `xorgxrdp` pelo AUR sem `yay` ou `paru`
+- Workflows de CI e release para gerar DEB, pacote Arch, zipapp, bootstrap e `SHA256SUMS`
+
+### Changed
+- Organizadas as ferramentas de instalação em `installer/`
+- Instalador local executável com `python -m installer --local`
+- Operações do `apt`, `pacman`, AUR e downloads agora ficam registradas no log de instalação
+- Barras de operação usam percentuais nativos quando os gerenciadores fornecem progresso real
+- Atualizada a documentação de instalação, teste local, Wine, AUR e desinstalação
+
+### Fixed
+- Confirmações interativas não ficam mais escondidas atrás da barra de progresso
+- Arch não usa mais `pacman -Sy` isolado e importa as chaves PGP declaradas pelos PKGBUILDs
+- Testes de dependências Arch usam uma distribuição simulada em CI
+
 ## [0.3.1] - 2026-03-19
 
 ### Changed
@@ -37,5 +59,4 @@
 - Wine stack overflow errors (ulimit + registry configuration)
 - Wine DISPLAY configuration for xrdp sessions
 - Application file path issues with symlink and file copying
-
 

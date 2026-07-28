@@ -85,9 +85,9 @@ Features include:
 ## System Requirements
 
 ### Supported Platforms
-- Ubuntu 20.04 LTS or later
-- Debian 11 (Bullseye) or later
-- Windows Subsystem for Linux (WSL) with Ubuntu/Debian
+- Ubuntu 22.04 LTS or later and derivados (Linux Mint, Pop!_OS)
+- Debian 12 or later
+- Arch Linux, Manjaro, EndeavourOS and CachyOS
 
 ### Runtime Dependencies
 - Python 3.8 or higher
@@ -102,25 +102,56 @@ Features include:
 ### Quick Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/rdp-session-manager.git
-cd rdp-session-manager
-
-# Run the installation script
-./install.sh
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 ```
 
-The installation script will:
-- Detect your system (Ubuntu/Debian/WSL)
-- Install system dependencies (GTK4, libadwaita, etc.)
-- Install Python dependencies (PyGObject, psutil)
-- Configure necessary permissions
-- Optionally install xrdp and FreeRDP
-- Create Python virtual environment (optional)
+The installer detects the platform, shows the complete plan, validates
+checksums, installs the application and xrdp, and records a full log. WineGE
+is offered as an optional component in the interactive assistant:
+
+```bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --with-wine
+```
+
+Useful options are `--yes`, `--without-xrdp`, `--release vX.Y.Z`, `--dry-run`
+and `--verbose`. Logs are stored in
+`~/.local/state/rdp-session-manager/install.log`.
+
+The release includes a self-contained Python zipapp with the Rich terminal UI,
+so users do not need to install Python libraries manually.
+
+On Arch and derivatives, the installer supplies the official runtime packages,
+enables `multilib` transparently when Wine is selected, and installs the AUR
+build toolchain plus declared PGP keys when no `yay` or `paru` helper exists.
+
+To inspect the bootstrap before running it:
+
+```bash
+curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh -o install.sh
+less install.sh
+bash install.sh
+```
+
+To preview the visual installer from a development clone:
+
+```bash
+python3 -m venv .venv-installer
+. .venv-installer/bin/activate
+python -m pip install -r installer/requirements.txt
+python -m installer --dry-run
+```
+
+After building the packages, install the current clone instead of a GitHub
+release with:
+
+```bash
+./installer/build_packages.sh
+python -m installer --local
+```
 
 ### Manual Installation
 
-For detailed manual installation instructions, refer to [INSTALL.md](INSTALL.md).
+For detailed manual installation instructions, refer to [docs/INSTALL.md](docs/INSTALL.md).
 
 #### System Dependencies (Debian/Ubuntu)
 ```bash
@@ -364,6 +395,12 @@ RemoteApps-RDP/
 │   ├── delete-rdp-user.sh       # User deletion
 │   ├── toggle-user-lock.sh      # User enable/disable
 │   └── set-user-password.sh     # Password management
+├── installer/                   # Installation and release tooling
+│   ├── core.py                  # Rich terminal installer
+│   ├── install.sh               # Public release bootstrap
+│   ├── build_packages.sh        # DEB and Arch package builder
+│   ├── uninstall.sh             # Application removal
+│   └── requirements.txt         # Installer UI dependencies
 ├── docs/                        # Documentation
 ├── tests/                       # Unit tests
 │   └── test_cli.sh              # CLI test suite
@@ -493,7 +530,7 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ## Version Information
 
-**Current Version**: 0.3.1
+**Current Version**: 0.3.2
 **Status**: Production Ready
 **Last Updated**: 2025-10-30
 

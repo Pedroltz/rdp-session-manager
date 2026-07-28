@@ -334,7 +334,8 @@ async def load_users(self):
 
 **Installation** (automated via install.sh):
 
-The `install.sh` script includes optional Oracle Instant Client installation. To use it:
+The main installer does not install Oracle Instant Client. To use Oracle connectivity,
+install the licensed client separately before configuring the application:
 
 1. Download Oracle Instant Client RPMs (version 21.15 recommended):
    - Go to: https://www.oracle.com/database/technologies/instant-client/downloads.html
