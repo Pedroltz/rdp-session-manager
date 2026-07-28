@@ -53,6 +53,7 @@ except ImportError as exc:
 REPOSITORY = "Pedroltz/rdp-session-manager"
 API_BASE = f"https://api.github.com/repos/{REPOSITORY}"
 DOWNLOAD_BASE = f"https://github.com/{REPOSITORY}/releases"
+DEFAULT_RELEASE_TAG = "v0.3.2-Beta"
 APP_DEB = "rdp-session-manager.deb"
 APP_ARCH = "rdp-session-manager.pkg.tar.zst"
 SUPPORTED_UBUNTU = (22, 4)
@@ -543,17 +544,17 @@ class Installer:
             self.release = {"tag_name": "código local", "assets": [], "prerelease": False, "draft": False}
             return self.release
         if self.args.dry_run:
-            self.release = {"tag_name": self.args.release or "latest-stable", "assets": [], "prerelease": False, "draft": False}
+            self.release = {"tag_name": self.args.release or DEFAULT_RELEASE_TAG, "assets": [], "prerelease": True, "draft": False}
             return self.release
         if self.args.release:
             tag = self.args.release if self.args.release.startswith("v") else f"v{self.args.release}"
             endpoint = f"{API_BASE}/releases/tags/{tag}"
         else:
-            endpoint = f"{API_BASE}/releases/latest"
+            endpoint = f"{API_BASE}/releases/tags/{DEFAULT_RELEASE_TAG}"
         with self.ui.running("Consultando a release estável no GitHub…"):
             self.release = http_json(endpoint)
-        if bool(self.release.get("prerelease")) or bool(self.release.get("draft")):
-            raise InstallerError("A release selecionada é beta ou draft; selecione uma release estável.")
+        if bool(self.release.get("draft")):
+            raise InstallerError("A release selecionada é um draft e ainda não pode ser instalada.")
         return self.release
 
     def choose_components(self) -> None:

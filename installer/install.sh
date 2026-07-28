@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# RDP Session Manager - stable release bootstrap
+# RDP Session Manager - beta release bootstrap
 #
 # Public installer:
-#   curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
+#   curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash
 #
 # This file deliberately stays small.  The versioned Python installer performs
 # all platform detection, downloads, checksums and package-manager operations.
@@ -10,6 +10,7 @@ set -Eeuo pipefail
 
 readonly REPOSITORY="Pedroltz/rdp-session-manager"
 readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases"
+readonly DEFAULT_RELEASE_TAG="v0.3.2-Beta"
 readonly TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rdpsm-installer.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -53,7 +54,7 @@ ensure_python() {
 
 ensure_python "$@"
 
-release_url="${RELEASE_BASE}/latest/download"
+release_url="${RELEASE_BASE}/download/${DEFAULT_RELEASE_TAG}"
 release_tag=""
 bootstrap_args=("$@")
 for ((index = 0; index < ${#bootstrap_args[@]}; index++)); do

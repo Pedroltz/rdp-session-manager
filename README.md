@@ -102,7 +102,7 @@ Features include:
 ### Quick Installation
 
 ```bash
-curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash
 ```
 
 The installer detects the platform, shows the complete plan, validates
@@ -110,7 +110,7 @@ checksums, installs the application and xrdp, and records a full log. WineGE
 is offered as an optional component in the interactive assistant:
 
 ```bash
-curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --with-wine
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash -s -- --with-wine
 ```
 
 Useful options are `--yes`, `--without-xrdp`, `--release vX.Y.Z`, `--dry-run`
@@ -127,7 +127,7 @@ build toolchain plus declared PGP keys when no `yay` or `paru` helper exists.
 To inspect the bootstrap before running it:
 
 ```bash
-curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh -o install.sh
+curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh -o install.sh
 less install.sh
 bash install.sh
 ```
