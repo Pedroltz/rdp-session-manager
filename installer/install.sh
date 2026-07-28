@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# RDP Session Manager - beta release bootstrap
+# RDP Session Manager release bootstrap
 #
 # Public installer:
-#   curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/download/v0.3.2-Beta/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
 #
-# This file deliberately stays small.  The versioned Python installer performs
-# all platform detection, downloads, checksums and package-manager operations.
+# This file deliberately stays small. It resolves the latest published GitHub
+# release, then delegates platform detection, checksums, and package-manager
+# operations to the versioned Python installer.
 set -Eeuo pipefail
 
 readonly REPOSITORY="Pedroltz/rdp-session-manager"
 readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases"
-readonly DEFAULT_RELEASE_TAG="v0.3.2-Beta"
+readonly API_BASE="https://api.github.com/repos/${REPOSITORY}"
 readonly TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rdpsm-installer.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -54,7 +55,6 @@ ensure_python() {
 
 ensure_python "$@"
 
-release_url="${RELEASE_BASE}/download/${DEFAULT_RELEASE_TAG}"
 release_tag=""
 bootstrap_args=("$@")
 for ((index = 0; index < ${#bootstrap_args[@]}; index++)); do
@@ -65,11 +65,33 @@ for ((index = 0; index < ${#bootstrap_args[@]}; index++)); do
         release_tag="${bootstrap_args[index + 1]}"
     fi
 done
-if [ -n "$release_tag" ]; then
-    release_url="${RELEASE_BASE}/download/${release_tag}"
+
+if [ -z "$release_tag" ]; then
+    releases_file="$TMP_DIR/releases.json"
+    log "Consultando a release mais recente..."
+    download "${API_BASE}/releases" "$releases_file"
+    release_tag="$(python3 - "$releases_file" <<'PY'
+import json
+import sys
+
+try:
+    releases = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"Não foi possível interpretar a resposta de releases: {exc}")
+
+for release in releases:
+    if isinstance(release, dict) and not release.get("draft") and release.get("tag_name"):
+        print(release["tag_name"])
+        break
+else:
+    raise SystemExit("Nenhuma release publicada foi encontrada no GitHub.")
+PY
+)" || fail "Não foi possível determinar a release mais recente."
 fi
 
-log "Baixando instalador visual da release ${release_tag:-estável mais recente}..."
+release_url="${RELEASE_BASE}/download/${release_tag}"
+
+log "Baixando instalador visual da release ${release_tag}..."
 download "${release_url}/installer.pyz" "$TMP_DIR/installer.pyz"
 download "${release_url}/SHA256SUMS" "$TMP_DIR/SHA256SUMS"
 
