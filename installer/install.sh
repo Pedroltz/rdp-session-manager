@@ -103,4 +103,20 @@ expected="$(awk '$2 == "installer.pyz" || $2 == "*installer.pyz" {print $1; exit
 actual="$(sha256sum "$TMP_DIR/installer.pyz" | awk '{print $1}')"
 [ "$expected" = "$actual" ] || fail "Checksum inválido para installer.pyz."
 
-exec python3 "$TMP_DIR/installer.pyz" "$@"
+if [ -t 0 ]; then
+    exec python3 "$TMP_DIR/installer.pyz" "$@"
+fi
+
+# `curl ... | bash` uses stdin to deliver this script. Read interactive answers
+# from the controlling terminal instead of the already-consumed pipe.
+if (: </dev/tty) 2>/dev/null; then
+    exec python3 "$TMP_DIR/installer.pyz" "$@" </dev/tty
+fi
+
+for arg in "$@"; do
+    if [[ "$arg" == "--yes" ]]; then
+        exec python3 "$TMP_DIR/installer.pyz" "$@"
+    fi
+done
+
+fail "A instalação interativa precisa de um terminal. Execute em um terminal ou use --yes."
