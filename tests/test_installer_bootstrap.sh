@@ -61,6 +61,7 @@ if [[ "${RDPSM_EXPECT_TTY:-}" == "1" && "${1:-}" == */installer.pyz ]]; then
         printf 'installer stdin is not a terminal\n' >&2
         exit 1
     }
+    printf 'RDPSM_TTY_READY\n' >&2
     IFS= read -r answer
     [ "$answer" = "s" ] || {
         printf 'unexpected interactive answer: %s\n' "$answer" >&2
@@ -118,12 +119,13 @@ run_failure_case "$INSTALLER_HASH  another-file.pyz" \
 run_failure_case "$(printf '0%.0s' {1..64}) *installer.pyz" \
     "Checksum inválido para installer.pyz."
 
-printf 's\n' | \
-    PATH="$TEST_DIR/bin:$PATH" \
+printf '%s  *installer.pyz\n' "$INSTALLER_HASH" \
+    > "$TEST_DIR/assets/SHA256SUMS"
+PATH="$TEST_DIR/bin:$PATH" \
     RDPSM_BOOTSTRAP_FIXTURES="$TEST_DIR/assets" \
     RDPSM_EXPECT_TTY=1 \
-    script -qec "cat '$PROJECT_DIR/installer/install.sh' | bash" /dev/null \
-    >/dev/null
+    python3 "$PROJECT_DIR/tests/test_installer_tty.py" \
+        "$PROJECT_DIR/installer/install.sh"
 
 noninteractive_output=""
 if noninteractive_output="$(
