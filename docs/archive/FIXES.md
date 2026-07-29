@@ -1,153 +1,153 @@
-# Correções e Melhorias Aplicadas
+# Corrections and Improvements Applied
 
-## 🎉 Resumo Geral
+## 🎉 General Summary
 
-A aplicação está **TOTALMENTE FUNCIONAL** com todas as operações implementadas e testadas!
+The application is **FULLY FUNCTIONAL** with all operations implemented and tested!
 
-**Versão Atual**: v0.2.0
+**Current Version**: v0.2.0
 **Data**: 2025-10-18
-**Status**: ✅ Produção
+**Status**: ✅ Production
 
 ---
 
-## 📋 Todas as Correções (Cronológico)
+## 📋 All Corrections (Chronological)
 
-### Versão 0.1.0 (17/10/2025) - Correções Iniciais
+### Version 0.1.0 (10/17/2025) - Initial Fixes
 
 #### 1. ✅ Namespace libadwaita
-**Problema**: `ValueError: Namespace Adw not available for version 1.0`
-**Causa**: Debian empacota libadwaita como versão '1' ao invés de '1.0'
-**Solução**: Alterado em 4 arquivos:
+**Problem**: `ValueError: Namespace Adw not available for version 1.0`
+**Cause**: Debian packages libadwaita as version '1' instead of '1.0'
+**Solution**: Changed 4 files:
 ```python
-# Antes
+# Before
 gi.require_version('Adw', '1.0')
 
-# Depois
+# After
 gi.require_version('Adw', '1')
 ```
 
-**Arquivos modificados**:
+**Modified files**:
 - `src/main.py`
 - `src/application.py`
 - `src/ui/main_window.py`
 - `src/ui/user_dialog.py`
 
-#### 2. ✅ API depreciada do GTK
-**Problema**: `AttributeError: type object 'Widget' has no attribute 'get_default_display'`
-**Causa**: API depreciada no GTK4
-**Solução**: Usar `Gdk.Display.get_default()` ao invés de `Gtk.Widget.get_default_display()`
+#### 2. ✅ Deprecated GTK API
+**Problem**: `AttributeError: type object 'Widget' has no attribute 'get_default_display'`
+**Cause**: Deprecated API in GTK4
+**Solution**: Use `Gdk.Display.get_default()` instead of `Gtk.Widget.get_default_display()`
 
-**Arquivo**: `src/application.py`
+**File**: `src/application.py`
 
 #### 3. ✅ psutil Connections
-**Problema**: `invalid attr name 'connections'`
-**Causa**: `process_iter` não aceita 'connections' como atributo direto
-**Solução**: Usar `proc.connections(kind='inet')` manualmente
+**Problem**: `invalid attr name 'connections'`
+**Cause**: `process_iter` does not accept 'connections' as a direct attribute
+**Solution**: Use `proc.connections(kind='inet')` manually
 
-**Arquivo**: `src/core/session_monitor.py`
+**File**: `src/core/session_monitor.py`
 
-#### 4. ✅ Dependência faltante
-**Problema**: ModuleNotFoundError: No module named 'psutil'
-**Solução**: Adicionado `python3-psutil` ao requirements.txt
+#### 4. ✅ Missing dependency
+**Problem**: ModuleNotFoundError: No module named 'psutil'
+**Solution**: Added `python3-psutil` to requirements.txt
 
 ---
 
-### Versão 0.2.0 (18/10/2025) - Correções Críticas
+### Version 0.2.0 (10/18/2025) - Critical Fixes
 
-#### 5. ✅ Sistema de Logs Completo (CRÍTICO)
-**Problema**: Apenas logs do módulo principal (`rdp-session-manager`) eram gravados no arquivo
-**Causa**: `setup_logger()` configurava apenas o named logger, não o root logger
-**Impacto**: Impossível debugar problemas em user_manager, rdp_config, de_installer, etc.
+#### 5. ✅ Complete Log System (CRITICAL)
+**Problem**: Only logs from the main module (`rdp-session-manager`) were written to the file
+**Cause**: `setup_logger()` only configured the named logger, not the root logger
+**Impact**: Impossible to debug problems in user_manager, rdp_config, de_installer, etc.
 
-**Solução**:
+**Solution**:
 ```python
 # src/utils/logger.py
 
-# ANTES (errado)
+# BEFORE (wrong)
 def setup_logger(name: str = 'rdp-session-manager', ...):
-    logger = logging.getLogger(name)  # Apenas este logger configurado
-    # ... configuração ...
+    logger = logging.getLogger(name) # Only this configured logger
+    # ... settings ...
     return logger
 
-# DEPOIS (correto)
+# AFTER (correct)
 def setup_logger(name: str = 'rdp-session-manager', ...):
     root_logger = logging.getLogger()  # ROOT logger
     root_logger.setLevel(log_level)
 
-    # Evitar duplicação
+    # Avoid duplication
     if root_logger.handlers:
         return logging.getLogger(name)
 
-    # Configurar handlers no root logger
+    # Configure handlers in the root logger
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
-    # Retornar named logger para uso local
+    # Return named logger for local use
     return logging.getLogger(name)
 ```
 
-**Resultado**: TODOS os módulos agora logam corretamente:
+**Result**: ALL modules now log in correctly:
 ```
-2025-10-18 00:46:47 - core.user_manager - INFO - Removendo usuário RDP: trix_bastardo
-2025-10-18 00:46:47 - core.user_manager - INFO - Usuário tem 58 processos ativos
-2025-10-18 00:46:52 - core.user_manager - INFO - Executando userdel...
-2025-10-18 00:46:55 - core.user_manager - INFO - ✓ Usuário removido com sucesso
-```
-
-**Arquivos afetados**: Todos os módulos agora logam corretamente!
-
-#### 6. ✅ pkexec com Caminhos Absolutos (CRÍTICO)
-**Problema**: Comandos falhando com código 127 "command not found"
-**Mensagem de erro**:
-```
-2025-10-17 20:15:33 - core.user_manager - ERROR - Falha ao criar grupo: pkexec não encontrado - código 127
+2025-10-18 00:46:47 - core.user_manager - INFO - Removing RDP user: trix_bastardo
+2025-10-18 00:46:47 - core.user_manager - INFO - User has 58 active processes
+2025-10-18 00:46:52 - core.user_manager - INFO - Running userdel...
+2025-10-18 00:46:55 - core.user_manager - INFO - ✓ User removed successfully
 ```
 
-**Causa**: pkexec não tem `/usr/sbin` no PATH por padrão
-**Impacto**: NENHUMA operação administrativa funcionava (criar usuário, grupo, etc)
+**Affected files**: All modules now log correctly!
 
-**Solução**: Usar caminhos absolutos em TODOS os comandos:
+#### 6. ✅ pkexec with Absolute Paths (CRITICAL)
+**Problem**: Commands failing with code 127 "command not found"
+**Error message**:
+```
+2025-10-17 20:15:33 - core.user_manager - ERROR - Failed to create group: pkexec not found - code 127
+```
+
+**Cause**: pkexec does not have `/usr/sbin` in the PATH by default
+**Impact**: NO administrative operations worked (create user, group, etc.)
+
+**Solution**: Use absolute paths in ALL commands:
 ```python
-# ANTES (errado)
+# BEFORE (wrong)
 subprocess.run(['pkexec', 'groupadd', 'rdp-users'])
 subprocess.run(['pkexec', 'useradd', '-u', uid, username])
 subprocess.run(['pkexec', 'apt-get', 'install', 'xrdp'])
 
-# DEPOIS (correto)
+# AFTER (correct)
 subprocess.run(['pkexec', '/usr/sbin/groupadd', 'rdp-users'])
 subprocess.run(['pkexec', '/usr/sbin/useradd', '-u', uid, username])
 subprocess.run(['pkexec', '/usr/bin/apt-get', 'install', 'xrdp'])
 ```
 
-**Comandos corrigidos**:
-- `/usr/sbin/groupadd` - Criar grupos
-- `/usr/sbin/useradd` - Criar usuários
-- `/usr/sbin/userdel` - Deletar usuários
-- `/usr/sbin/chpasswd` - Definir senhas
-- `/usr/bin/apt-get` - Instalar pacotes
-- `/usr/bin/systemctl` - Gerenciar serviços
-- `/usr/bin/mkdir` - Criar diretórios
-- `/usr/bin/chmod` - Alterar permissões
-- `/usr/bin/pkill` - Encerrar processos
-- `/usr/bin/bash` - Executar scripts
-- `/usr/bin/cp` - Copiar arquivos
-- `/usr/bin/chown` - Alterar ownership
+**Fixed commands**:
+- `/usr/sbin/groupadd` - Create groups
+- `/usr/sbin/useradd` - Create users
+- `/usr/sbin/userdel` - Delete users
+- `/usr/sbin/chpasswd` - Set passwords
+- `/usr/bin/apt-get` - Install packages
+- `/usr/bin/systemctl` - Manage services
+- `/usr/bin/mkdir` - Create directories
+- `/usr/bin/chmod` - Change permissions
+- `/usr/bin/pkill` - Terminate processes
+- `/usr/bin/bash` - Run scripts
+- `/usr/bin/cp` - Copy files
+- `/usr/bin/chown` - Change ownership
 
-**Arquivos modificados**:
-- `src/core/user_manager.py` - Todos os comandos
+**Modified files**:
+- `src/core/user_manager.py` - All commands
 - `src/core/system_deps.py` - apt-get e systemctl
 - `src/core/rdp_config.py` - cp, chown, chmod, bash
 - `src/core/de_installer.py` - apt-get
 
-**Resultado**: Todas operações administrativas funcionam perfeitamente!
+**Result**: All administrative operations work perfectly!
 
-#### 7. ✅ Detecção e Instalação de FreeRDP
-**Problema**: Aplicação não detectava se FreeRDP estava instalado
-**Impacto**: Usuários tinham que instalar manualmente, má experiência
+#### 7. ✅ FreeRDP Detection and Installation
+**Problem**: Application did not detect if FreeRDP was installed
+**Impact**: Users had to install manually, bad experience
 
-**Solução Implementada**:
+**Implemented Solution**:
 
-1. **Detecção Automática** (`src/core/system_deps.py`):
+1. **Auto Detect** (`src/core/system_deps.py`):
 ```python
 def is_freerdp_installed(self) -> bool:
     import shutil
@@ -162,7 +162,7 @@ def get_freerdp_command(self) -> str:
     return None
 ```
 
-2. **Adição aos Pacotes Gerenciados**:
+2. **Addition to Managed Packages**:
 ```python
 REQUIRED_PACKAGES = {
     # ...
@@ -171,17 +171,17 @@ REQUIRED_PACKAGES = {
         'packages': ['freerdp3-x11'],
         'description': 'Cliente RDP (Remote Desktop Protocol)',
         'service': None,
-        'critical': False  # Opcional, só para conectar
+        'critical': False # Optional, only for connecting
     }
 }
 ```
 
-3. **Fluxo de Instalação** (`src/ui/main_window.py` + `src/application.py`):
+3. **Installation Flow** (`src/ui/main_window.py` + `src/application.py`):
 ```python
 def handle_connect_response(self, response, user):
     if response == "connect":
         if not self.system_deps.is_freerdp_installed():
-            # Dialog oferecendo instalação
+            # Dialog offering installation
             install_dialog = Adw.MessageDialog(...)
             install_dialog.connect("response", lambda d, r: self.on_freerdp_install_response(r, user))
             install_dialog.present()
@@ -195,91 +195,91 @@ def on_freerdp_install_response(self, response, user):
         app.install_freerdp_with_progress()
 ```
 
-4. **Dialog com Progresso** (`src/application.py`):
+4. **Dialog with Progress** (`src/application.py`):
 ```python
 def install_freerdp_with_progress(self):
     dialog = Adw.MessageDialog(...)
-    # TextView mostrando output em tempo real
-    # Thread de instalação
-    # Callback de progresso
+    # TextView showing output in real time
+    # Installation thread
+    # Progress callback
 ```
 
-**Resultado**:
-- Detecção automática ao clicar em "Abrir FreeRDP"
-- Oferece instalação se não estiver instalado
-- Progresso visual durante instalação
-- Suporte para xfreerdp3 e xfreerdp (fallback)
+**Result**:
+- Automatic detection when clicking "Open FreeRDP"
+- Offers installation if not installed
+- Visual progress during installation
+- Support for xfreerdp3 and xfreerdp (fallback)
 
-#### 8. ✅ Dialog Visual para Credenciais RDP
-**Problema**: FreeRDP pedia credenciais no terminal, não visualmente
-**Impacto**: UX ruim, usuários confusos
+#### 8. ✅ Visual Dialog for RDP Credentials
+**Problem**: FreeRDP asked for credentials in the terminal, not visually
+**Impact**: Bad UX, confused users
 
-**Tentativa 1 - FALHOU**:
+**Attempt 1 - FAILED**:
 ```python
-password_entry = Adw.PasswordEntryRow()  # Não funciona em MessageDialog!
+password_entry = Adw.PasswordEntryRow() # Does not work in MessageDialog!
 ```
-**Erro**: Widget incompatibilidade
+**Error**: Widget incompatibility
 
-**Tentativa 2 - FALHOU**:
+**Attempt 2 - FAILED**:
 ```python
 password_entry = Gtk.PasswordEntry()
-password_entry.set_placeholder_text("Senha")  # Método não existe!
+password_entry.set_placeholder_text("Password") # Method does not exist!
 ```
-**Erro**: `AttributeError: 'PasswordEntry' object has no attribute 'set_placeholder_text'`
+**Error**: `AttributeError: 'PasswordEntry' object has no attribute 'set_placeholder_text'`
 
-**Tentativa 3 - FALHOU**:
+**Attempt 3 - FAILED**:
 ```python
 password_entry = Gtk.Entry()
 password_entry.set_visibility(False)
-# Mas tinha GLib.timeout_add() roubando foco!
+# But GLib.timeout_add() was stealing focus!
 ```
-**Erro**: Foco voltava automaticamente, impossível digitar em domain_entry
+**Error**: Focus returned automatically, impossible to type in domain_entry
 
-**Solução Final - FUNCIONA**:
+**Final Solution - IT WORKS**:
 ```python
 def show_password_dialog(self, user):
     dialog = Adw.MessageDialog(...)
 
-    # Box com campos
+    # Box with fields
     creds_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
 
-    # Campo de domínio (opcional)
+    # Domain field (optional)
     domain_entry = Gtk.Entry()
     domain_entry.set_can_focus(True)  # IMPORTANTE!
 
-    # Campo de senha
+    # Password field
     password_entry = Gtk.Entry()
-    password_entry.set_visibility(False)  # Ocultar texto
+    password_entry.set_visibility(False)  # Hide text
     password_entry.set_invisible_char('•')
     password_entry.set_can_focus(True)  # IMPORTANTE!
 
-    # Enter para navegar
+    # Enter to navigate
     domain_entry.connect('activate', lambda e: password_entry.grab_focus())
     password_entry.connect('activate', lambda e: dialog.response('connect'))
 
-    # SEM GLib.timeout_add() - era isso que roubava o foco!
+    # WITHOUT GLib.timeout_add() - that was what stole the focus!
 ```
 
-**Resultado**:
+**Result**:
 - Dialog visual clean
-- Campo de domínio opcional para domínios Windows
-- Campo de senha funcionando perfeitamente
-- Enter navega entre campos
-- Credenciais passadas via `/d:` e `/p:`
+- Optional domain field for Windows domains
+- Password field working perfectly
+- Enter navigates between fields
+- Credentials passed via `/d:` and `/p:`
 
-#### 9. ✅ Exclusão Inteligente de Usuários
-**Problema**: Não conseguia deletar usuário conectado
-**Mensagem de erro**:
+#### 9. ✅ Smart User Deletion
+**Problem**: Unable to delete logged in user
+**Error message**:
 ```
 userdel: user trix_bastardo is currently used by process 26924
 ```
 
-**Solução Implementada** (`src/core/user_manager.py`):
+**Implemented Solution** (`src/core/user_manager.py`):
 
-1. **Detecção de Processos**:
+1. **Process Detection**:
 ```python
 def get_user_processes(self, username: str) -> List[int]:
-    """Obtém lista de PIDs de processos do usuário"""
+    """Get list of user process PIDs"""
     result = subprocess.run(
         ['pgrep', '-u', username],
         capture_output=True,
@@ -293,10 +293,10 @@ def get_user_processes(self, username: str) -> List[int]:
     return []
 ```
 
-2. **Encerramento de Processos**:
+2. **Closure of Processes**:
 ```python
 def kill_user_processes(self, username: str, force: bool = False) -> bool:
-    """Mata processos do usuário (SIGTERM ou SIGKILL)"""
+    """Kills user processes (SIGTERM or SIGKILL)"""
     signal = '-9' if force else '-15'
 
     result = subprocess.run(
@@ -306,33 +306,33 @@ def kill_user_processes(self, username: str, force: bool = False) -> bool:
         timeout=10
     )
 
-    return result.returncode in [0, 1]  # 0=processos encontrados, 1=não encontrados
+    return result.returncode in [0, 1] # 0=processes found, 1=not found
 ```
 
-3. **Exclusão Completa**:
+3. **Complete Deletion**:
 ```python
 def delete_user(self, username: str, remove_home: bool = True, kill_processes: bool = True) -> bool:
-    # 1. Verificar processos ativos
+    # 1. Check active processes
     active_pids = self.get_user_processes(username)
 
     if active_pids:
-        logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos")
+        logger.info(f"User {username} has {len(active_pids)} active processes")
 
         if kill_processes:
-            # 2. Encerrar gracefully (SIGTERM)
+            # 2. Terminate gracefully (SIGTERM)
             self.kill_user_processes(username, force=False)
             time.sleep(1)
 
-            # 3. Verificar se ainda há processos
+            # 3. Check if there are still processes
             remaining_pids = self.get_user_processes(username)
 
             if remaining_pids:
-                # 4. Forçar (SIGKILL)
-                logger.warning("Ainda há processos. Forçando terminação...")
+                # 4. Force (SIGKILL)
+                logger.warning("There are still processes. Forcing termination...")
                 self.kill_user_processes(username, force=True)
                 time.sleep(0.5)
 
-    # 5. Deletar usuário
+    # 5. Delete user
     cmd = ['pkexec', '/usr/sbin/userdel']
     if remove_home:
         cmd.append('-r')
@@ -348,88 +348,88 @@ def on_delete_user(self, username):
     active_pids = self.user_manager.get_user_processes(username)
 
     if active_pids:
-        # Dialog especial para usuários conectados
+        # Special dialog for logged in users
         dialog = Adw.MessageDialog(
-            heading=f"⚠ {username} está ativo",
-            body=f"...suas sessões serão encerradas automaticamente..."
+            heading=f"⚠ {username} is active",
+            body=f"...your sessions will be terminated automatically..."
         )
-        dialog.add_response("delete", "Encerrar e Remover")
+        dialog.add_response("delete", "Close and Remove")
     else:
-        # Dialog normal para usuários inativos
+        # Normal dialog for inactive users
         dialog = Adw.MessageDialog(
-            heading=f"Remover {username}?",
-            body="...Todos os dados serão removidos..."
+            heading=f"Remove {username}?",
+            body="...All data will be removed..."
         )
-        dialog.add_response("delete", "Remover")
+        dialog.add_response("delete", "Remove")
 ```
 
 **Teste Real (18/10/2025 00:46)**:
 ```
-Input: Deletar usuário trix_bastardo (58 processos ativos)
+Input: Delete user trix_bastardo (58 active processes)
 Logs:
-  - Detectados 58 processos: [26924, 26926, ...]
-  - Terminando com SIGTERM -15
+  - 58 processes detected: [26924, 26926, ...]
+  - Ending with SIGTERM -15
   - Aguardando 1 segundo
-  - Verificando processos restantes
-  - Forçando com SIGKILL -9 se necessário
-  - Executando userdel -r trix_bastardo
-Output: ✅ Usuário removido com sucesso
-  - Conta removida
+  - Checking remaining processes
+  - Forcing with SIGKILL -9 if necessary
+  - Running userdel -r trix_bastardo
+Output: ✅ User successfully removed
+  - Account removed
   - Home /opt/rdp-users/trix_bastardo removido
-  - Todos os 58 processos encerrados
+  - All 58 cases closed
 ```
 
-#### 10. ✅ Verificação e Instalação de xrdp
-**Problema**: Aplicação não avisava se xrdp não estivesse instalado
-**Impacto**: Usuários criados mas não funcionavam
+#### 10. ✅ Verification and Installation of xrdp
+**Problem**: Application did not warn if xrdp was not installed
+**Impact**: Users created but did not work
 
-**Solução Implementada**:
+**Implemented Solution**:
 
-1. **Banner de Aviso** (`src/ui/main_window.py`):
+1. **Warning Banner** (`src/ui/main_window.py`):
 ```python
 def create_xrdp_warning_banner(self):
     self.xrdp_banner = Adw.Banner()
-    self.xrdp_banner.set_title("⚠ Servidor xrdp não está instalado - A aplicação não funcionará sem ele")
-    self.xrdp_banner.set_button_label("Instalar Agora")
+    self.xrdp_banner.set_title("⚠ xrdp server is not installed - The application will not work without it")
+    self.xrdp_banner.set_button_label("Install Now")
     self.xrdp_banner.connect('button-clicked', self.on_install_xrdp_clicked)
     self.xrdp_banner.set_revealed(False)
 
-    # Inserir no topo da interface
+    # Insert at the top of the interface
     toolbar_view = self.toast_overlay.get_child()
     content = toolbar_view.get_content()
     content.prepend(self.xrdp_banner)
 ```
 
-2. **Verificação Periódica**:
+2. **Periodic Check**:
 ```python
 def __init__(self, ...):
     # ...
     self.update_xrdp_status()  # Inicial
-    GLib.timeout_add_seconds(10, self.update_xrdp_status)  # A cada 10seg
+    GLib.timeout_add_seconds(10, self.update_xrdp_status) # Every 10sec
 
 def update_xrdp_status(self):
     xrdp_ready = self.system_deps.is_xrdp_ready()
 
-    # Mostrar/ocultar banner
+    # Show/hide banner
     self.xrdp_banner.set_revealed(not xrdp_ready)
 
-    # Bloquear botões de criar usuário
+    # Block create user buttons
     self.add_user_button.set_sensitive(xrdp_ready)
     self.empty_add_user_button.set_sensitive(xrdp_ready)
 
     return True  # Continue timeout
 ```
 
-3. **Instalação com Progresso** (`src/application.py`):
+3. **Installation with Progress** (`src/application.py`):
 ```python
 def show_xrdp_install_dialog(self):
     dialog = Adw.MessageDialog(...)
 
-    # TextView para logs
+    # TextView for logs
     textview = Gtk.TextView()
     textbuffer = textview.get_buffer()
 
-    # Thread de instalação
+    # Installation thread
     def install_in_thread():
         success, msg = self.system_deps.install_package(
             'xrdp',
@@ -442,57 +442,57 @@ def show_xrdp_install_dialog(self):
     thread.start()
 ```
 
-**Resultado**:
-- Banner aparece se xrdp não instalado
-- Botões de criar usuário bloqueados
-- Instalação com um clique
-- Progresso visual em tempo real
-- Serviço habilitado e iniciado automaticamente
+**Result**:
+- Banner appears if xrdp not installed
+- Create user buttons blocked
+- One-click installation
+- Real-time visual progress
+- Service enabled and started automatically
 
-#### 11. ✅ Detecção Dinâmica de Desktop Environment
-**Problema**: Todos os usuários apareciam como "XFCE • Porta 3389" na interface, independentemente do Desktop Environment escolhido
-**Impacto**: Impossível saber qual DE o usuário realmente usa
+#### 11. ✅ Dynamic Desktop Environment Detection
+**Issue**: All users appeared as "XFCE • Port 3389" in the interface, regardless of the Desktop Environment chosen
+**Impact**: Impossible to know which DE the user actually uses
 
-**Evidência do Bug**:
+**Bug Evidence**:
 ```
 Interface mostrava:
-- Usuario1: XFCE • Porta 3389 (mas era LXDE)
-- Usuario2: XFCE • Porta 3389 (mas era GNOME)
-- Usuario3: XFCE • Porta 3389 (mas era KDE)
+- User1: XFCE • Port 3389 (but it was LXDE)
+- User2: XFCE • Port 3389 (but it was GNOME)
+- User3: XFCE • Port 3389 (but it was KDE)
 ```
 
 **Causa**: Valores hardcoded em `list_users()`
 ```python
-# src/core/user_manager.py (linha 122-123) - ANTES
+# src/core/user_manager.py (line 122-123) - BEFORE
 
 rdp_user = RDPUser(
     username=user_info.pw_name,
     uid=user_info.pw_uid,
     home_dir=user_info.pw_dir,
-    desktop_env="xfce",  # TODO: ler de config - HARDCODED!
-    rdp_port=3389,       # TODO: ler de config - HARDCODED!
+    desktop_env="xfce", # TODO: read from config - HARDCODED!
+    rdp_port=3389, # TODO: read from config - HARDCODED!
     active=False
 )
 ```
 
-**Solução Implementada**:
+**Implemented Solution**:
 
-1. **Método de Detecção de DE** (linhas 542-577):
+1. **ED Detection Method** (lines 542-577):
 ```python
 def _detect_desktop_env(self, home_dir: str) -> str:
-    """Detecta o Desktop Environment lendo o arquivo .xsession"""
+    """Detects the Desktop Environment by reading the .xsession file"""
     try:
         xsession_file = Path(home_dir) / '.xsession'
 
         if not xsession_file.exists():
-            logger.warning(f"Arquivo .xsession não encontrado em {home_dir}")
+            logger.warning(f"File .xsession not found in {home_dir}")
             return "unknown"
 
-        # Ler arquivo .xsession
+        # Read .xsession file
         with open(xsession_file, 'r') as f:
             content = f.read()
 
-        # Mapear comandos para DEs
+        # Map commands to DEs
         de_commands = {
             'startlxde': 'lxde',
             'startlxqt': 'lxqt',
@@ -503,58 +503,58 @@ def _detect_desktop_env(self, home_dir: str) -> str:
             'startplasma-x11': 'kde'
         }
 
-        # Procurar comando no arquivo
+        # Search command in file
         for command, de_id in de_commands.items():
             if command in content:
                 logger.debug(f"Detected DE for {home_dir}: {de_id} (command: {command})")
                 return de_id
 
-        logger.warning(f"Comando DE não reconhecido em {xsession_file}")
+        logger.warning(f"DE command not recognized in {xsession_file}")
         return "unknown"
 
     except Exception as e:
-        logger.error(f"Erro ao detectar DE de {home_dir}: {e}")
+        logger.error(f"Error detecting DE of {home_dir}: {e}")
         return "unknown"
 ```
 
-2. **Método de Detecção de Porta RDP** (linhas 579-585):
+2. **RDP Port Detection Method** (lines 579-585):
 ```python
 def _detect_rdp_port(self, uid: int) -> int:
-    """Detecta a porta RDP baseada no UID"""
+    """Detect RDP port based on UID"""
     base_port = 3389
     port_offset = uid - self.RDP_UID_START  # RDP_UID_START = 5000
     return base_port + port_offset
 ```
 
-3. **list_users() Atualizado** (linhas 587-622):
+3. **list_users() Updated** (lines 587-622):
 ```python
-# DEPOIS (correto)
+# AFTER (correct)
 def list_users(self) -> List[RDPUser]:
     for user_info in pwd.getpwall():
         if self._is_rdp_user(user_info.pw_name):
-            # Detectar Desktop Environment real
+            # Detect real Desktop Environment
             desktop_env = self._detect_desktop_env(user_info.pw_dir)
 
-            # Detectar porta RDP baseada no UID
+            # Detect RDP port based on UID
             rdp_port = self._detect_rdp_port(user_info.pw_uid)
 
             rdp_user = RDPUser(
                 username=user_info.pw_name,
                 uid=user_info.pw_uid,
                 home_dir=user_info.pw_dir,
-                desktop_env=desktop_env,  # AGORA LÊ DO .xsession!
-                rdp_port=rdp_port,        # AGORA CALCULA DO UID!
+                desktop_env=desktop_env, # NOW READ FROM .xsession!
+                rdp_port=rdp_port, # NOW CALCULATE THE UID!
                 active=False
             )
 ```
 
-**Como Funciona**:
-1. Durante `create_user()`, o arquivo `.xsession` é criado com o comando de startup do DE escolhido
-2. Durante `list_users()`, o método `_detect_desktop_env()` lê este arquivo
-3. Mapeia o comando encontrado (`startlxde`, `gnome-session`, etc.) para o ID do DE
-4. A porta RDP é calculada automaticamente baseada no UID do usuário
+**How ​​It Works**:
+1. During `create_user()`, the file `.xsession` is created with the chosen DE startup command
+2. During `list_users()`, method `_detect_desktop_env()` reads this file
+3. Maps the found command (`startlxde`, `gnome-session`, etc.) to the DE ID
+4. RDP port is automatically calculated based on user UID
 
-**Mapeamento DE → Comando**:
+**DE → Command Mapping**:
 - `startlxde` → LXDE
 - `startlxqt` → LXQt
 - `startxfce4` → XFCE
@@ -563,61 +563,61 @@ def list_users(self) -> List[RDPUser]:
 - `gnome-session` → GNOME
 - `startplasma-x11` → KDE Plasma
 
-**Cálculo de Portas**:
-- Primeiro usuário (UID 5000): Porta 3389
-- Segundo usuário (UID 5001): Porta 3390
-- Terceiro usuário (UID 5002): Porta 3391
-- E assim por diante...
+**Port Calculation**:
+- First user (UID 5000): Port 3389
+- Second user (UID 5001): Port 3390
+- Third user (UID 5002): Port 3391
+- And so on...
 
-**Resultado**:
+**Result**:
 ```
-Interface agora mostra corretamente:
-- Usuario1: LXDE • Porta 3389 • IP: ...
-- Usuario2: GNOME • Porta 3390 • IP: ...
-- Usuario3: KDE • Porta 3391 • IP: ...
+Interface now correctly shows:
+- User1: LXDE • Port 3389 • IP: ...
+- User2: GNOME • Port 3390 • IP: ...
+- User3: KDE • Port 3391 • IP: ...
 ```
 
-**Arquivo Modificado**:
+**Modified File**:
 - `src/core/user_manager.py`
 
-**Logs de Detecção**:
+**Detection Logs**:
 ```
 DEBUG - core.user_manager - Detected DE for /opt/rdp-users/usuario1: lxde (command: startlxde)
 DEBUG - core.user_manager - Detected DE for /opt/rdp-users/usuario2: gnome (command: gnome-session)
 DEBUG - core.user_manager - Detected DE for /opt/rdp-users/usuario3: kde (command: startplasma-x11)
 ```
 
-#### 12. ✅ Permissões do Home Directory Impedindo Leitura do .xsession
-**Problema**: Desktop Environment aparecia como "Desconhecida" mesmo com arquivo .xsession correto
-**Impacto**: Detecção dinâmica de DE não funcionava
+#### 12. ✅ Home Directory Permissions Preventing .xsession from being read
+**Problem**: Desktop Environment appeared as "Unknown" even with the correct .xsession file
+**Impact**: Dynamic ED detection did not work
 
-**Causa Raiz**: Permissões 700 no diretório home
+**Root Cause**: Permissions 700 on home directory
 ```bash
-$ stat /opt/rdp-users/usuario
-700 usuario:rdp-users /opt/rdp-users/usuario
+$ stat /opt/rdp-users/user
+700 user:rdp-users /opt/rdp-users/user
 #  ^^^
 #  Owner: rwx, Group: ---, Others: ---
-#  Aplicação não consegue ENTRAR no diretório para ler .xsession
+# Application cannot ENTER the directory to read .xsession
 ```
 
-**Evidência nos Logs**:
+**Evidence in Logs**:
 ```
-ERROR - Erro ao detectar DE de /opt/rdp-users/trix-gnome: [Errno 13] Permissão negada: '/opt/rdp-users/trix-gnome/.xsession'
+ERROR - Error detecting DE of /opt/rdp-users/trix-gnome: [Errno 13] Permission denied: '/opt/rdp-users/trix-gnome/.xsession'
 ```
 
-**Por Que Aconteceu**:
-- O comando `useradd -m` cria o home directory com permissões padrão 700
-- Isso é seguro para usuários normais, mas impede que a aplicação leia configurações
-- Mesmo o arquivo .xsession tendo 755, não é acessível se o diretório tem 700
+**Why It Happened**:
+- The command `useradd -m` creates the home directory with default permissions 700
+- This is safe for normal users, but prevents the application from reading settings
+- Even though the .xsession file is 755, it is not accessible if the directory is 700
 
-**Solução Implementada** (`src/core/user_manager.py` linhas 373-389):
+**Implemented Solution** (`src/core/user_manager.py` lines 373-389):
 
 ```python
-# Após criar usuário e definir senha...
+# After creating user and setting password...
 
-# Corrigir permissões do home directory para permitir leitura do .xsession
+# Correct home directory permissions to allow reading of .xsession
 if log_callback:
-    log_callback(f"  → Ajustando permissões do diretório home...")
+    log_callback(f" → Adjusting home directory permissions...")
 
 chmod_result = subprocess.run(
     ['pkexec', '/usr/bin/chmod', '751', home_dir],
@@ -627,38 +627,38 @@ chmod_result = subprocess.run(
 )
 
 if chmod_result.returncode != 0:
-    logger.warning(f"Aviso ao definir permissões do home: {chmod_result.stderr}")
+    logger.warning(f"Warning when setting home permissions: {chmod_result.stderr}")
 else:
-    logger.info(f"Permissões do home alteradas para 751")
+    logger.info(f"Home permissions changed to 751")
     if log_callback:
-        log_callback(f"  ✓ Permissões ajustadas (751)")
+        log_callback(f" ✓ Permissions set (751)")
 ```
 
-**Permissões 751**:
+**Permissions 751**:
 ```
 7 (rwx) - Owner: Controle total
-5 (r-x) - Group: Ler e executar
-1 (--x) - Others: EXECUTAR (pode entrar no diretório)
+5 (r-x) - Group: Read and execute
+1 (--x) - Others: RUN (can enter directory)
 ```
 
-**Por Que 751 e Não 755?**:
-- 751: Others podem **entrar** no diretório mas não **listar** conteúdo
-- Mais seguro: Precisa saber o nome exato do arquivo
-- Permite ler `.xsession` (que tem 755) mas não listar arquivos privados
-- Boa prática para home directories em ambientes multiusuário
+**Why 751 and not 755?**:
+- 751: Others can **enter** the directory but cannot **list** content
+- More secure: Need to know the exact file name
+- Allows reading `.xsession` (which has 755) but not listing private files
+- Good practice for home directories in multi-user environments
 
-**Como Corrigir Usuários Existentes**:
+**How ​​to Fix Existing Users**:
 ```bash
-# Para cada usuário RDP existente:
+# For each existing RDP user:
 sudo chmod 751 /opt/rdp-users/NOME_USUARIO
 ```
 
-**Arquivo Modificado**:
-- `src/core/user_manager.py` - Método `_create_system_user()`
+**Modified File**:
+- `src/core/user_manager.py` - Method `_create_system_user()`
 
-**Teste de Verificação**:
+**Verification Test**:
 ```bash
-# 1. Verificar permissões
+# 1. Check permissions
 $ stat -c "%a" /opt/rdp-users/trix-gnome
 751  # ✓ Correto!
 
@@ -666,126 +666,126 @@ $ stat -c "%a" /opt/rdp-users/trix-gnome
 $ cat /opt/rdp-users/trix-gnome/.xsession | grep exec
 exec gnome-session  # ✓ Funciona!
 
-# 3. Verificar na aplicação
-# Interface agora mostra: "GNOME • Porta 3389 • IP: ..."
-# Ao invés de: "Desconhecida • Porta 3389 • IP: ..."
+# 3. Check in application
+# Interface now shows: "GNOME • Port 3389 • IP: ..."
+# Instead of: "Unknown • Port 3389 • IP: ..."
 ```
 
-**Resultado**:
-- ✅ Novos usuários criados automaticamente com 751
-- ✅ Detecção de DE funciona perfeitamente
-- ✅ Segurança mantida (others não podem listar diretório)
+**Result**:
+- ✅ New users created automatically with 751
+- ✅ ED detection works perfectly
+- ✅ Security maintained (others cannot list directory)
 - ✅ Interface mostra DE correto
 
 ---
 
-## 🎯 Resumo das Funcionalidades
+## 🎯 Feature Summary
 
 ### ✅ O que funciona 100%:
 
-1. **Gerenciamento de Usuários**:
-   - ✓ Criação com validação
-   - ✓ Exclusão com encerramento de sessões
-   - ✓ Detecção de processos ativos
+1. **User Management**:
+   - ✓ Creation with validation
+   - ✓ Exclusion with closing sessions
+   - ✓ Detection of active processes
    - ✓ Logs completos
 
-2. **Instalação de Dependências**:
-   - ✓ xrdp com banner e progresso
+2. **Dependency Installation**:
+   - ✓ xrdp with banner and progress
    - ✓ FreeRDP sob demanda
-   - ✓ Desktop Environments com progresso
+   - ✓ Desktop Environments with progress
 
-3. **Conexão RDP**:
-   - ✓ Dialog visual para credenciais
-   - ✓ Suporte para domínios
-   - ✓ Lançamento direto do cliente
-   - ✓ Cópia de endereço
+3. **RDP Connection**:
+   - ✓ Visual dialog for credentials
+   - ✓ Support for domains
+   - ✓ Direct customer launch
+   - ✓ Copy of address
 
 4. **Interface**:
-   - ✓ GTK4/libadwaita moderna
+   - ✓ GTK4/modern libadwaita
    - ✓ Toast notifications
    - ✓ Dialogs contextuais
    - ✓ Banner de avisos
-   - ✓ Progresso visual
+   - ✓ Visual progress
 
-5. **Logs e Segurança**:
-   - ✓ Todos os módulos logam
-   - ✓ PolicyKit para tudo
-   - ✓ Caminhos absolutos
-   - ✓ Validação robusta
+5. **Logs and Security**:
+   - ✓ All modules log in
+   - ✓ PolicyKit for everything
+   - ✓ Absolute paths
+   - ✓ Robust validation
 
 ---
 
 ## 📊 Testes Executados
 
-### Teste 1: Criação de Usuário
+### Test 1: User Creation
 ```
 Input: testuser, TestPass123, XFCE
-Resultado: ✅ SUCESSO
-- Grupo rdp-users criado
-- Diretório /opt/rdp-users criado
-- Usuário criado (UID: 5000)
-- Senha definida
-- .xsession criado
+Result: ✅ SUCCESS
+- Group rdp-users created
+- Directory /opt/rdp-users created
+- User created (UID: 5000)
+- Password set
+- .xsession created
 - Logs completos
 ```
 
-### Teste 2: Exclusão de Usuário Inativo
+### Test 2: Inactive User Deletion
 ```
-Input: Deletar testuser (0 processos)
-Resultado: ✅ SUCESSO
-- Dialog normal de confirmação
-- Usuário removido
+Input: Delete testuser (0 processes)
+Result: ✅ SUCCESS
+- Normal confirmation dialog
+- User removed
 - Home removido
 - Logs completos
 ```
 
-### Teste 3: Exclusão de Usuário com 58 Processos
+### Test 3: User Deletion with 58 Processes
 ```
-Input: Deletar trix_bastardo (58 processos ativos)
-Resultado: ✅ SUCESSO
-- Dialog especial de aviso
-- 58 processos detectados
-- Processos encerrados (SIGTERM)
-- Verificação de processos restantes
-- Forçar SIGKILL se necessário
-- Usuário removido
+Input: Delete trix_bastardo (58 active processes)
+Result: ✅ SUCCESS
+- Special warning dialog
+- 58 processes detected
+- Processes closed (SIGTERM)
+- Checking remaining processes
+- Force SIGKILL if necessary
+- User removed
 - Home removido
-- Logs detalhados de cada etapa
+- Detailed logs of each step
 ```
 
-### Teste 4: Conexão RDP com Credenciais
+### Test 4: RDP Connection with Credentials
 ```
-Input: Conectar a testuser
-Resultado: ✅ SUCESSO
-- Dialog de credenciais aparece
-- Campo domínio (opcional)
-- Campo senha funcionando
-- Enter navega entre campos
-- FreeRDP lançado com credenciais
-- Sessão RDP aberta
+Input: Connect to testuser
+Result: ✅ SUCCESS
+- Credentials dialog appears
+- Domain field (optional)
+- Password field working
+- Enter navigates between fields
+- FreeRDP launched with credentials
+- Open RDP session
 ```
 
-### Teste 5: Instalação de FreeRDP
+### Test 5: FreeRDP Installation
 ```
-Input: Clicar "Abrir FreeRDP" sem FreeRDP instalado
-Resultado: ✅ SUCESSO
-- Dialog oferecendo instalação
-- Progresso visual
+Input: Click "Open FreeRDP" without FreeRDP installed
+Result: ✅ SUCCESS
+- Dialog offering installation
+- Visual progress
 - freerdp3-x11 instalado
 - Dialog fechado
 - Reconecta automaticamente
 ```
 
-### Teste 6: Instalação de xrdp
+### Test 6: Installing xrdp
 ```
-Input: Iniciar app sem xrdp
-Resultado: ✅ SUCESSO
-- Banner de aviso aparece
-- Botões de criar bloqueados
-- Clicar "Instalar Agora"
-- Dialog com progresso
+Input: Start app without xrdp
+Result: ✅ SUCCESS
+- Warning banner appears
+- Create buttons blocked
+- Click "Install Now"
+- Dialog with progress
 - xrdp e xorgxrdp instalados
-- Serviço habilitado e iniciado
+- Service enabled and started
 - Banner desaparece
 ```
 
@@ -793,39 +793,39 @@ Resultado: ✅ SUCESSO
 
 ## 📞 Troubleshooting
 
-### Logs não aparecem
-**Solução**: Versão 0.2.0 corrigiu - todos os módulos agora logam
+### Logs do not appear
+**Solution**: Version 0.2.0 fixed it - all modules now log in
 
-### Erro 127 ao criar usuário
-**Solução**: Versão 0.2.0 corrigiu - todos os comandos usam caminhos absolutos
+### Error 127 when creating user
+**Workaround**: Version 0.2.0 fixed - all commands use absolute paths
 
-### Não consigo digitar no campo de senha
-**Solução**: Versão 0.2.0 corrigiu - removido GLib.timeout_add()
+### I can't type in the password field
+**Solution**: Version 0.2.0 fixed it - removed GLib.timeout_add()
 
-### Não consigo deletar usuário conectado
-**Solução**: Versão 0.2.0 corrigiu - encerramento automático de processos
+### I can't delete logged in user
+**Solution**: Version 0.2.0 fixed - automatic termination of processes
 
 ---
 
-## 🚀 Como Verificar se está Atualizado
+## 🚀 How to Check if It's Updated
 
 ```bash
-# Ver versão
-cat STATUS.md | grep "Versão"
-# Deve mostrar: v0.2.0
+# View version
+cat STATUS.md | grep "Version"
+# Should show: v0.2.0
 
-# Ver logs funcionando
+# View running logs
 tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
-# Deve mostrar logs de core.user_manager, core.rdp_config, etc.
+# Should show logs from core.user_manager, core.rdp_config, etc.
 
-# Testar exclusão de usuário conectado
-# Deve mostrar dialog especial e encerrar processos automaticamente
+# Test deletion of logged in user
+# It should show special dialog and terminate processes automatically
 ```
 
 ---
 
-**Data das Correções**: 2025-10-18
-**Status**: ✅ TOTALMENTE FUNCIONAL
-**Versão**: 0.2.0
+**Date of Corrections**: 2025-10-18
+**Status**: ✅ FULLY FUNCTIONAL
+**Version**: 0.2.0
 
-🎊 **Todas as correções aplicadas e testadas com sucesso!** 🎊
+🎊 **All fixes successfully applied and tested!** 🎊

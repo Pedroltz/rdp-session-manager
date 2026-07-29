@@ -43,7 +43,7 @@ def main() -> int:
             if chunk:
                 output.extend(chunk)
                 if not answered and READY_MARKER in output:
-                    os.write(terminal_fd, b"s\n")
+                    os.write(terminal_fd, b"y\n")
                     answered = True
 
         finished_pid, status = os.waitpid(child_pid, os.WNOHANG)

@@ -1,59 +1,59 @@
-# Sumário Executivo do Projeto
+# Project Executive Summary
 
-## 🎉 Status: COMPLETO ✅
+## 🎉 Status: COMPLETE ✅
 
-O projeto **RDP Session Manager** foi completamente desenvolvido e está pronto para uso!
+The **RDP Session Manager** project has been completely developed and is ready to use!
 
 ---
 
-## 📊 Estatísticas do Projeto
+## 📊 Project Statistics
 
-| Métrica | Valor |
+| Metric | Value |
 |---------|-------|
-| **Arquivos Python** | 20 |
-| **Arquivos UI (GTK)** | 2 |
-| **Arquivos de Configuração** | 6 |
-| **Arquivos de Documentação** | 4 |
-| **Arquivos de Build** | 8 |
-| **Testes Unitários** | 2 |
-| **Total de Arquivos** | 42 |
+| **Python Files** | 20 |
+| **UI Files (GTK)** | 2 |
+| **Configuration Files** | 6 |
+| **Documentation Files** | 4 |
+| **Build Files** | 8 |
+| **Unit Tests** | 2 |
+| **Total Files** | 42 |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 RemoteApps-RDP/
-├── 📄 README.md                    # Documentação principal
-├── 📄 InitProject.md               # Especificação original
+├── 📄 README.md # Main documentation
+├── 📄 InitProject.md # Original specification
 ├── ⚙️ setup.py                     # Setup Python
-├── ⚙️ meson.build                  # Build principal
-├── 📝 requirements.txt             # Dependências Python
+├── ⚙️ meson.build # Main Build
+├── 📝 requirements.txt # Python Dependencies
 │
-├── 📂 src/                         # Código-fonte
+├── 📂 src/ # Code-fonte
 │   ├── main.py                     # Entry point
-│   ├── application.py              # Aplicação GTK
+│ ├── application.py # GTK Application
 │   │
-│   ├── 📂 core/                    # Módulos principais
-│   │   ├── user_manager.py         # Gerenciamento de usuários
-│   │   ├── rdp_config.py           # Configuração RDP/xrdp
-│   │   ├── de_installer.py         # Instalador de DEs
-│   │   └── session_monitor.py      # Monitor de sessões
+│ ├── 📂 core/ # Core modules
+│ │ ├── user_manager.py # User management
+│ │ ├── rdp_config.py # RDP/xrdp configuration
+│ │ ├── de_installer.py # DE installer
+│ │ └── session_monitor.py # Session monitor
 │   │
 │   ├── 📂 ui/                      # Interface GTK4
-│   │   ├── main_window.py          # Janela principal
-│   │   └── user_dialog.py          # Diálogo criação usuário
+│ │ ├── main_window.py # Main window
+│ │ └── user_dialog.py # User creation dialog
 │   │
-│   └── 📂 utils/                   # Utilitários
-│       ├── logger.py               # Sistema de logs
-│       ├── validator.py            # Validação entrada
+│ └── 📂 utils/ # Utilities
+│ ├── logger.py # Logging system
+│ ├── validator.py # Input validation
 │       ├── polkit.py               # Helper PolicyKit
-│       └── backup.py               # Sistema backup
+│ └── backup.py # Backup system
 │
-├── 📂 data/                        # Dados da aplicação
-│   ├── 📂 ui/                      # Arquivos GTK UI
-│   │   ├── main-window.ui          # UI janela principal
-│   │   └── user-dialog.ui          # UI diálogo usuário
+├── 📂 data/ # Application data
+│ ├── 📂 ui/ # GTK UI files
+│ │ ├── main-window.ui # UI main window
+│ │ └── user-dialog.ui # UI user dialog
 │   │
 │   ├── com.rdp.SessionManager.desktop.in    # Desktop entry
 │   ├── com.rdp.SessionManager.appdata.xml   # AppData
@@ -63,79 +63,79 @@ RemoteApps-RDP/
 ├── 📂 scripts/                     # Scripts auxiliares
 │   └── rdp-session-helper.py       # Helper PolicyKit
 │
-├── 📂 tests/                       # Testes unitários
+├── 📂 tests/ # Unit tests
 │   ├── test_validator.py
 │   ├── test_user_manager.py
 │   └── run_tests.sh
 │
-└── 📂 docs/                        # Documentação
+└── 📂 docs/ # Documentation
     ├── DEVELOPMENT.md              # Guia desenvolvimento
-    └── PROBLEMS_AND_SOLUTIONS.md   # Problemas e soluções
+    └── PROBLEMS_AND_SOLUTIONS.md # Problems and solutions
 ```
 
 ---
 
-## ✨ Funcionalidades Implementadas
+## ✨ Implemented Features
 
 ### Backend (100%)
-- ✅ Gerenciamento completo de usuários RDP
-- ✅ Configuração automática de sessões xrdp
-- ✅ Instalador de Desktop Environments (9 DEs suportados)
-- ✅ Monitoramento de sessões ativas em tempo real
-- ✅ Sistema de logs e auditoria JSON
-- ✅ Backup e restauração de configurações
+- ✅ Complete RDP user management
+- ✅ Automatic configuration of xrdp sessions
+- ✅ Desktop Environments Installer (9 DEs supported)
+- ✅ Monitoring active sessions in real time
+- ✅ JSON log and audit system
+- ✅ Backup and restore settings
 
 ### Frontend GTK4 (100%)
-- ✅ Interface moderna com libadwaita
-- ✅ Janela principal com lista de usuários
-- ✅ Diálogo de criação de usuário completo
-- ✅ Validação em tempo real
-- ✅ Indicadores de status de sessão
-- ✅ Busca de usuários
+- ✅ Modern interface with libadwaita
+- ✅ Main window with user list
+- ✅ Full user creation dialog
+- ✅ Real-time validation
+- ✅ Session status indicators
+- ✅ User search
 
-### Segurança (100%)
-- ✅ Integração PolicyKit para privilégios
-- ✅ Validação robusta de entrada
-- ✅ Sanitização de dados
-- ✅ Auditoria de ações administrativas
-- ✅ Isolamento de usuários RDP
+### Security (100%)
+- ✅ PolicyKit integration for privileges
+- ✅ Robust input validation
+- ✅ Data sanitization
+- ✅ Audit of administrative actions
+- ✅ RDP user isolation
 
 ### Qualidade (100%)
-- ✅ Testes unitários
-- ✅ Documentação completa
-- ✅ Sistema de build (Meson)
+- ✅ Unit tests
+- ✅ Complete documentation
+- ✅ Build system (Meson)
 - ✅ Logs estruturados
 
 ---
 
-## 🚀 Como Usar
+## 🚀 How to Use
 
-### Instalação Rápida
+### Quick Installation
 
 ```bash
-# 1. Clonar repositório
+# 1. Clone repository
 git clone <repo-url>
 cd RemoteApps-RDP
 
-# 2. Instalar dependências
+# 2. Install dependencies
 sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adwaita-1 xrdp
 
-# 3. Instalar Python dependencies
+# 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 4. Executar
+# 4. Run
 python3 src/main.py
 ```
 
-### Instalação com Meson
+### Installation with Meson
 
 ```bash
-# Build e instalação sistema
+# Build and install system
 meson setup builddir
 meson compile -C builddir
 sudo meson install -C builddir
 
-# Executar aplicação instalada
+# Run installed application
 rdp-session-manager
 ```
 
@@ -143,131 +143,131 @@ rdp-session-manager
 
 ## 🎯 Desktop Environments Suportados
 
-| DE | Tamanho | Status | Recomendação |
+| DE | Size | Status | Recommendation |
 |----|---------|--------|--------------|
-| **XFCE** | 400MB | ✅ | ⭐ **Recomendado para RDP** |
-| **LXDE** | 250MB | ✅ | Muito leve |
-| **LXQt** | 350MB | ✅ | Leve e moderno |
+| **XFCE** | 400MB | ✅ | ⭐ **Recommended for RDP** |
+| **LXDE** | 250MB | ✅ | Very light |
+| **LXQt** | 350MB | ✅ | Lightweight and modern |
 | **MATE** | 600MB | ✅ | Tradicional |
 | **GNOME** | 1.2GB | ✅ | Requer X11 |
 | **KDE Plasma** | 1.5GB | ✅ | Pesado |
-| **Cinnamon** | 800MB | ✅ | Médio |
+| **Cinnamon** | 800MB | ✅ | Medium |
 
 ---
 
 ## 🔧 Tecnologias Utilizadas
 
 ### Frontend
-- **GTK4** - Toolkit gráfico
-- **libadwaita** - Componentes GNOME
+- **GTK4** - Graphics Toolkit
+- **libadwaita** - GNOME Components
 - **Python GObject** - Bindings Python
 
 ### Backend
-- **Python 3.9+** - Linguagem principal
-- **xrdp** - Servidor RDP
-- **FreeRDP** - Cliente/servidor RDP
-- **PolicyKit** - Autorização de privilégios
+- **Python 3.9+** - Main language
+- **xrdp** - RDP Server
+- **FreeRDP** - RDP client/server
+- **PolicyKit** - Authorization of privileges
 
 ### Build & Deploy
-- **Meson** - Sistema de build
+- **Meson** - Build system
 - **setuptools** - Empacotamento Python
 
 ---
 
-## 📈 Progresso de Desenvolvimento
+## 📈 Development Progress
 
-### ✅ Fase 1: Estrutura Base (100%)
-- Diretórios e arquivos de configuração
-- Sistema de build Meson
-- Metadados da aplicação
+### ✅ Phase 1: Base Structure (100%)
+- Directories and configuration files
+- Meson build system
+- Application metadata
 
 ### ✅ Fase 2: Backend Core (100%)
 - UserManager, RDPConfig, DEInstaller, SessionMonitor
-- Todos os módulos implementados e funcionais
+- All modules implemented and functional
 
 ### ✅ Fase 3: Interface GTK4 (100%)
-- Todas as telas implementadas
-- Integração completa com backend
+- All screens implemented
+- Complete integration with backend
 
-### ✅ Fase 4: Segurança (100%)
+### ✅ Phase 4: Security (100%)
 - PolicyKit configurado
-- Validação e sanitização implementadas
-- Sistema de auditoria funcionando
+- Validation and sanitization implemented
+- Audit system working
 
 ### ✅ Fase 5: Qualidade (100%)
-- Testes unitários criados
-- Documentação completa
-- Sistema de backup implementado
+- Unit tests created
+- Complete documentation
+- Backup system implemented
 
 ---
 
-## 🐛 Problemas Conhecidos e Mitigações
+## 🐛 Known Issues and Mitigations
 
-### Críticos (Solução Planejada)
-1. **Conflitos de Porta RDP**
-   - Status: Identificado
-   - Solução: Pool de portas implementável
-   - Prioridade: P0
+### Critics (Planned Solution)
+1. **RDP Port Conflicts**
+   - Status: Identified
+   - Solution: Deployable port pool
+   - Priority: P0
 
-2. **Gerenciamento de Memória**
-   - Status: Identificado
-   - Solução: cgroups e limites por sessão
-   - Prioridade: P0
+2. **Memory Management**
+   - Status: Identified
+   - Solution: cgroups and limits per session
+   - Priority: P0
 
-### Médios
-3. **Compatibilidade DEs**
+### Mediums
+3. **DEs Compatibility**
    - Workarounds documentados
    - XFCE recomendado
 
-4. **Permissões Home Dir**
-   - Script de setup disponível
+4. **Home Dir Permissions**
+   - Setup script available
    - Documentado
 
-Para detalhes completos: `docs/PROBLEMS_AND_SOLUTIONS.md`
+For full details: `docs/PROBLEMS_AND_SOLUTIONS.md`
 
 ---
 
-## 📚 Documentação Disponível
+## 📚 Documentation Available
 
-1. **README.md** - Guia do usuário e instalação
-2. **docs/DEVELOPMENT.md** - Guia de desenvolvimento
-3. **docs/PROBLEMS_AND_SOLUTIONS.md** - Problemas e soluções
-4. **InitProject.md** - Especificação original
+1. **README.md** - User and Installation Guide
+2. **docs/DEVELOPMENT.md** - Development guide
+3. **docs/PROBLEMS_AND_SOLUTIONS.md** - Problems and solutions
+4. **InitProject.md** - Original specification
 
 ---
 
 ## 🔮 Roadmap Futuro
 
 ### Curto Prazo (v0.2.0)
-- [ ] Pool de portas RDP gerenciado
-- [ ] Limites de recursos com cgroups
-- [ ] Backup automático diário
-- [ ] Script de instalação completo
+- [ ] Managed RDP port pool
+- [ ] Resource limits with cgroups
+- [ ] Daily automatic backup
+- [ ] Complete installation script
 
-### Médio Prazo (v0.3.0)
-- [ ] Quotas de disco por usuário
-- [ ] Interface web de administração
+### Medium Term (v0.3.0)
+- [ ] Disk quotas per user
+- [ ] Administration web interface
 - [ ] API REST
-- [ ] Integração LDAP/AD
+- [ ] LDAP/AD integration
 
 ### Longo Prazo (v1.0.0)
-- [ ] Clustering e balanceamento
-- [ ] Dashboards e métricas
-- [ ] Suporte para containers
+- [ ] Clustering and balancing
+- [ ] Dashboards and metrics
+- [ ] Support for containers
 - [ ] Multi-tenancy
 
 ---
 
-## 🧪 Executar Testes
+## 🧪 Run Tests
 
 ```bash
-# Testes unitários
+# Unit tests
 pytest tests/ -v
 
-# Ou com script
+# Or with the script
 ./tests/run_tests.sh
 
-# Com cobertura
+# With coverage
 pytest tests/ --cov=src --cov-report=html
 ```
 
@@ -276,63 +276,63 @@ pytest tests/ --cov=src --cov-report=html
 ## 📞 Suporte
 
 - **Issues**: GitHub Issues
-- **Documentação**: Pasta `docs/`
+- **Documentation**: Folder `docs/`
 - **Logs**: `~/.local/share/rdp-session-manager/logs/`
 
 ---
 
-## 📝 Licença
+## 📝 License
 
 GNU General Public License v3.0
 
 ---
 
-## 🎓 Aprendizados do Projeto
+## 🎓 Project Learnings
 
 ### Tecnologias Dominadas
 - ✅ GTK4 e libadwaita
 - ✅ Python GObject Introspection
-- ✅ PolicyKit para escalação de privilégios
-- ✅ Sistema de build Meson
-- ✅ Arquitetura MVC para aplicações desktop
+- ✅ PolicyKit for privilege escalation
+- ✅ Meson build system
+- ✅ MVC architecture for desktop applications
 
 ### Desafios Superados
-- ✅ Integração GTK4 Templates com Python
-- ✅ PolicyKit helper script para ações admin
-- ✅ Validação e sanitização robusta
-- ✅ Sistema de logs e auditoria estruturado
-- ✅ Gerenciamento de múltiplos DEs
+- ✅ GTK4 Templates integration with Python
+- ✅ PolicyKit helper script for admin actions
+- ✅ Robust validation and sanitization
+- ✅ Structured log and audit system
+- ✅ Management of multiple DEs
 
-### Padrões Aplicados
-- ✅ Separação de responsabilidades (MVC)
-- ✅ Validação em camadas
-- ✅ Logging estruturado
+### Applied Standards
+- ✅ Separation of responsibilities (MVC)
+- ✅ Layered validation
+- ✅ Structured logging
 - ✅ Error handling consistente
-- ✅ Documentação abrangente
+- ✅ Comprehensive documentation
 
 ---
 
-## 🏆 Conclusão
+## 🏆 Conclusion
 
-O **RDP Session Manager** foi desenvolvido com sucesso seguindo todas as especificações do `InitProject.md`. A aplicação está **funcional, documentada e pronta para uso**.
+**RDP Session Manager** was successfully developed following all `InitProject.md` specifications. The application is **functional, documented and ready to use**.
 
 ### Conquistas
-- ✅ 100% das funcionalidades implementadas
-- ✅ Interface moderna e intuitiva
-- ✅ Sistema robusto e seguro
-- ✅ Documentação completa
-- ✅ Testes unitários
-- ✅ Problemas futuros antecipados
+- ✅ 100% of features implemented
+- ✅ Modern and intuitive interface
+- ✅ Robust and secure system
+- ✅ Complete documentation
+- ✅ Unit tests
+- ✅ Anticipated future problems
 
-### Próximos Passos Recomendados
-1. Testar em ambiente real
-2. Coletar feedback de usuários
-3. Implementar melhorias do roadmap
-4. Criar pacotes .deb/.rpm
-5. Publicar em repositórios
+### Recommended Next Steps
+1. Test in a real environment
+2. Collect user feedback
+3. Implement roadmap improvements
+4. Create .deb/.rpm packages
+5. Publish to repositories
 
 ---
 
-**Desenvolvido com ❤️ para a comunidade GNOME/Linux**
+**Developed with ❤️ for the GNOME/Linux community**
 
-_Data de Conclusão: 2025-10-17_
+_Completion Date: 2025-10-17_

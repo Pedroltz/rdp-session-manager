@@ -94,15 +94,15 @@ RDP Users (1 total)
 
 Username             UID      Desktop    Port     Status
 ----------------------------------------------------------------------
-trix_segundo         5000     GNOME      3389     Disabled
+trix_second         5000     GNOME      3389     Disabled
 ```
 **Expected output (JSON):**
 ```json
 [
   {
-    "username": "trix_segundo",
+    "username": "trix_second",
     "uid": 5000,
-    "home_dir": "/opt/rdp-users/trix_segundo",
+    "home_dir": "/opt/rdp-users/trix_second",
     "desktop_env": "gnome",
     "rdp_port": 3389,
     "active": false,
@@ -123,15 +123,15 @@ trix_segundo         5000     GNOME      3389     Disabled
 ./rdpsm user info USERNAME --format json
 
 # Example with existing user
-./rdpsm user info trix_segundo
+./rdpsm user info trix_second
 ```
 **Expected output:**
 ```
-User Information: trix_segundo
+User Information: trix_second
 ==============================
-  Username:     trix_segundo
+  Username:     trix_second
   UID:          5000
-  Home:         /opt/rdp-users/trix_segundo
+  Home:         /opt/rdp-users/trix_second
   Desktop:      GNOME
   RDP Port:     3389
   Status:       Disabled
@@ -147,11 +147,11 @@ User Information: trix_segundo
 ./rdpsm user processes USERNAME
 
 # Example
-./rdpsm user processes trix_segundo
+./rdpsm user processes trix_second
 ```
 **Expected output (if no processes):**
 ```
-→ No processes found for user 'trix_segundo'
+→ No processes found for user 'trix_second'
 ```
 **Expected output (if has processes):**
 ```
@@ -225,12 +225,12 @@ Delete user 'testuser' and all data? (yes/no): yes
 ./rdpsm user enable USERNAME
 
 # Example
-./rdpsm user enable trix_segundo
+./rdpsm user enable trix_second
 ```
 **Expected output:**
 ```
-→ Enabling user 'trix_segundo'...
-✓ User 'trix_segundo' enabled
+→ Enabling user 'trix_second'...
+✓ User 'trix_second' enabled
 ```
 **Safe to test:** ⚠️ NO - Modifies system user (requires sudo)
 
@@ -246,12 +246,12 @@ Delete user 'testuser' and all data? (yes/no): yes
 ./rdpsm user disable USERNAME
 
 # Example
-./rdpsm user disable trix_segundo
+./rdpsm user disable trix_second
 ```
 **Expected output:**
 ```
-→ Disabling user 'trix_segundo'...
-✓ User 'trix_segundo' disabled
+→ Disabling user 'trix_second'...
+✓ User 'trix_second' disabled
 ```
 **Safe to test:** ⚠️ NO - Modifies system user (requires sudo)
 
@@ -271,14 +271,14 @@ Delete user 'testuser' and all data? (yes/no): yes
 ./rdpsm user password USERNAME -p "newpassword"
 
 # Example
-./rdpsm user password trix_segundo
+./rdpsm user password trix_second
 ```
 **Expected output:**
 ```
-New password for trix_segundo:
+New password for trix_second:
 Confirm password:
-→ Changing password for 'trix_segundo'...
-✓ Password changed for 'trix_segundo'
+→ Changing password for 'trix_second'...
+✓ Password changed for 'trix_second'
 ```
 **Safe to test:** ⚠️ NO - Modifies system user (requires sudo)
 
@@ -352,11 +352,11 @@ mary                 192.168.1.101        3389
 ./rdpsm session info USERNAME --format json
 
 # Example
-./rdpsm session info trix_segundo
+./rdpsm session info trix_second
 ```
 **Expected output (if no active session):**
 ```
-→ No active session for user 'trix_segundo'
+→ No active session for user 'trix_second'
 ```
 **Expected output (if has session):**
 ```

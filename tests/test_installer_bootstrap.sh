@@ -74,7 +74,7 @@ if [[ "${RDPSM_EXPECT_TTY:-}" == "1" && "${1:-}" == */installer.pyz ]]; then
     }
     printf 'RDPSM_TTY_READY\n' >&2
     IFS= read -r answer
-    [ "$answer" = "s" ] || {
+    [ "$answer" = "y" ] || {
         printf 'unexpected interactive answer: %s\n' "$answer" >&2
         exit 1
     }
@@ -192,31 +192,31 @@ with zipfile.ZipFile(sys.argv[1], "a") as archive:
     archive.writestr("../unexpected", "unsafe")
 PY
 write_bundle_release
-expect_failure "Não foi possível extrair o bundle." --dry-run --yes
+expect_failure "Unable to extract bundle." --dry-run --yes
 cp "$TEST_DIR/assets/valid-bundle.zip" "$TEST_DIR/assets/$BUNDLE_NAME"
 
 write_bundle_release "$(printf '0%.0s' {1..64})"
-expect_failure "Digest inválido para $BUNDLE_NAME." --dry-run --yes
+expect_failure "Invalid digest for $BUNDLE_NAME." --dry-run --yes
 
 printf '%s\n' \
     "{\"tag_name\":\"v0.3.5\",\"draft\":false,\"prerelease\":false,\"assets\":[{\"name\":\"$BUNDLE_NAME\",\"browser_download_url\":\"https://example.test/$BUNDLE_NAME\"}]}" \
     > "$TEST_DIR/assets/release.json"
-expect_failure "não possui um digest SHA-256 válido" --dry-run --yes
+expect_failure "does not have a valid SHA-256 digest" --dry-run --yes
 
 printf '%s\n' \
     '{"tag_name":"v0.3.5","draft":false,"prerelease":false,"assets":[]}' \
     > "$TEST_DIR/assets/release.json"
-expect_failure "não contém o bundle nem os assets legados necessários" --dry-run --yes
+expect_failure "does not contain the bundle or required legacy assets" --dry-run --yes
 
 write_legacy_release
 run_bootstrap --release v0.3.4 --dry-run --yes >/dev/null
 
 legacy_hash="$(sha256sum "$TEST_DIR/assets/installer.pyz" | awk '{print $1}')"
 printf '%s  another-file.pyz\n' "$legacy_hash" > "$TEST_DIR/assets/SHA256SUMS"
-expect_failure "SHA256SUMS não contém o checksum de installer.pyz." \
+expect_failure "SHA256SUMS does not contain the checksum of installer.pyz." \
     --release v0.3.4 --dry-run --yes
 printf '%s *installer.pyz\n' "$(printf '0%.0s' {1..64})" > "$TEST_DIR/assets/SHA256SUMS"
-expect_failure "Checksum inválido para installer.pyz." \
+expect_failure "Invalid checksum for installer.pyz." \
     --release v0.3.4 --dry-run --yes
 
 write_bundle_release
@@ -235,7 +235,7 @@ if noninteractive_output="$(
     printf 'Expected piped bootstrap without a terminal to fail.\n' >&2
     exit 1
 fi
-grep -Fq "A instalação interativa precisa de um terminal." \
+grep -Fq "Interactive installation requires a terminal." \
     <<<"$noninteractive_output"
 
 if [ -n "${RDPSM_RELEASE_ASSETS_DIR:-}" ]; then

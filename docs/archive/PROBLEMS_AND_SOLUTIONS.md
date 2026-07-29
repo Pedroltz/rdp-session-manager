@@ -1,23 +1,23 @@
-# Problemas Conhecidos e Soluções
+# Known Issues and Solutions
 
-## Problemas Atuais e Futuros Antecipados
+## Current and Anticipated Future Problems
 
-### 1. 🔴 Conflitos de Porta RDP
+### 1. 🔴 RDP Port Conflicts
 
-**Problema**: Múltiplos usuários podem tentar usar a mesma porta RDP.
+**Issue**: Multiple users may attempt to use the same RDP port.
 
-**Impacto**: Alto - Impede criação de novos usuários
+**Impact**: High - Prevents the creation of new users
 
-**Causas Possíveis**:
-- Sistema não verifica portas em uso adequadamente
-- Configuração de porta manual conflitante
-- Processos xrdp antigos ainda ocupando portas
+**Possible Causes**:
+- System does not check ports in use properly
+- Conflicting manual port configuration
+- Old xrdp processes still occupying ports
 
-**Soluções**:
+**Solutions**:
 
 **Curto Prazo**:
 ```python
-# Implementar verificação mais robusta em rdp_config.py
+# Implement more robust checking in rdp_config.py
 def is_port_available(self, port: int) -> bool:
     import socket
     try:
@@ -29,85 +29,85 @@ def is_port_available(self, port: int) -> bool:
 ```
 
 **Longo Prazo**:
-- Implementar pool de portas gerenciado
-- Adicionar range configurável de portas RDP
-- Criar sistema de alocação dinâmica
+- Implement managed port pool
+- Add configurable range of RDP ports
+- Create dynamic allocation system
 
 ---
 
-### 2. 🟡 Permissões de Diretórios Home Customizados
+### 2. 🟡 Custom Home Directory Permissions
 
-**Problema**: Criação de usuários RDP em `/opt/rdp-users` pode falhar por permissões.
+**Issue**: Creating RDP users on `/opt/rdp-users` may fail due to permissions.
 
-**Impacto**: Médio - Usuários não podem ser criados
+**Impact**: Medium - Users cannot be created
 
-**Causas Possíveis**:
-- Diretório `/opt/rdp-users` não existe
-- Permissões incorretas no diretório pai
+**Possible Causes**:
+- Directory `/opt/rdp-users` does not exist
+- Incorrect permissions on the parent directory
 - SELinux/AppArmor bloqueando acesso
 
-**Soluções**:
+**Solutions**:
 
 **Imediato**:
 ```bash
-# Script de configuração inicial
+# Initial configuration script
 sudo mkdir -p /opt/rdp-users
 sudo chmod 755 /opt/rdp-users
 sudo chown root:rdp-users /opt/rdp-users
 ```
 
 **Futuro**:
-- Verificar e criar diretório automaticamente no primeiro uso
-- Adicionar verificação de permissões no startup
-- Suportar diretórios alternativos configuráveis
+- Automatically scan and create directory on first use
+- Add permissions check on startup
+- Support configurable alternative directories
 
 ---
 
-### 3. 🟡 Compatibilidade entre Desktop Environments
+### 3. 🟡 Compatibility between Desktop Environments
 
-**Problema**: Alguns DEs não funcionam bem via RDP.
+**Problem**: Some DEs do not work well via RDP.
 
-**Impacto**: Médio - Experiência ruim do usuário
+**Impact**: Medium - Poor user experience
 
-**DEs Problemáticos**:
-- **GNOME**: Wayland não funciona via RDP (requer X11)
-- **KDE Plasma**: Pode ter problemas de performance
+**Problematic DEs**:
+- **GNOME**: Wayland does not work via RDP (requires X11)
+- **KDE Plasma**: May have performance issues
 - **Cinnamon**: Efeitos visuais causam lag
 
-**Soluções**:
+**Solutions**:
 
-**Para GNOME**:
+**For GNOME**:
 ```bash
-# Forçar X11 ao invés de Wayland
+# Force X11 instead of Wayland
 echo "export GDM_BACKEND=x11" >> /opt/rdp-users/user/.xsessionrc
 ```
 
-**Para KDE**:
+**For KDE**:
 ```bash
-# Desabilitar compositing
+# Disable compositing
 echo "export KWIN_COMPOSE=N" >> ~/.config/startupconfig
 ```
 
-**Recomendação**: Usar XFCE ou MATE para melhor experiência RDP.
+**Recommendation**: Use XFCE or MATE for better RDP experience.
 
 ---
 
-### 4. 🔴 Gerenciamento de Memória com Múltiplas Sessões
+### 4. 🔴 Memory Management with Multiple Sessions
 
-**Problema**: Servidor fica lento com muitas sessões RDP ativas.
+**Problem**: Server becomes slow with many active RDP sessions.
 
 **Impacto**: Alto - Performance degradada
 
 **Causas**:
-- Cada DE consome 500MB-2GB de RAM
-- Processos não são terminados corretamente ao desconectar
-- Sem limite de recursos por sessão
+- Each DE consumes 500MB-2GB of RAM
+- Processes are not terminated correctly when disconnecting
+- No resource limit per session
 
-**Soluções**:
+**Solutions**:
 
 **Imediato**:
 ```bash
-# Limitar recursos com systemd
+# Limit resources with systemd
 cat > /etc/systemd/system/user-rdp@.service << EOF
 [Service]
 User=%i
@@ -118,48 +118,48 @@ EOF
 ```
 
 **Futuro**:
-- Implementar cgroups para cada sessão
-- Auto-kill de sessões inativas
-- Dashboard de uso de recursos
-- Alertas de limite de recursos
+- Implement cgroups for each session
+- Auto-kill of inactive sessions
+- Resource usage dashboard
+- Resource limit alerts
 
 ---
 
-### 5. 🟡 Segurança: Isolamento de Usuários RDP
+### 5. 🟡 Security: RDP User Isolation
 
-**Problema**: Usuários RDP podem acessar recursos do sistema.
+**Issue**: RDP users can access system resources.
 
-**Impacto**: Médio - Risco de segurança
+**Impact**: Medium - Security risk
 
 **Riscos**:
-- Acesso a arquivos do sistema
-- Instalação de software não autorizado
-- Consumo excessivo de recursos
+- Access to system files
+- Installation of unauthorized software
+- Excessive consumption of resources
 
-**Soluções**:
+**Solutions**:
 
 **Imediato**:
 ```bash
-# Criar profile AppArmor restritivo
+# Create restrictive AppArmor profile
 sudo aa-genprof /bin/bash
-# Configurar em modo "complain" inicialmente
+# Configure in "complain" mode initially
 ```
 
 **Longo Prazo**:
-- Implementar quotas de disco por usuário
-- Restringir comandos sudo
-- Sandbox com namespaces/containers
-- Auditoria de ações em tempo real
+- Implement disk quotas per user
+- Restrict sudo commands
+- Sandbox with namespaces/containers
+- Audit of actions in real time
 
 ---
 
 ### 6. 🟠 Performance de Rede
 
-**Problema**: Conexões RDP lentas em redes com alta latência.
+**Issue**: Slow RDP connections on high latency networks.
 
-**Impacto**: Médio - Experiência ruim do usuário
+**Impact**: Medium - Poor user experience
 
-**Otimizações Necessárias**:
+**Necessary Optimizations**:
 
 ```ini
 # /etc/xrdp/xrdp.ini
@@ -167,7 +167,7 @@ sudo aa-genprof /bin/bash
 tcp_nodelay=true
 tcp_keepalive=true
 
-# Compressão
+# Compression
 bitmap_compression=true
 bulk_compression=true
 
@@ -176,42 +176,42 @@ max_bpp=24
 ```
 
 **Futuro**:
-- Implementar perfis de conexão (LAN, WAN, Móvel)
-- Auto-ajuste de qualidade baseado em latência
-- Suporte para RemoteFX
+- Implement connection profiles (LAN, WAN, Mobile)
+- Latency-based quality Auto-ajuste
+- Support for RemoteFX
 
 ---
 
-### 7. 🔴 Falhas na Instalação de Desktop Environments
+### 7. 🔴 Desktop Environments Installation Failures
 
-**Problema**: Instalação de DE pode falhar e deixar sistema inconsistente.
+**Problem**: DE installation may fail and leave the system inconsistent.
 
-**Impacto**: Alto - Sistema instável
+**Impact**: High - Unstable system
 
 **Causas**:
-- Dependências não resolvidas
-- Espaço em disco insuficiente
-- Timeout durante download
-- Conflitos de pacotes
+- Unresolved dependencies
+- Insufficient disk space
+- Timeout during download
+- Package conflicts
 
-**Soluções**:
+**Solutions**:
 
-**Prevenção**:
+**Prevention**:
 ```python
 def install_de_safe(self, de_id):
-    # 1. Verificar espaço em disco
+    # 1. Check disk space
     if not self.check_disk_space(de_id):
         return False, "Insufficient disk space"
 
-    # 2. Simular instalação
+    # 2. Simulate installation
     result = subprocess.run(['apt-get', 'install', '-s'] + packages)
     if result.returncode != 0:
         return False, "Dependency conflicts"
 
-    # 3. Criar ponto de restauração
+    # 3. Create restore point
     self.create_snapshot()
 
-    # 4. Instalar com retry
+    # 4. Install with retry
     for attempt in range(3):
         if self.install_de(de_id):
             return True, "Success"
@@ -226,15 +226,15 @@ def install_de_safe(self, de_id):
 
 ### 8. 🟠 Logs e Auditoria
 
-**Problema**: Logs crescem indefinidamente.
+**Problem**: Logs grow indefinitely.
 
-**Impacto**: Baixo - Uso excessivo de disco
+**Impact**: Low - Excessive disk usage
 
-**Soluções**:
+**Solutions**:
 
-**Rotação Automática**:
+**Auto Rotate**:
 ```python
-# Em logger.py - já implementado
+# In logger.py - already implemented
 RotatingFileHandler(
     log_file,
     maxBytes=10*1024*1024,  # 10MB
@@ -242,25 +242,25 @@ RotatingFileHandler(
 )
 ```
 
-**Limpeza Periódica**:
+**Periodic Cleaning**:
 ```python
-# Adicionar ao cron
+# Add to cron
 @daily
 find /var/log/rdp-session-manager/ -name "*.log.*" -mtime +30 -delete
 ```
 
 ---
 
-### 9. 🔴 Backup e Recuperação
+### 9. 🔴 Backup and Recovery
 
-**Problema**: Não há backup automático de configurações.
+**Problem**: There is no automatic backup of settings.
 
-**Impacto**: Alto - Perda de dados em caso de falha
+**Impact**: High - Data loss in case of failure
 
-**Implementação Necessária**:
+**Required Implementation**:
 
 ```python
-# Backup automático diário
+# Daily automatic backup
 class AutoBackup:
     def __init__(self):
         self.backup_manager = BackupManager()
@@ -277,19 +277,19 @@ class AutoBackup:
 
 ### 10. 🟡 Escalabilidade
 
-**Problema**: Sistema não escala bem para muitos usuários.
+**Problem**: System does not scale well for many users.
 
-**Impacto**: Médio - Limitação de crescimento
+**Impact**: Medium - Growth limitation
 
-**Limitações Atuais**:
-- Sem clustering
-- Sem balanceamento de carga
-- Gerenciamento manual de portas
+**Current Limitations**:
+- No clustering
+- No load balancing
+- Manual port management
 - UI sincr
 
-ona (trava com muitos usuários)
+ona (crashes with many users)
 
-**Soluções Futuras**:
+**Future Solutions**:
 
 1. **Async UI**:
 ```python
@@ -299,69 +299,69 @@ async def load_users(self):
 ```
 
 2. **Clustering**:
-- Implementar backend distribuído
-- Balanceamento de carga entre servidores
-- Sincronização de configurações
+- Implement distributed backend
+- Load balancing between servers
+- Settings synchronization
 
 3. **Database**:
-- Migrar de arquivos para PostgreSQL/SQLite
-- Cache com Redis
-- API REST para múltiplos frontends
+- Migrate files to PostgreSQL/SQLite
+- Cache with Redis
+- REST API for multiple frontends
 
 ---
 
 ## Matriz de Prioridades
 
-| Problema | Impacto | Esforço | Prioridade |
+| Problem | Impact | Effort | Priority |
 |----------|---------|---------|------------|
-| Conflitos de Porta | Alto | Baixo | **P0 - Crítico** |
-| Múltiplas Sessões (RAM) | Alto | Médio | **P0 - Crítico** |
-| Backup Automático | Alto | Baixo | **P1 - Alto** |
-| Isolamento Segurança | Médio | Alto | **P1 - Alto** |
-| Instalação DE | Alto | Médio | **P1 - Alto** |
-| Permissões Home Dir | Médio | Baixo | **P2 - Médio** |
-| Compat. DEs | Médio | Médio | **P2 - Médio** |
-| Performance Rede | Médio | Alto | **P2 - Médio** |
+| Port Conflicts | High | Bass | **P0 - Critical** |
+| Multiple Sessions (RAM) | High | Medium | **P0 - Critical** |
+| Automatic Backup | High | Bass | **P1 - High** |
+| Isolation Security | Medium | High | **P1 - High** |
+| DE Installation | High | Medium | **P1 - High** |
+| Permissions Home Dir | Medium | Bass | **P2 - Medium** |
+| Compat. DEs | Medium | Medium | **P2 - Medium** |
+| Performance Network | Medium | High | **P2 - Medium** |
 | Logs Crescentes | Baixo | Baixo | **P3 - Baixo** |
-| Escalabilidade | Médio | Alto | **P3 - Longo Prazo** |
+| Scalability | Medium | High | **P3 - Long Term** |
 
-## Checklist de Melhorias
+## Improvement Checklist
 
 ### Curto Prazo (1-2 semanas)
-- [ ] Implementar pool de portas RDP
-- [ ] Adicionar verificação de espaço em disco
-- [ ] Criar script de setup inicial
-- [ ] Implementar backup automático
-- [ ] Adicionar limites de recursos com cgroups
+- [ ] Implement RDP port pool
+- [ ] Add disk space check
+- [ ] Create initial setup script
+- [ ] Implement automatic backup
+- [ ] Add resource limits with cgroups
 
-### Médio Prazo (1-2 meses)
-- [ ] Sistema de quotas de disco
+### Medium Term (1-2 months)
+- [ ] Disk quota system
 - [ ] Profile AppArmor restritivo
-- [ ] Otimizações de performance RDP
-- [ ] Retry logic para instalação de DEs
-- [ ] Async UI para melhor responsividade
+- [ ] RDP performance optimizations
+- [ ] Retry logic for installing DEs
+- [ ] Async UI for better responsiveness
 
 ### Longo Prazo (3-6 meses)
-- [ ] Backend com database
+- [ ] Backend with database
 - [ ] API REST
 - [ ] Interface Web
 - [ ] Suporte a clustering
-- [ ] Integração com LDAP/AD
+- [ ] Integration with LDAP/AD
 
-## Como Reportar Problemas
+## How to Report Problems
 
-1. **Verifique** se o problema já está listado
+1. **Check** if the issue is already listed
 2. **Colete** logs relevantes:
    ```bash
    journalctl -u xrdp > xrdp.log
    cat ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log > app.log
    ```
-3. **Abra Issue** no GitHub com:
-   - Descrição do problema
-   - Passos para reproduzir
+3. **Open an issue** on GitHub with:
+   - Description of the problem
+   - Steps to reproduce
    - Logs anexados
-   - Versão do sistema e aplicação
+   - System and application version
 
-## Contribuindo com Soluções
+## Contributing to Solutions
 
-Veja [CONTRIBUTING.md](CONTRIBUTING.md) para guidelines de contribuição.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.

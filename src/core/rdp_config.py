@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Módulo de configuração RDP
+RDP configuration module
 """
 
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class RDPConfig:
-    """Gerenciador de configurações RDP (xrdp)"""
+    """RDP Settings Manager (xrdp)"""
 
     def __init__(self):
         pass
@@ -21,19 +21,19 @@ class RDPConfig:
     def create_user_session(self, username: str, uid: int, desktop_env: str,
                           rdp_port: int = 3389) -> bool:
         """
-        Cria configuração de sessão RDP para um usuário
+        Create RDP session configuration for a user
 
         Args:
-            username: Nome do usuário
-            uid: UID do usuário
-            desktop_env: Ambiente desktop (gnome, xfce, kde)
-            rdp_port: Porta RDP
+            username: Username
+            uid: user UID
+            desktop_env: Desktop environment (gnome, xfce, kde)
+            rdp_port: RDP port
 
         Returns:
-            True se sucesso, False se falha
+            True if successful, False if failed
         """
         logger.info("=" * 70)
-        logger.info("RDP_CONFIG: Método create_user_session() CHAMADO")
+        logger.info("RDP_CONFIG: Create_user_session() Method CALLED")
         logger.info(f"  - Username: {username}")
         logger.info(f"  - UID: {uid}")
         logger.info(f"  - Desktop ENV: {desktop_env}")
@@ -41,47 +41,47 @@ class RDPConfig:
         logger.info("=" * 70)
 
         try:
-            # Configurar xrdp
-            logger.info("RDP_CONFIG: Gerando configuração de sessão xrdp...")
+            # Configure xrdp
+            logger.info("RDP_CONFIG: Generating xrdp session configuration...")
             session_config = self._generate_xrdp_session_config(
                 username, desktop_env, rdp_port
             )
-            logger.info(f"RDP_CONFIG: Comando de start: {session_config['start_command']}")
+            logger.info(f"RDP_CONFIG: Start command: {session_config['start_command']}")
 
             # Determinar home directory
             home_dir = f"/opt/rdp-users/{username}"
             logger.info(f"RDP_CONFIG: Home directory: {home_dir}")
 
-            # Criar script .xsession
+            # Create .xsession script
             de_command = session_config['start_command']
-            logger.info(f"RDP_CONFIG: Criando arquivo .xsession com comando: {de_command}")
+            logger.info(f"RDP_CONFIG: Creating .xsession file with command: {de_command}")
 
             success = self._create_session_startup_script(username, de_command, home_dir)
 
             if not success:
-                logger.error(f"RDP_CONFIG: ERRO - Falha ao criar script .xsession para {username}")
+                logger.error(f"RDP_CONFIG: ERROR - Failed to create .xsession script for {username}")
                 return False
 
             logger.info("=" * 70)
-            logger.info(f"RDP_CONFIG: SUCESSO - Configuração RDP criada para {username}")
-            logger.info(f"  - Porta: {rdp_port}")
-            logger.info(f"  - Arquivo .xsession criado em: {home_dir}/.xsession")
+            logger.info(f"RDP_CONFIG: SUCCESS - RDP configuration created for {username}")
+            logger.info(f" - Port: {rdp_port}")
+            logger.info(f" - .xsession file created at: {home_dir}/.xsession")
             logger.info("=" * 70)
             return True
 
         except Exception as e:
             logger.error("=" * 70)
-            logger.error(f"RDP_CONFIG: ERRO ao criar configuração RDP para {username}")
-            logger.error(f"  - Exceção: {type(e).__name__}")
-            logger.error(f"  - Mensagem: {e}")
+            logger.error(f"RDP_CONFIG: ERROR creating RDP configuration for {username}")
+            logger.error(f" - Exception: {type(e).__name__}")
+            logger.error(f" - Message: {e}")
             logger.error("=" * 70)
             return False
 
     def _generate_xrdp_session_config(self, username: str, desktop_env: str,
                                      rdp_port: int) -> Dict:
-        """Gera configuração de sessão xrdp"""
+        """Generate xrdp session configuration"""
 
-        # Determinar comando de inicialização do DE
+        # Determine DE startup command
         de_commands = {
             'gnome': 'gnome-session',
             'xfce': 'startxfce4',
@@ -109,29 +109,28 @@ class RDPConfig:
 
     def _create_session_startup_script(self, username: str, de_command: str,
                                       home_dir: str) -> bool:
-        """Verifica se script de inicialização da sessão existe (.xsession)"""
-        logger.info(f"RDP_CONFIG: Verificando script .xsession para {username}...")
+        """Checks if session initialization script exists (.xsession)"""
+        logger.info(f"RDP_CONFIG: Checking .xsession script for {username}...")
         logger.info(f"RDP_CONFIG:   - Home: {home_dir}")
-        logger.info(f"RDP_CONFIG:   - Comando DE: {de_command}")
+        logger.info(f"RDP_CONFIG: - DE command: {de_command}")
 
         try:
-            # O arquivo .xsession já deve ter sido criado pelo user_manager durante create_user
-            # Apenas verificar se existe
+            # The .xsession file must have already been created by user_manager during create_user
+            # Just check if it exists
             xsession_path = Path(home_dir) / ".xsession"
 
             if xsession_path.exists():
-                logger.info(f"RDP_CONFIG: OK Script .xsession já existe")
-                logger.info(f"RDP_CONFIG:   - Arquivo: {xsession_path}")
+                logger.info(f"RDP_CONFIG: OK Script .xsession already exists")
+                logger.info(f"RDP_CONFIG: - File: {xsession_path}")
                 return True
             else:
-                logger.warning(f"RDP_CONFIG: AVISO Script .xsession não encontrado")
-                logger.warning(f"RDP_CONFIG:   - Isso pode indicar um problema durante a criação do usuário")
-                logger.warning(f"RDP_CONFIG:   - O arquivo deveria ter sido criado automaticamente")
+                logger.warning(f"RDP_CONFIG: WARNING .xsession script not found")
+                logger.warning(f"RDP_CONFIG: - This may indicate a problem during user creation")
+                logger.warning(f"RDP_CONFIG: - The file should have been created automatically")
                 return False
 
         except Exception as e:
-            logger.error(f"RDP_CONFIG: EXCEÇÃO ao verificar script de inicialização")
-            logger.error(f"RDP_CONFIG:   - Tipo: {type(e).__name__}")
-            logger.error(f"RDP_CONFIG:   - Mensagem: {e}")
+            logger.error(f"RDP_CONFIG: EXCEPTION checking startup script")
+            logger.error(f"RDP_CONFIG:   - Type: {type(e).__name__}")
+            logger.error(f"RDP_CONFIG: - Message: {e}")
             return False
-

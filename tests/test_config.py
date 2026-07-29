@@ -21,14 +21,14 @@ class TestAppConfig(unittest.TestCase):
 
     def setUp(self):
         """Setup test fixtures"""
-        # Criar diretório temporário para testes
+        # Create temporary directory for testing
         self.test_dir = Path(tempfile.mkdtemp())
         self.config_dir = self.test_dir / '.config' / 'rdp-session-manager'
         self.config_file = self.config_dir / 'config.ini'
 
     def tearDown(self):
         """Cleanup test fixtures"""
-        # Remover diretório temporário
+        # Remove temporary directory
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
 
@@ -50,7 +50,7 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Verificar porta padrão
+        # Check default port
         default_port = config.get_default_rdp_port()
         self.assertEqual(default_port, 3389)
 
@@ -61,10 +61,10 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Arquivo deve existir
+        # File must exist
         self.assertTrue(config.config_file.exists())
 
-        # Verificar conteúdo
+        # Check content
         content = config.config_file.read_text()
         self.assertIn('[rdp]', content)
         self.assertIn('default_port', content)
@@ -89,11 +89,11 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Definir nova porta
+        # Set new port
         result = config.set_default_rdp_port(8080)
         self.assertTrue(result)
 
-        # Verificar se foi salvo
+        # Check if it was saved
         port = config.get_default_rdp_port()
         self.assertEqual(port, 8080)
 
@@ -104,15 +104,15 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Porta inválida (muito baixa)
+        # Invalid port (too low)
         result = config.set_default_rdp_port(0)
         self.assertFalse(result)
 
-        # Porta inválida (muito alta)
+        # Invalid port (too high)
         result = config.set_default_rdp_port(70000)
         self.assertFalse(result)
 
-        # Porta inválida (negativa)
+        # Invalid port (negative)
         result = config.set_default_rdp_port(-1)
         self.assertFalse(result)
 
@@ -123,11 +123,11 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Definir porta inválida manualmente no arquivo
+        # Set invalid port manually in file
         config.config.set('rdp', 'default_port', '999999')
         config._save()
 
-        # Deve retornar 3389 como fallback
+        # Should return 3389 as fallback
         port = config.get_default_rdp_port()
         self.assertEqual(port, 3389)
 
@@ -138,11 +138,11 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Obter valor padrão
+        # Get default value
         value = config.get('rdp', 'default_port')
         self.assertEqual(value, '3389')
 
-        # Obter valor inexistente com fallback
+        # Get non-existent value with fallback
         value = config.get('nonexistent', 'key', fallback='default_value')
         self.assertEqual(value, 'default_value')
 
@@ -153,11 +153,11 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Definir novo valor
+        # Set new value
         result = config.set('custom', 'setting', 'test_value')
         self.assertTrue(result)
 
-        # Verificar se foi salvo
+        # Check if it was saved
         value = config.get('custom', 'setting')
         self.assertEqual(value, 'test_value')
 
@@ -168,14 +168,14 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Definir valor em seção inexistente
+        # Set value in non-existent section
         result = config.set('newsection', 'key', 'value')
         self.assertTrue(result)
 
-        # Verificar que seção foi criada
+        # Check which section was created
         self.assertTrue(config.config.has_section('newsection'))
 
-        # Verificar valor
+        # Check value
         value = config.get('newsection', 'key')
         self.assertEqual(value, 'value')
 
@@ -184,11 +184,11 @@ class TestAppConfig(unittest.TestCase):
         """Test that config persists across instances"""
         mock_home.return_value = self.test_dir
 
-        # Primeira instância
+        # First instance
         config1 = AppConfig()
         config1.set_default_rdp_port(5000)
 
-        # Segunda instância (deve carregar do arquivo)
+        # Second instance (must load from file)
         config2 = AppConfig()
         port = config2.get_default_rdp_port()
 
@@ -199,11 +199,11 @@ class TestAppConfig(unittest.TestCase):
         """Test loading existing config file"""
         mock_home.return_value = self.test_dir
 
-        # Criar primeira instância
+        # Create first instance
         config1 = AppConfig()
         config1.set('test', 'key', 'value')
 
-        # Criar segunda instância (deve carregar arquivo existente)
+        # Create second instance (must load existing file)
         config2 = AppConfig()
         value = config2.get('test', 'key')
 
@@ -214,18 +214,18 @@ class TestAppConfig(unittest.TestCase):
         """Test that missing default sections/keys are added"""
         mock_home.return_value = self.test_dir
 
-        # Criar config sem alguns defaults
+        # Create config without some defaults
         config_dir = self.test_dir / '.config' / 'rdp-session-manager'
         config_dir.mkdir(parents=True, exist_ok=True)
         config_file = config_dir / 'config.ini'
 
-        # Criar arquivo incompleto
+        # Create incomplete file
         config_file.write_text('[other]\nkey=value\n')
 
-        # Carregar config (deve adicionar defaults)
+        # Load config (must add defaults)
         config = AppConfig()
 
-        # Verificar que defaults foram adicionados
+        # Check which defaults have been added
         self.assertTrue(config.config.has_section('rdp'))
         self.assertTrue(config.config.has_option('rdp', 'default_port'))
 
@@ -238,13 +238,13 @@ class TestAppConfig(unittest.TestCase):
         config_dir.mkdir(parents=True, exist_ok=True)
         config_file = config_dir / 'config.ini'
 
-        # Criar arquivo inválido
+        # Create invalid file
         config_file.write_text('invalid config content [[[')
 
-        # Carregar config (deve recriar com defaults)
+        # Load config (must recreate with defaults)
         config = AppConfig()
 
-        # Deve ter valores padrão
+        # Must have default values
         port = config.get_default_rdp_port()
         self.assertEqual(port, 3389)
 
@@ -255,12 +255,12 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Adicionar valores em múltiplas seções
+        # Add values ​​in multiple sections
         config.set('section1', 'key1', 'value1')
         config.set('section2', 'key2', 'value2')
         config.set('section3', 'key3', 'value3')
 
-        # Verificar todos os valores
+        # Check all values
         self.assertEqual(config.get('section1', 'key1'), 'value1')
         self.assertEqual(config.get('section2', 'key2'), 'value2')
         self.assertEqual(config.get('section3', 'key3'), 'value3')
@@ -272,7 +272,7 @@ class TestAppConfig(unittest.TestCase):
 
         config = AppConfig()
 
-        # Definir valor inicial
+        # Set initial value
         config.set('test', 'key', 'value1')
         self.assertEqual(config.get('test', 'key'), 'value1')
 

@@ -137,7 +137,7 @@ class InstallerHelpersTest(unittest.TestCase):
 
     def test_parses_native_fraction_progress(self):
         self.assertEqual(
-            installer.parse_progress_fraction("( 3/12) instalando pacote"),
+            installer.parse_progress_fraction("( 3/12) installing package"),
             (3, 12),
         )
 
@@ -147,12 +147,12 @@ class InstallerHelpersTest(unittest.TestCase):
             (47, 100),
         )
         self.assertEqual(
-            installer.parse_progress_fraction("pacote 8 MiB 83% concluído"),
+            installer.parse_progress_fraction("8 MiB package 83% complete"),
             (83, 100),
         )
 
     def test_ignores_regular_command_output_as_progress(self):
-        self.assertIsNone(installer.parse_progress_fraction("baixando pacote normalmente"))
+        self.assertIsNone(installer.parse_progress_fraction("downloading package normally"))
 
     def test_enables_commented_arch_multilib_block(self):
         original = (
@@ -289,7 +289,7 @@ class InstallerHelpersTest(unittest.TestCase):
                 instance.show_plan(installer.APP_ARCH)
             rows, packages = show_plan.call_args.args
             self.assertIn(
-                ("Helper AUR", "Instalar yay-bin automaticamente pelo AUR"),
+                ("AUR helper", "Install yay-bin automatically from the AUR"),
                 rows,
             )
             self.assertIn("yay-bin (AUR)", packages)

@@ -104,7 +104,7 @@ class TestValidator(unittest.TestCase):
 
     def test_sanitize_username_length_limit(self):
         """Test username sanitization with length limit"""
-        # 40 caracteres devem ser truncados para 32
+        # 40 characters must be truncated to 32
         long_username = 'a' * 40
         result = Validator.sanitize_username(long_username)
         self.assertEqual(len(result), 32)
@@ -174,7 +174,7 @@ class TestValidator(unittest.TestCase):
 
         for input_path, expected in test_cases:
             result = Validator.sanitize_path(input_path)
-            # Verificar que caracteres perigosos foram removidos
+            # Check that dangerous characters have been removed
             self.assertNotIn('..', result)
             self.assertNotIn('$', result)
             self.assertNotIn('`', result)
@@ -187,19 +187,19 @@ class TestValidator(unittest.TestCase):
         for name in reserved_names:
             valid, error = Validator.validate_username(name)
             self.assertFalse(valid, f"Reserved name '{name}' should be invalid")
-            self.assertIn('reservado', error.lower())
+            self.assertIn('reserved', error.lower())
 
     def test_validate_password_complexity(self):
         """Test password complexity requirements"""
-        # Apenas minúsculas - inválido
+        # Lowercase only - invalid
         valid, error = Validator.validate_password('password', 'password')
         self.assertFalse(valid)
 
-        # Apenas maiúsculas - inválido
+        # Uppercase only - invalid
         valid, error = Validator.validate_password('PASSWORD', 'PASSWORD')
         self.assertFalse(valid)
 
-        # Sem números - inválido
+        # No numbers - invalid
         valid, error = Validator.validate_password('Password', 'Password')
         self.assertFalse(valid)
 
@@ -209,35 +209,35 @@ class TestValidator(unittest.TestCase):
 
     def test_validate_password_without_confirmation(self):
         """Test password validation without confirmation"""
-        # Senha válida sem confirmação
+        # Valid password without confirmation
         valid, error = Validator.validate_password('ValidPass123')
         self.assertTrue(valid, f"Password should be valid: {error}")
 
     def test_validate_port_string_conversion(self):
         """Test port validation with string input"""
-        # String válida deve ser convertida
+        # Valid string must be converted
         valid, error = Validator.validate_port('3389')
         self.assertTrue(valid)
 
-        # String inválida
+        # Invalid string
         valid, error = Validator.validate_port('not_a_number')
         self.assertFalse(valid)
 
     def test_validate_port_boundary_values(self):
         """Test port validation with boundary values"""
-        # Limite inferior válido
+        # Valid lower limit
         valid, error = Validator.validate_port(1024)
         self.assertTrue(valid)
 
-        # Limite superior válido
+        # Valid upper limit
         valid, error = Validator.validate_port(65535)
         self.assertTrue(valid)
 
-        # Abaixo do limite
+        # Below limit
         valid, error = Validator.validate_port(1023)
         self.assertFalse(valid)
 
-        # Acima do limite
+        # Above limit
         valid, error = Validator.validate_port(65536)
         self.assertFalse(valid)
 

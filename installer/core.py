@@ -42,8 +42,8 @@ try:
     from rich.text import Text
 except ImportError as exc:
     print(
-        "O instalador visual precisa da biblioteca Rich.\n"
-        "Execute pelo install.sh da release ou instale localmente com:\n"
+        "The visual installer needs the Rich library.\n"
+        "Run from the release's install.sh or install locally with:\n"
         "  python3 -m pip install -r installer/requirements.txt",
         file=sys.stderr,
     )
@@ -99,11 +99,11 @@ class UI:
         self.overall: Optional[Progress] = None
         self.overall_task: Optional[int] = None
         self._closed = False
-        mode = "Pré-visualização: nenhuma alteração será realizada." if dry_run else "Vamos preparar este computador para gerenciar sessões RDP."
+        mode = "Dry run: no changes will be made." if dry_run else "Let's prepare this computer to manage RDP sessions."
         title = Text("RDP Session Manager", style="bold bright_cyan")
         body = Text.assemble(
-            ("Assistente de instalação e configuração\n", "bold white"),
-            ("Instale a aplicação, configure o servidor xrdp e escolha os recursos opcionais.\n", "white"),
+            ("Installation and configuration wizard\n", "bold white"),
+            ("Install the application, configure the xrdp server and choose optional features.\n", "white"),
             (mode, "dim"),
         )
         self.console.print(Panel(body, title=title, border_style="bright_cyan", padding=(1, 3)))
@@ -130,7 +130,7 @@ class UI:
             self.overall.start()
             self.overall_task = self.overall.add_task(title, total=total, completed=0)
         assert self.overall_task is not None
-        self.overall.update(self.overall_task, description=f"Etapa {number}/{total} · {title}", completed=number - 1)
+        self.overall.update(self.overall_task, description=f"Step {number}/{total} · {title}", completed=number - 1)
 
     def command_line(self, line: str) -> None:
         if self.verbose:
@@ -178,16 +178,16 @@ class UI:
             completed, total = fraction
             label = re.sub(r"^\s*\(\s*\d+\s*/\s*\d+\s*\)\s*", "", message).strip()
             label = re.sub(r"(?i)^progress:\s*\[\s*\d+%\s*\]\s*", "", label).strip()
-            label = label if label else "Processando"
+            label = label if label else "Processing"
             compact = label if len(label) <= 72 else f"…{label[-71:]}"
             status.update_progress(f"[bold cyan]{compact}[/]", completed, total)
         if self.verbose:
             self.console.print(Text(f"  {message}"))
-        elif any(token in lowered for token in ("erro", "error", "failed", "falha", "warning", "aviso")):
+        elif any(token in lowered for token in ("error", "failed", "failure", "warning")):
             self.console.print(Text(f"  {message}", style="yellow"))
         elif not fraction:
             compact = message if len(message) <= 100 else f"…{message[-99:]}"
-            status.update(f"[bold cyan]Processando[/] [dim]{compact}[/]")
+            status.update(f"[bold cyan]Processing[/] [dim]{compact}[/]")
 
     def show_plan(self, rows: Sequence[tuple[str, str]], packages: Sequence[str]) -> None:
         table = Table(show_header=False, box=None, padding=(0, 2))
@@ -196,35 +196,35 @@ class UI:
         for label, value in rows:
             table.add_row(label, value)
         package_text = Text(", ".join(packages), style="dim")
-        self.console.print(Panel(table, title="[bold]Plano de instalação[/]", border_style="blue"))
-        self.console.print(Panel(package_text, title=f"[bold]Pacotes ({len(packages)})[/]", border_style="dim"))
+        self.console.print(Panel(table, title="[bold]Installation Plan[/]", border_style="blue"))
+        self.console.print(Panel(package_text, title=f"[bold]Packages ({len(packages)})[/]", border_style="dim"))
 
     def confirm(self, question: str) -> bool:
         with self.terminal_passthrough():
-            return Prompt.ask(question, choices=["s", "n"], default="n", console=self.console) == "s"
+            return Prompt.ask(question, choices=["y", "n"], default="n", console=self.console) == "y"
 
     def component_prompt(self, question: str, description: str, *, default: bool) -> bool:
         self.console.print()
         self.console.print(f"[bold white]{question}[/]")
         self.console.print(Text(description, style="dim"))
         selected = Prompt.ask(
-            "Selecionar este componente?",
-            choices=["s", "n"],
-            default="s" if default else "n",
+            "Select this component?",
+            choices=["y", "n"],
+            default="y" if default else "n",
             console=self.console,
         )
-        return selected == "s"
+        return selected == "y"
 
     def success(self, message: str) -> None:
         self.console.print(f"[bold green]✓[/] {message}")
 
     def warning(self, message: str) -> None:
-        self.console.print(Panel(Text(message), title="[bold yellow]Atenção[/]", border_style="yellow"))
+        self.console.print(Panel(Text(message), title="[bold yellow]Attention[/]", border_style="yellow"))
 
     def error(self, message: str) -> None:
-        self.console.print(Panel(Text(message), title="[bold red]Falha na instalação[/]", border_style="red"))
+        self.console.print(Panel(Text(message), title="[bold red]Installation failed[/]", border_style="red"))
 
-    def complete(self, description: str = "Instalação concluída") -> None:
+    def complete(self, description: str = "Installation completed") -> None:
         if self.overall is not None and self.overall_task is not None:
             self.overall.update(self.overall_task, completed=5, description=description)
         self.close()
@@ -268,7 +268,7 @@ def parse_os_release(path: Path = Path("/etc/os-release")) -> Mapping[str, str]:
             key, value = raw.split("=", 1)
             values[key] = value.strip().strip('"').strip("'")
     except OSError as exc:
-        raise InstallerError(f"Não foi possível ler {path}: {exc}") from exc
+        raise InstallerError(f"Could not read {path}: {exc}") from exc
     return values
 
 
@@ -283,13 +283,13 @@ def detect_distro(path: Path = Path("/etc/os-release")) -> Distro:
         family = "debian"
     else:
         raise InstallerError(
-            f"Distribuição não suportada: {identifier or 'desconhecida'}. "
-            "Suportadas: Ubuntu/Debian e derivados, Arch e derivados."
+            f"Unsupported distribution: {identifier or 'unknown'}. "
+            "Supported systems: Ubuntu/Debian and derivatives, Arch and derivatives."
         )
     return Distro(
         family=family,
         identifier=identifier,
-        version=values.get("VERSION_ID", "desconhecida"),
+        version=values.get("VERSION_ID", "unknown"),
         name=values.get("PRETTY_NAME", identifier or "Linux"),
         id_like=id_like,
     )
@@ -367,8 +367,8 @@ class Runner:
                 self.log.write("interactive command output is attached directly to the terminal")
                 with self.ui.terminal_passthrough():
                     self.ui.info(
-                        "O instalador pode solicitar novamente a senha do sudo "
-                        "durante a compilação do AUR."
+                        "The installer may ask again for the sudo password "
+                        "during AUR compilation."
                     )
                     process = subprocess.run(
                         list(command),
@@ -380,11 +380,11 @@ class Runner:
                 result = subprocess.CompletedProcess(command, process.returncode, "", "")
                 if check and result.returncode != 0:
                     raise InstallerError(
-                        f"Comando falhou (código {result.returncode}): {rendered}. "
-                        f"Consulte o log: {self.log.path}"
+                        f"Command failed (code {result.returncode}): {rendered}. "
+                        f"See log: {self.log.path}"
                     )
                 return result
-            with self.ui.running(f"Executando {command[0]}") as status:
+            with self.ui.running(f"Running {command[0]}") as status:
                 process = subprocess.Popen(
                     list(command),
                     cwd=str(cwd) if cwd else None,
@@ -400,7 +400,7 @@ class Runner:
                 for line in process.stdout:
                     if time.monotonic() > deadline:
                         process.kill()
-                        raise InstallerError(f"Timeout após {timeout}s: {rendered}")
+                        raise InstallerError(f"Timeout after {timeout}s: {rendered}")
                     clean = line.rstrip()
                     if clean:
                         self.log.write(clean)
@@ -410,14 +410,14 @@ class Runner:
             result = subprocess.CompletedProcess(command, returncode, "\n".join(lines), "")
             if check and returncode != 0:
                 raise InstallerError(
-                    f"Comando falhou (código {returncode}): {rendered}. "
-                    f"Consulte o log: {self.log.path}"
+                    f"Command failed (code {returncode}): {rendered}. "
+                    f"See log: {self.log.path}"
                 )
             return result
         except subprocess.TimeoutExpired as exc:
-            raise InstallerError(f"Timeout executando: {rendered}. Log: {self.log.path}") from exc
+            raise InstallerError(f"Timeout executing: {rendered}. Log: {self.log.path}") from exc
         except OSError as exc:
-            raise InstallerError(f"Não foi possível executar {rendered}: {exc}") from exc
+            raise InstallerError(f"Unable to execute {rendered}: {exc}") from exc
 
 
 def sha256(path: Path) -> str:
@@ -480,7 +480,7 @@ def http_json(url: str) -> object:
         with urlopen(request, timeout=15) as response:
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise InstallerError(f"Falha ao consultar GitHub ({url}): {exc}") from exc
+        raise InstallerError(f"Failed to query GitHub ({url}): {exc}") from exc
 
 
 def validate_stable_release(release: object) -> Mapping[str, object]:
@@ -491,7 +491,7 @@ def validate_stable_release(release: object) -> Mapping[str, object]:
         or release.get("prerelease")
         or not release.get("tag_name")
     ):
-        raise InstallerError("Nenhuma release estável foi encontrada no GitHub.")
+        raise InstallerError("No stable releases were found on GitHub.")
     return release
 
 
@@ -500,7 +500,7 @@ def download(url: str, destination: Path, ui: UI, log: InstallLog, retries: int 
     last_error: Optional[Exception] = None
     for attempt in range(1, retries + 1):
         try:
-            ui.info(f"Baixando {destination.name} · tentativa {attempt}/{retries}")
+            ui.info(f"Downloading {destination.name} · try {attempt}/{retries}")
             with urlopen(request, timeout=30) as response, destination.open("wb") as output:
                 total = int(response.headers.get("Content-Length", "0"))
                 received = 0
@@ -530,19 +530,19 @@ def download(url: str, destination: Path, ui: UI, log: InstallLog, retries: int 
             log.write(f"download failed attempt {attempt}: {exc}")
             if attempt < retries:
                 time.sleep(attempt * 2)
-    raise InstallerError(f"Não foi possível baixar {url}: {last_error}. Log: {log.path}")
+    raise InstallerError(f"Unable to download {url}: {last_error}. Log: {log.path}")
 
 
 class Installer:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
         self.ui = UI(args.verbose, args.dry_run)
-        self.ui.info("Preparando o assistente…")
+        self.ui.info("Preparing the wizard…")
         self.askpass = self._configure_graphical_auth()
         self.log = InstallLog()
         self.runner = Runner(self.ui, self.log, args.dry_run)
         self.distro = detect_distro(Path(args.os_release)) if args.os_release else detect_distro()
-        self.ui.success(f"Sistema detectado: {self.distro.name}")
+        self.ui.success(f"System detected: {self.distro.name}")
         self.temp_dir = Path(tempfile.mkdtemp(prefix="rdpsm-install-"))
         self.release: Optional[Mapping[str, object]] = None
 
@@ -568,44 +568,44 @@ class Installer:
         if self.distro.family == "debian" and self.distro.identifier == "ubuntu":
             match = re.match(r"^(\d+)\.(\d+)", self.distro.version)
             if match and (int(match.group(1)), int(match.group(2))) < SUPPORTED_UBUNTU:
-                raise InstallerError("Ubuntu 22.04 ou superior é necessário.")
+                raise InstallerError("Ubuntu 22.04 or higher is required.")
         if self.distro.family == "debian" and self.distro.identifier == "debian":
             match = re.match(r"^(\d+)", self.distro.version)
             if match and int(match.group(1)) < SUPPORTED_DEBIAN:
-                raise InstallerError("Debian 12 ou superior é necessário.")
+                raise InstallerError("Debian 12 or higher is required.")
         if platform.machine() not in {"x86_64", "amd64", "aarch64", "arm64"}:
-            raise InstallerError(f"Arquitetura não suportada: {platform.machine()}")
+            raise InstallerError(f"Unsupported architecture: {platform.machine()}")
 
     def release_info(self) -> Mapping[str, object]:
         if self.release is not None:
             return self.release
         if self.args.bundle_dir:
             self.release = {
-                "tag_name": self.args.resolved_release or self.args.release or "bundle publicado",
+                "tag_name": self.args.resolved_release or self.args.release or "published bundle",
                 "assets": [],
                 "prerelease": False,
                 "draft": False,
             }
             return self.release
         if self.args.local:
-            self.release = {"tag_name": "código local", "assets": [], "prerelease": False, "draft": False}
+            self.release = {"tag_name": "local build", "assets": [], "prerelease": False, "draft": False}
             return self.release
         if self.args.dry_run:
-            self.release = {"tag_name": self.args.release or "release publicada mais recente", "assets": [], "prerelease": False, "draft": False}
+            self.release = {"tag_name": self.args.release or "latest published release", "assets": [], "prerelease": False, "draft": False}
             return self.release
         if self.args.release:
             tag = self.args.release if self.args.release.startswith("v") else f"v{self.args.release}"
             endpoint = f"{API_BASE}/releases/tags/{tag}"
-            with self.ui.running(f"Consultando a release {tag} no GitHub…"):
+            with self.ui.running(f"Querying release {tag} on GitHub…"):
                 release = http_json(endpoint)
             if not isinstance(release, dict):
-                raise InstallerError("Resposta inválida da API de releases do GitHub.")
+                raise InstallerError("Invalid GitHub Releases API response.")
             self.release = release
         else:
-            with self.ui.running("Consultando a release estável mais recente no GitHub…"):
+            with self.ui.running("Querying the latest stable release on GitHub…"):
                 self.release = validate_stable_release(http_json(f"{API_BASE}/releases/latest"))
         if bool(self.release.get("draft")):
-            raise InstallerError("A release selecionada é um draft e ainda não pode ser instalada.")
+            raise InstallerError("The selected release is a draft and cannot be installed yet.")
         return self.release
 
     def choose_components(self) -> None:
@@ -620,26 +620,26 @@ class Installer:
         self.ui.console.print(
             Panel(
                 Text(
-                    "Escolha agora o que deve ser preparado. Essas opções poderão "
-                    "ser revisadas no resumo antes da autenticação.",
+                    "Choose now what should be prepared. These options can "
+                    "be reviewed in the summary before authentication.",
                     style="white",
                 ),
-                title="[bold bright_cyan]Componentes da instalação[/]",
+                title="[bold bright_cyan]Installation Components[/]",
                 border_style="cyan",
             )
         )
         if self.args.without_xrdp is None:
             install_xrdp = self.ui.component_prompt(
-                "Servidor xrdp",
-                "Necessário para receber conexões de Área de Trabalho Remota neste computador.",
+                "xrdp server",
+                "Required to receive Remote Desktop connections on this computer.",
                 default=True,
             )
             self.args.without_xrdp = not install_xrdp
         if self.args.with_wine is None:
             self.args.with_wine = self.ui.component_prompt(
                 "WineGE RemoteApp",
-                "Adiciona as bibliotecas para executar aplicativos Windows nas sessões RDP. "
-                "Pode aumentar significativamente o tempo e o tamanho da instalação.",
+                "Adds the libraries required to run Windows applications in RDP sessions. "
+                "It can significantly increase installation time and size.",
                 default=False,
             )
 
@@ -654,26 +654,26 @@ class Installer:
         tag = release.get("tag_name")
         if isinstance(tag, str):
             return f"{DOWNLOAD_BASE}/download/{tag}/{name}"
-        raise InstallerError(f"Asset não encontrado na release: {name}")
+        raise InstallerError(f"Asset not found in release: {name}")
 
     def bundled_asset(self, name: str) -> Path:
         """Return and verify one file from an extracted release bundle."""
         bundle_dir = Path(self.args.bundle_dir).expanduser().resolve()
         asset_path = (bundle_dir / name).resolve()
         if asset_path.parent != bundle_dir or not asset_path.is_file():
-            raise InstallerError(f"Asset não encontrado no bundle: {name}.")
+            raise InstallerError(f"Asset not found in bundle: {name}.")
         checksums_path = bundle_dir / "SHA256SUMS"
         if not checksums_path.is_file():
-            raise InstallerError("Bundle não contém SHA256SUMS.")
+            raise InstallerError("Bundle does not contain SHA256SUMS.")
         checksums = parse_checksums(checksums_path.read_text(encoding="utf-8"))
         expected = checksums.get(name)
         if not expected:
-            raise InstallerError(f"SHA256SUMS do bundle não contém {name}.")
+            raise InstallerError(f"SHA256SUMS of the bundle does not contain {name}.")
         actual = sha256(asset_path)
         if actual.lower() != expected.lower():
-            raise InstallerError(f"Checksum inválido para {name} no bundle.")
+            raise InstallerError(f"Invalid checksum for {name} in bundle.")
         self.log.write(f"bundle asset {asset_path} sha256={actual}")
-        self.ui.success(f"Checksum do bundle validado: {actual}")
+        self.ui.success(f"Bundle checksum verified: {actual}")
         return asset_path
 
     def package_names(self) -> list[str]:
@@ -707,20 +707,20 @@ class Installer:
             else None
         )
         rows = [
-            ("Sistema", f"{self.distro.name} · família {self.distro.family}"),
+            ("System", f"{self.distro.name} · {self.distro.family} family"),
             ("Release", str(self.release_info().get("tag_name", "latest"))),
-            ("Aplicação", app_asset),
-            ("Servidor RDP", "Não instalar" if self.args.without_xrdp else "Instalar e ativar xrdp"),
+            ("Application", app_asset),
+            ("RDP Server", "Do not install" if self.args.without_xrdp else "Install and enable xrdp"),
             (
-                "Origem do xrdp",
-                "AUR oficial · PKGBUILDs compilados localmente"
+                "xrdp source",
+                "Official AUR · PKGBUILDs built locally"
                 if self.distro.family == "arch" and not self.args.without_xrdp
-                else "Repositórios oficiais",
+                else "Official repositories",
             ),
-            ("WineGE", "Instalar dependências opcionais" if self.args.with_wine else "Não instalar"),
+            ("WineGE", "Install optional dependencies" if self.args.with_wine else "Do not install"),
             (
-                "Repositório multilib",
-                "Ativar automaticamente, se necessário" if self.args.with_wine else "Sem alterações",
+                "Multilib repository",
+                "Enable automatically if needed" if self.args.with_wine else "No changes",
             ),
             ("Log", str(self.log.path)),
         ]
@@ -729,32 +729,32 @@ class Installer:
             rows.insert(
                 5,
                 (
-                    "Helper AUR",
-                    f"Usar {arch_aur_helper} já instalado"
+                    "AUR helper",
+                    f"Use installed {arch_aur_helper}"
                     if arch_aur_helper
-                    else "Instalar yay-bin automaticamente pelo AUR",
+                    else "Install yay-bin automatically from the AUR",
                 ),
             )
             if not arch_aur_helper:
                 planned_packages += ["git", "base-devel", "gnupg", "yay-bin (AUR)"]
         self.ui.show_plan(rows, planned_packages)
         if self.args.dry_run:
-            self.ui.warning("Simulação concluída. Nenhum arquivo, pacote ou serviço foi alterado.")
+            self.ui.warning("Simulation complete. No files, packages or services were changed.")
             return
         if self.args.yes:
             return
-        if not self.ui.confirm("[bold]Autorizar e iniciar todas as ações exibidas?[/]"):
-            raise InstallerError("Instalação cancelada pelo usuário.")
+        if not self.ui.confirm("[bold]Authorize and start all displayed actions?[/]"):
+            raise InstallerError("Installation canceled by user.")
 
     def preflight(self) -> None:
-        self.ui.info("Verificando sistema, permissões e gerenciador de pacotes…")
+        self.ui.info("Checking system, permissions and package manager…")
         self.validate_version()
         if not self.args.dry_run and not command_exists("sudo") and os.geteuid() != 0:
-            raise InstallerError("sudo não está disponível; execute como root ou instale sudo.")
+            raise InstallerError("sudo is not available; run as root or install sudo.")
         if self.distro.family == "debian" and not command_exists("apt-get"):
-            raise InstallerError("apt-get não encontrado.")
+            raise InstallerError("apt-get not found.")
         if self.distro.family == "arch" and not command_exists("pacman"):
-            raise InstallerError("pacman não encontrado.")
+            raise InstallerError("pacman not found.")
         lock_paths = (
             (Path("/var/lib/dpkg/lock-frontend"), Path("/var/lib/apt/lists/lock"))
             if self.distro.family == "debian"
@@ -763,8 +763,8 @@ class Installer:
         if not self.args.dry_run:
             locked = package_lock_held(lock_paths)
             if locked:
-                raise InstallerError(f"O gerenciador de pacotes está ocupado ({locked}). Feche-o e tente novamente.")
-        self.ui.success("Pré-verificações concluídas.")
+                raise InstallerError(f"The package manager is busy ({locked}). Close it and try again.")
+        self.ui.success("Preflight checks completed.")
 
     def privilege(self) -> list[str]:
         if os.geteuid() == 0:
@@ -773,7 +773,7 @@ class Installer:
 
     def install_debian(self, app_path: Path) -> None:
         prefix = self.privilege()
-        self.ui.stage(3, 5, "Atualizando índices e instalando dependências Debian/Ubuntu")
+        self.ui.stage(3, 5, "Updating indexes and installing Debian/Ubuntu dependencies")
         self.runner.run(prefix + ["apt-get", "update"], timeout=900)
         self.runner.run(prefix + ["apt-get", "install", "-y", "--no-install-recommends", *self.package_names(), str(app_path)], timeout=1800)
         if not self.args.without_xrdp:
@@ -785,11 +785,11 @@ class Installer:
     def install_yay(self) -> str:
         """Bootstrap yay-bin from its official AUR PKGBUILD."""
         if os.geteuid() == 0:
-            raise InstallerError("A instalação do yay precisa ser executada por usuário comum, não como root.")
+            raise InstallerError("Yay installation needs to be run by a regular user, not as root.")
 
         self.ui.warning(
-            "yay/paru não encontrado. O instalador baixará o PKGBUILD oficial "
-            "do yay-bin no AUR, validará o binário com o makepkg e instalará o yay."
+            "yay/paru not found. The installer will download the official yay-bin "
+            "PKGBUILD from the AUR, verify the binary with makepkg, and install yay."
         )
         self.runner.run(
             self.privilege()
@@ -829,15 +829,15 @@ class Installer:
             if line.strip().endswith((".pkg.tar.zst", ".pkg.tar.xz", ".pkg.tar.gz"))
         ]
         if not built_packages:
-            raise InstallerError(f"makepkg não informou o pacote gerado para yay-bin. Log: {self.log.path}")
+            raise InstallerError(f"makepkg did not report the generated package for yay-bin. Log: {self.log.path}")
         self.runner.run(
             self.privilege()
             + ["pacman", "-U", "--needed", "--noconfirm", *(str(path) for path in built_packages)],
             timeout=900,
         )
         if not self.args.dry_run and not command_exists("yay"):
-            raise InstallerError("O yay foi instalado, mas o comando não foi encontrado no PATH.")
-        self.ui.success("yay instalado e pronto para uso.")
+            raise InstallerError("Yay was installed, but the command was not found in the PATH.")
+        self.ui.success("yay installed and ready to use.")
         return "yay"
 
     def ensure_arch_multilib(self) -> None:
@@ -847,15 +847,15 @@ class Installer:
         try:
             current = pacman_conf.read_text(encoding="utf-8")
         except OSError as exc:
-            raise InstallerError(f"Não foi possível ler {pacman_conf}: {exc}") from exc
+            raise InstallerError(f"Could not read {pacman_conf}: {exc}") from exc
         updated = enable_multilib_config(current)
         if updated == current:
             return
 
         self.ui.warning(
-            "O Wine no Arch precisa das bibliotecas de 32 bits do repositório oficial multilib. "
-            "O instalador ativará [multilib] em /etc/pacman.conf e manterá uma cópia de segurança "
-            "em /etc/pacman.conf.rdpsm.bak."
+            "Wine on Arch needs the 32-bit libraries from the official multilib repository. "
+            "The installer will enable [multilib] in /etc/pacman.conf and keep a backup at "
+            "/etc/pacman.conf.rdpsm.bak."
         )
 
         generated = self.temp_dir / "pacman.conf"
@@ -871,13 +871,13 @@ class Installer:
             prefix + ["install", "-o", "root", "-g", "root", "-m", "644", str(generated), str(pacman_conf)],
             timeout=30,
         )
-        self.ui.success("Repositório multilib ativado.")
+        self.ui.success("Multilib repository activated.")
 
     def import_pkgbuild_keys(self, pkgbuild: Path) -> None:
         try:
             keys = pkgbuild_pgp_keys(pkgbuild.read_text(encoding="utf-8"))
         except OSError as exc:
-            raise InstallerError(f"Não foi possível inspecionar {pkgbuild}: {exc}") from exc
+            raise InstallerError(f"Unable to inspect {pkgbuild}: {exc}") from exc
         for fingerprint in keys:
             present = self.runner.run(
                 ["gpg", "--batch", "--list-keys", fingerprint],
@@ -886,7 +886,7 @@ class Installer:
             )
             if present.returncode == 0:
                 continue
-            self.ui.info(f"Importando chave PGP declarada pelo PKGBUILD: {fingerprint}")
+            self.ui.info(f"Importing PGP key declared by PKGBUILD: {fingerprint}")
             for server in ("hkps://keyserver.ubuntu.com", "hkps://keys.openpgp.org"):
                 result = self.runner.run(
                     ["gpg", "--batch", "--keyserver", server, "--recv-keys", fingerprint],
@@ -897,16 +897,16 @@ class Installer:
                     break
             else:
                 raise InstallerError(
-                    f"Não foi possível importar a chave PGP {fingerprint} exigida por {pkgbuild}. "
-                    f"Consulte o log: {self.log.path}"
+                    f"The PGP key {fingerprint} required by {pkgbuild} could not be imported. "
+                    f"See log: {self.log.path}"
                 )
 
     def install_arch_xrdp(self) -> None:
         if self.args.without_xrdp:
             return
         self.ui.warning(
-            "No Arch, xrdp e xorgxrdp são compilados a partir do AUR. "
-            "Os PKGBUILDs serão baixados, validados e compilados no seu usuário."
+            "On Arch, xrdp and xorgxrdp are built from the AUR. "
+            "Their PKGBUILDs will be downloaded, verified, and built as your regular user."
         )
         helper = self.aur_helper() or self.install_yay()
         if helper == "yay":
@@ -938,7 +938,7 @@ class Installer:
 
     def install_arch(self, app_path: Path) -> None:
         prefix = self.privilege()
-        self.ui.stage(3, 5, "Atualizando Arch e instalando dependências")
+        self.ui.stage(3, 5, "Updating Arch and installing dependencies")
         self.ensure_arch_multilib()
         self.runner.run(prefix + ["pacman", "-Syu", "--needed", "--noconfirm", *self.package_names()], timeout=1800)
         self.install_arch_xrdp()
@@ -948,10 +948,10 @@ class Installer:
 
     def enable_service(self, name: str) -> None:
         prefix = self.privilege()
-        self.ui.stage(4, 5, f"Ativando serviço {name}")
+        self.ui.stage(4, 5, f"Activating service {name}")
         self.runner.run(prefix + ["systemctl", "enable", "--now", name], timeout=60, check=False)
         if not self.args.dry_run and shutil.which("systemctl") and subprocess.run(["systemctl", "is-active", "--quiet", name]).returncode != 0:
-            self.ui.warning(f"{name} não ficou ativo; consulte: journalctl -u {name}")
+            self.ui.warning(f"{name} did not become active; see: journalctl -u {name}")
 
     def run(self) -> int:
         app_asset = APP_DEB if self.distro.family == "debian" else APP_ARCH
@@ -960,81 +960,81 @@ class Installer:
             self.choose_components()
             self.show_plan(app_asset)
             if self.args.dry_run:
-                self.ui.complete("Simulação concluída")
+                self.ui.complete("Simulation completed")
                 return 0
             # Do not start Rich's live progress display before interactive
             # prompts: it can redraw over the final confirmation and make the
             # installer look frozen at 0%.
-            self.ui.stage(1, 5, "Plano aprovado")
+            self.ui.stage(1, 5, "Plan approved")
             if self.args.bundle_dir:
-                self.ui.stage(2, 5, "Validando pacote extraído do bundle")
+                self.ui.stage(2, 5, "Validating package extracted from bundle")
                 app_path = self.bundled_asset(app_asset)
             elif self.args.local:
                 app_path = Path(self.args.package_dir).expanduser().resolve() / app_asset
-                self.ui.stage(2, 5, "Validando o pacote gerado localmente")
+                self.ui.stage(2, 5, "Validating the locally generated package")
                 if not app_path.is_file():
                     raise InstallerError(
-                        f"Pacote local não encontrado: {app_path}\n"
-                        "Gere os pacotes primeiro com: ./installer/build_packages.sh"
+                        f"Local package not found: {app_path}\n"
+                        "Generate packages first with: ./installer/build_packages.sh"
                     )
                 actual = sha256(app_path)
                 self.log.write(f"local package {app_path} sha256={actual}")
-                self.ui.success(f"Pacote local encontrado e SHA-256 calculado: {actual}")
+                self.ui.success(f"Local package found and calculated SHA-256: {actual}")
             else:
                 app_path = self.temp_dir / app_asset
                 checksums_path = self.temp_dir / "SHA256SUMS"
-                self.ui.stage(2, 5, "Baixando e validando artefatos da release")
+                self.ui.stage(2, 5, "Downloading and validating release artifacts")
                 download(self.asset_url(app_asset), app_path, self.ui, self.log)
                 download(self.asset_url("SHA256SUMS"), checksums_path, self.ui, self.log)
                 checksums = parse_checksums(checksums_path.read_text(encoding="utf-8"))
                 expected = checksums.get(app_asset)
                 if not expected:
-                    raise InstallerError(f"SHA256SUMS não contém {app_asset}.")
+                    raise InstallerError(f"SHA256SUMS does not contain {app_asset}.")
                 actual = sha256(app_path)
                 if actual.lower() != expected.lower():
-                    raise InstallerError(f"Checksum inválido para {app_asset}. Log: {self.log.path}")
-                self.ui.success(f"Checksum validado: {actual}")
+                    raise InstallerError(f"Invalid checksum for {app_asset}. Log: {self.log.path}")
+                self.ui.success(f"Checksum verified: {actual}")
             if self.distro.family == "debian":
                 self.install_debian(app_path)
             else:
                 self.install_arch(app_path)
-            self.ui.stage(5, 5, "Verificando instalação")
+            self.ui.stage(5, 5, "Verifying installation")
             self.runner.run(["rdp-session-manager", "--help"], timeout=30, check=False)
             if not self.args.without_xrdp:
-                self.ui.success("xrdp foi instalado e configurado.")
+                self.ui.success("xrdp was installed and configured.")
             self.ui.complete()
             self.ui.console.print(
                 Panel(
                     Text.assemble(
-                        ("RDP Session Manager instalado com sucesso!\n\n", "bold green"),
-                        ("Para abrir a aplicação:\n", "white"),
+                        ("RDP Session Manager installed successfully!\n\n", "bold green"),
+                        ("To open the application:\n", "white"),
                         ("rdp-session-manager", "bold bright_cyan"),
                     ),
-                    title="[bold green]Tudo pronto[/]",
+                    title="[bold green]All set[/]",
                     border_style="green",
                     padding=(1, 3),
                 )
             )
-            self.ui.info(f"Log completo: {self.log.path}")
+            self.ui.info(f"Full log: {self.log.path}")
             return 0
         except (InstallerError, KeyboardInterrupt) as exc:
             self.ui.error(str(exc))
-            self.ui.error(f"Log completo: {self.log.path}")
+            self.ui.error(f"Full log: {self.log.path}")
             return 130 if isinstance(exc, KeyboardInterrupt) else 1
         finally:
             self.close()
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(description="Instalador transparente do RDP Session Manager")
-    result.add_argument("--yes", action="store_true", help="não solicitar confirmações")
-    result.add_argument("--with-wine", action="store_true", default=None, help="instalar dependências opcionais do WineGE")
-    result.add_argument("--without-xrdp", action="store_true", default=None, help="não instalar nem ativar xrdp")
-    result.add_argument("--release", help="fixar release, por exemplo v0.4.0")
-    result.add_argument("--local", action="store_true", help="instalar o pacote gerado neste clone")
-    result.add_argument("--package-dir", default="release", help="diretório dos pacotes para --local")
-    result.add_argument("--dry-run", action="store_true", help="mostrar o plano sem alterar o sistema")
-    result.add_argument("--verbose", action="store_true", help="mostrar toda a saída dos comandos")
+    result = argparse.ArgumentParser(description="RDP Session Manager transparent installer")
+    result.add_argument("--yes", action="store_true", help="do not ask for confirmations")
+    result.add_argument("--with-wine", action="store_true", default=None, help="install optional WineGE dependencies")
+    result.add_argument("--without-xrdp", action="store_true", default=None, help="do not install or activate xrdp")
+    result.add_argument("--release", help="pin a release, for example v0.4.0")
+    result.add_argument("--local", action="store_true", help="install the package generated in this clone")
+    result.add_argument("--package-dir", default="release", help="package directory for --local")
+    result.add_argument("--dry-run", action="store_true", help="show the plan without changing the system")
+    result.add_argument("--verbose", action="store_true", help="show all command output")
     result.add_argument("--os-release", help=argparse.SUPPRESS)
     result.add_argument("--bundle-dir", help=argparse.SUPPRESS)
     result.add_argument("--resolved-release", help=argparse.SUPPRESS)

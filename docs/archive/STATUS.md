@@ -1,149 +1,149 @@
-# 🎉 Status do Projeto - RDP Session Manager
+# 🎉 Project Status - RDP Session Manager
 
-## ✅ APLICAÇÃO TOTALMENTE FUNCIONAL!
+## ✅ FULLY FUNCTIONAL APPLICATION!
 
-A aplicação está **100% funcional** com todas as features core implementadas e testadas no Debian 13.
+The application is **100% functional** with all core features implemented and tested on Debian 13.
 
-**Versão Atual**: **v0.2.0**
+**Current Version**: **v0.2.0**
 **Data**: 2025-10-18
-**Status**: ✅ **PRODUÇÃO**
+**Status**: ✅ **PRODUCTION**
 
 ---
 
-## 🚀 Funcionalidades Implementadas
+## 🚀 Implemented Features
 
-### ✅ Gerenciamento de Usuários
-- [x] Criação completa de usuários RDP
-- [x] Exclusão de usuários com remoção total de dados
-- [x] **NOVO**: Encerramento automático de sessões ativas ao deletar
-- [x] **NOVO**: Detecção de processos ativos por usuário
-- [x] **NOVO**: Detecção dinâmica de Desktop Environment por usuário
-- [x] **NOVO**: Cálculo automático de portas RDP por UID
-- [x] Validação robusta de entrada
-- [x] Status em tempo real (Ativo/Inativo)
-- [x] Logs completos de todas operações
+### ✅ User Management
+- [x] Complete RDP user creation
+- [x] Deleting users with full data removal
+- [x] **NEW**: Automatic closure of active sessions when deleting
+- [x] **NEW**: Detection of active processes per user
+- [x] **NEW**: Dynamic detection of Desktop Environment per user
+- [x] **NEW**: Automatic calculation of RDP ports by UID
+- [x] Robust input validation
+- [x] Real-time status (Active/Inactive)
+- [x] Complete logs of all operations
 
-### ✅ Gerenciamento de Dependências
-- [x] **NOVO**: Verificação automática de xrdp ao iniciar
-- [x] **NOVO**: Banner de aviso se xrdp não estiver instalado
-- [x] **NOVO**: Instalação automática de xrdp com progresso visual
-- [x] **NOVO**: Detecção automática de FreeRDP
-- [x] **NOVO**: Instalação automática de FreeRDP sob demanda
-- [x] Verificação de X11
-- [x] Instalação de Desktop Environments
+### ✅ Dependency Management
+- [x] **NEW**: Automatic xrdp check on startup
+- [x] **NEW**: Warning banner if xrdp is not installed
+- [x] **NEW**: Automatic xrdp installation with visual progress
+- [x] **NEW**: FreeRDP auto-detection
+- [x] **NEW**: Automatic installation of FreeRDP on demand
+- [x] X11 Check
+- [x] Installation of Desktop Environments
 
-### ✅ Conexão RDP
-- [x] **NOVO**: Dialog visual para credenciais (domínio + senha)
-- [x] **NOVO**: Lançamento direto do cliente FreeRDP
-- [x] **NOVO**: Suporte para domínios Windows
-- [x] Cópia automática de endereço para clipboard
-- [x] Instruções para Linux e Windows
-- [x] Botão de conexão em cada card de usuário
+### ✅ RDP Connection
+- [x] **NEW**: Visual dialog for credentials (domain + password)
+- [x] **NEW**: FreeRDP client direct release
+- [x] **NEW**: Support for Windows domains
+- [x] Automatic copy of address to clipboard
+- [x] Instructions for Linux and Windows
+- [x] Connection button on each user card
 
-### ✅ Interface Gráfica
-- [x] Interface GTK4 moderna com libadwaita
-- [x] Janela principal com lista de usuários
-- [x] Cards de usuário com status visual
-- [x] Dialog de criação de usuário
-- [x] **NOVO**: Dialog de progresso para operações longas
-- [x] **NOVO**: Dialog de confirmação para exclusão
-- [x] **NOVO**: Aviso especial para usuários conectados
-- [x] Toast notifications para feedback imediato
-- [x] Empty state quando não há usuários
-- [x] **NOVO**: Banner de aviso para dependências faltantes
+### ✅ Graphical Interface
+- [x] Modern GTK4 interface with libadwaita
+- [x] Main window with list of users
+- [x] User cards with visual status
+- [x] User creation dialog
+- [x] **NEW**: Progress dialog for long operations
+- [x] **NEW**: Confirmation dialog for deletion
+- [x] **NEW**: Special notice for logged in users
+- [x] Toast notifications for immediate feedback
+- [x] Empty state when there are no users
+- [x] **NEW**: Warning banner for missing dependencies
 
-### ✅ Segurança e Logs
-- [x] PolicyKit (pkexec) para todas operações administrativas
-- [x] **NOVO**: Comandos com caminhos absolutos (`/usr/sbin/useradd`, etc.)
-- [x] Isolamento de usuários em grupo `rdp-users`
+### ✅ Security and Logs
+- [x] PolicyKit (pkexec) for all administrative operations
+- [x] **NEW**: Commands with absolute paths (`/usr/sbin/useradd`, etc.)
+- [x] Isolation of users in group `rdp-users`
 - [x] UIDs dedicados (5000+)
-- [x] **NOVO**: Sistema de logs centralizadocapturando TODOS os módulos
-- [x] Rotação automática de logs
-- [x] Logs detalhados de todas operações
+- [x] **NEW**: Centralized log system capturing ALL modules
+- [x] Automatic log rotation
+- [x] Detailed logs of all operations
 
 ---
 
 ## 🎯 Testes Realizados
 
-### ✅ Criação de Usuários
+### ✅ User Creation
 ```
-✓ Criar grupo rdp-users automaticamente
-✓ Criar diretório /opt/rdp-users automaticamente
-✓ Criar usuário com UID 5000+
-✓ Definir senha via chpasswd
-✓ Criar arquivo .xsession
-✓ Validação de nome de usuário
-✓ Validação de senha forte
-✓ Detecção de usuário já existente
+✓ Create rdp-users group automatically
+✓ Create /opt/rdp-users directory automatically
+✓ Create user with UID 5000+
+✓ Set password via chpasswd
+✓ Create .xsession file
+✓ Username validation
+✓ Strong password validation
+✓ Detection of existing users
 ```
 
-### ✅ Exclusão de Usuários
+### ✅ Deletion of Users
 ```
-✓ Deletar usuário inativo normalmente
-✓ Detectar processos ativos do usuário
-✓ Mostrar aviso quando usuário está conectado
-✓ Encerrar processos automaticamente (SIGTERM)
-✓ Forçar encerramento se necessário (SIGKILL)
-✓ Remover home directory completo
-✓ Remover configurações RDP
-✓ Atualizar lista de usuários após exclusão
+✓ Delete inactive user normally
+✓ Detect active user processes
+✓ Show warning when user is logged in
+✓ Automatically terminate processes (SIGTERM)
+✓ Force shutdown if necessary (SIGKILL)
+✓ Remove complete home directory
+✓ Remove RDP settings
+✓ Update user list after deletion
 ```
 
 **Teste Real** (18/10/2025 00:46):
 ```
-Usuário: trix_bastardo
-Processos ativos: 58
-Ação: Exclusão
-Resultado: ✅ SUCESSO
-- Todos os 58 processos encerrados
-- Usuário removido
+User: trix_bastardo
+Active processes: 58
+Action: Deletion
+Result: ✅ SUCCESS
+- All 58 cases closed
+- User removed
 - Home directory removido
 - Logs registrados corretamente
 ```
 
-### ✅ Conexão RDP
+### ✅ RDP Connection
 ```
-✓ Detectar se FreeRDP está instalado
-✓ Oferecer instalação de FreeRDP se necessário
-✓ Mostrar dialog de credenciais
-✓ Aceitar domínio (opcional)
-✓ Aceitar senha
-✓ Lançar xfreerdp3 com parâmetros corretos
-✓ Passar credenciais via /p: e /d:
-✓ Desabilitar verificação de certificado
-```
-
-### ✅ Instalação de Dependências
-```
-✓ Verificar xrdp ao iniciar
-✓ Mostrar banner se xrdp não instalado
-✓ Instalar xrdp via pkexec apt-get
-✓ Habilitar e iniciar serviço xrdp
-✓ Verificar FreeRDP
-✓ Instalar FreeRDP sob demanda
-✓ Progresso visual durante instalação
+✓ Detect if FreeRDP is installed
+✓ Offer FreeRDP installation if necessary
+✓ Show credentials dialog
+✓ Accept domain (optional)
+✓ Accept password
+✓ Launch xfreerdp3 with correct parameters
+✓ Pass credentials via /p: and /d:
+✓ Disable certificate verification
 ```
 
-### ✅ Instalação de Desktop Environments
+### ✅ Installation of Dependencies
 ```
-✓ Verificar espaço em disco
-✓ Detectar DE já instalado
-✓ Executar apt-get update
-✓ Executar apt-get install
-✓ Progresso em tempo real (monitoring apt log)
+✓ Check xrdp on startup
+✓ Show banner if xrdp not installed
+✓ Install xrdp via pkexec apt-get
+✓ Enable and start xrdp service
+✓ Check FreeRDP
+✓ Install FreeRDP on demand
+✓ Visual progress during installation
+```
+
+### ✅ Installation of Desktop Environments
+```
+✓ Check disk space
+✓ Detect already installed DE
+✓ Run apt-get update
+✓ Run apt-get install
+✓ Real-time progress (monitoring apt log)
 ✓ Timeout de 30 minutos
 ✓ Tratamento de erros
 ```
 
 ---
 
-## 🔧 Correções Recentes (v0.2.0)
+## 🔧 Recent Fixes (v0.2.0)
 
-### 1. ✅ Sistema de Logs Completo
-**Problema**: Apenas logs do módulo principal eram gravados
-**Solução**:
-- Modificado `logger.py` para configurar ROOT logger
-- Agora captura logs de TODOS os módulos:
+### 1. ✅ Complete Log System
+**Problem**: Only main module logs were written
+**Solution**:
+- Modified `logger.py` to configure ROOT logger
+- Now captures logs from ALL modules:
   - `core.user_manager`
   - `core.rdp_config`
   - `core.de_installer`
@@ -152,19 +152,19 @@ Resultado: ✅ SUCESSO
   - `ui.main_window`
   - `ui.user_dialog`
 
-### 2. ✅ pkexec com Caminhos Absolutos
-**Problema**: `pkexec não encontrado - código 127`
-**Causa**: pkexec não tem `/usr/sbin` no PATH
-**Solução**: Todos os comandos agora usam caminhos completos:
+### 2. ✅ pkexec with Absolute Paths
+**Problem**: `pkexec not found - code 127`
+**Cause**: pkexec does not have `/usr/sbin` in PATH
+**Fix**: All commands now use full paths:
 ```python
-# Antes
+# Before
 ['pkexec', 'useradd', ...]
 
-# Depois
+# After
 ['pkexec', '/usr/sbin/useradd', ...]
 ```
 
-Comandos corrigidos:
+Fixed commands:
 - `/usr/sbin/groupadd`
 - `/usr/sbin/useradd`
 - `/usr/sbin/userdel`
@@ -178,10 +178,10 @@ Comandos corrigidos:
 - `/usr/bin/cp`
 - `/usr/bin/chown`
 
-### 3. ✅ Detecção e Instalação de FreeRDP
-**Feature**: Sistema completo de gerenciamento de FreeRDP
+### 3. ✅ FreeRDP Detection and Installation
+**Feature**: Complete FreeRDP management system
 
-**Implementado em** `src/core/system_deps.py`:
+**Implemented in** `src/core/system_deps.py`:
 ```python
 REQUIRED_PACKAGES = {
     'freerdp': {
@@ -195,120 +195,120 @@ REQUIRED_PACKAGES = {
 ```
 
 **Fluxo**:
-1. Usuário clica em "Abrir FreeRDP"
-2. Sistema verifica com `shutil.which('xfreerdp3')`
-3. Se não instalado, mostra dialog
-4. Instalação via `pkexec apt-get install freerdp3-x11`
-5. Progresso mostrado em tempo real
-6. Após instalação, reconecta automaticamente
+1. User clicks on "Open FreeRDP"
+2. System checks with `shutil.which('xfreerdp3')`
+3. If not installed, show dialog
+4. Installation via `pkexec apt-get install freerdp3-x11`
+5. Progress shown in real time
+6. After installation, reconnect automatically
 
-### 4. ✅ Dialog Visual para Credenciais
-**Feature**: Interface gráfica para entrada de credenciais RDP
+### 4. ✅ Visual Dialog for Credentials
+**Feature**: Graphical interface for entering RDP credentials
 
 **Implementado em** `src/ui/main_window.py`:
 ```python
 def show_password_dialog(self, user):
-    # Dialog com campos:
-    # - Domínio (opcional)
-    # - Senha (obrigatório)
-    # Lança FreeRDP ao confirmar
+    # Dialog with fields:
+    # - Domain (optional)
+    # - Password (required)
+    # Launch FreeRDP on commit
 ```
 
-**Características**:
-- Campo de domínio (opcional) para domínios Windows
-- Campo de senha com `visibility=False`
-- Enter no domínio move para senha
-- Enter na senha conecta
-- Validação: senha não pode estar vazia
-- Credenciais passadas via `/d:` e `/p:`
+**Features**:
+- Domain field (optional) for Windows domains
+- Password field with `visibility=False`
+- Entering the domain moves to password
+- Enter the password connects
+- Validation: password cannot be empty
+- Credentials passed via `/d:` and `/p:`
 
-### 5. ✅ Exclusão Inteligente de Usuários
-**Feature**: Sistema completo de exclusão com encerramento de sessões
+### 5. ✅ Smart User Deletion
+**Feature**: Complete deletion system with session termination
 
-**Implementado em** `src/core/user_manager.py`:
+**Implemented in** `src/core/user_manager.py`:
 
-**Métodos novos**:
+**New methods**:
 ```python
 def get_user_processes(username) -> List[int]
-    # Retorna PIDs de processos do usuário
+    # Returns PIDs of user processes
 
 def kill_user_processes(username, force=False) -> bool
-    # Encerra processos (SIGTERM ou SIGKILL)
+    # Terminate processes (SIGTERM or SIGKILL)
 
 def delete_user(username, remove_home=True, kill_processes=True) -> bool
-    # Remove usuário completamente
+    # Remove user completely
 ```
 
 **Fluxo**:
-1. Verificar se usuário tem processos ativos (pgrep)
-2. Se sim, mostrar dialog especial de aviso
-3. Ao confirmar:
-   - Encerrar processos (SIGTERM -15)
-   - Aguardar 1 segundo
-   - Verificar se ainda há processos
-   - Se sim, forçar (SIGKILL -9)
-   - Aguardar 0.5 segundo
-4. Executar `pkexec userdel -r username`
+1. Check if the user has active processes (pgrep)
+2. If yes, show special warning dialog
+3. When confirming:
+   - Terminate processes (SIGTERM -15)
+   - Wait 1 second
+   - Check if there are still processes
+   - If yes, force (SIGKILL -9)
+   - Wait 0.5 seconds
+4. Run `pkexec userdel -r username`
 5. Remove TUDO:
-   - Conta de usuário
+   - User account
    - Home directory
-   - Arquivo .xsession
-   - Todos os arquivos pessoais
+   - .xsession file
+   - All personal files
 
-**Dialog de Confirmação**:
-- **Usuário inativo**: Lista o que será removido
-- **Usuário ativo**: Avisa que sessões serão encerradas
+**Confirmation Dialog**:
+- **Inactive user**: Lists what will be removed
+- **Active user**: Warns that sessions will be closed
 
-### 6. ✅ Verificação e Instalação de xrdp
-**Feature**: Banner de aviso e instalação automática
+### 6. ✅ Verification and Installation of xrdp
+**Feature**: Warning banner and automatic installation
 
 **Implementado em** `src/ui/main_window.py` e `src/application.py`:
 
 **Banner**:
 ```python
 self.xrdp_banner = Adw.Banner()
-self.xrdp_banner.set_title("⚠ Servidor xrdp não está instalado")
-self.xrdp_banner.set_button_label("Instalar Agora")
+self.xrdp_banner.set_title("⚠ xrdp server is not installed")
+self.xrdp_banner.set_button_label("Install Now")
 ```
 
-**Verificação periódica**:
+**Periodic check**:
 ```python
 GLib.timeout_add_seconds(10, self.update_xrdp_status)
 ```
 
-**Instalação**:
-- Dialog com progresso visual
-- Terminal log view mostrando saída do apt
-- Instalação de `xrdp` e `xorgxrdp`
-- Habilita e inicia serviço automaticamente
-- Atualiza banner após instalação
+**Installation**:
+- Dialog with visual progress
+- Terminal log view showing apt output
+- Installation of `xrdp` and `xorgxrdp`
+- Enables and starts service automatically
+- Update banner after installation
 
-### 7. ✅ Detecção Dinâmica de Desktop Environment
-**Problema**: Todos os usuários mostravam "XFCE • Porta 3389" na interface
+### 7. ✅ Dynamic Detection of Desktop Environment
+**Issue**: All users were showing "XFCE • Port 3389" in the interface
 **Causa**: Valores hardcoded em `list_users()`
 
-**Evidência do Bug**:
-- Usuário criado com LXDE → Interface mostrava XFCE
-- Usuário criado com GNOME → Interface mostrava XFCE
-- Usuário criado com KDE → Interface mostrava XFCE
-- Todos usuários na mesma porta: 3389
+**Bug Evidence**:
+- User created with LXDE → Interface showed XFCE
+- User created with GNOME → Interface showed XFCE
+- User created with KDE → Interface showed XFCE
+- All users on the same port: 3389
 
-**Implementado em** `src/core/user_manager.py`:
+**Implemented in** `src/core/user_manager.py`:
 
-**Novos Métodos**:
+**New Methods**:
 ```python
 def _detect_desktop_env(self, home_dir: str) -> str:
-    """Detecta o Desktop Environment lendo o arquivo .xsession"""
-    # Lê ~/.xsession
-    # Mapeia comando (startlxde, gnome-session, etc.) para DE ID
-    # Retorna: 'lxde', 'gnome', 'kde', etc.
+    """Detects the Desktop Environment by reading the .xsession file"""
+    # Read ~/.xsession
+    # Maps command (startlxde, gnome-session, etc.) to DE ID
+    # Returns: 'lxde', 'gnome', 'kde', etc.
 
 def _detect_rdp_port(self, uid: int) -> int:
-    """Detecta a porta RDP baseada no UID"""
+    """Detect RDP port based on UID"""
     # Calcula: 3389 + (uid - 5000)
-    # UID 5000 → Porta 3389
-    # UID 5001 → Porta 3390
-    # UID 5002 → Porta 3391
+    # UID 5000 → Port 3389
+    # UID 5001 → Port 3390
+    # UID 5002 → Port 3391
 ```
 
 **Mapeamento de DEs**:
@@ -320,62 +320,62 @@ def _detect_rdp_port(self, uid: int) -> int:
 - `gnome-session` → GNOME
 - `startplasma-x11` → KDE
 
-**Resultado**:
-- Interface agora mostra o DE correto para cada usuário
+**Result**:
+- Interface now shows the correct DE for each user
 - Portas RDP calculadas automaticamente (3389, 3390, 3391, ...)
-- Logs de debug mostram DE detectado
+- Debug logs show the detected DE
 
-### 8. ✅ Correção de Permissões do Home Directory
-**Problema**: Após implementar detecção, DE ainda aparecia como "Desconhecida"
-**Causa**: Permissões 700 no home directory impediam leitura do `.xsession`
+### 8. ✅ Home Directory Permissions Fix
+**Problem**: After implementing detection, DE still appeared as "Unknown"
+**Cause**: Permissions 700 in the home directory prevented `.xsession` from being read
 
-**Erro nos Logs**:
+**Error in Logs**:
 ```
-ERROR - Erro ao detectar DE de /opt/rdp-users/trix-gnome: [Errno 13] Permissão negada
+ERROR - Error detecting DE of /opt/rdp-users/trix-gnome: [Errno 13] Permission denied
 ```
 
-**Implementado em** `src/core/user_manager.py`:
+**Implemented in** `src/core/user_manager.py`:
 
-**Ajuste de Permissões após Criação**:
+**Permissions Adjustment after Creation**:
 ```python
-# Após criar usuário e definir senha
+# After creating user and setting password
 chmod_result = subprocess.run(
     ['pkexec', '/usr/bin/chmod', '751', home_dir],
     ...
 )
 ```
 
-**Permissões 751**:
+**Permissions 751**:
 - Owner (7): `rwx` - Controle total
-- Group (5): `r-x` - Ler e executar
-- Others (1): `--x` - Pode ENTRAR no diretório (necessário para acessar .xsession)
+- Group (5): `r-x` - Read and execute
+- Others (1): `--x` - Can ENTER directory (necessary to access .xsession)
 
-**Por Que 751 e Não 755?**:
-- Mais seguro: Others podem entrar mas não listar conteúdo
-- Permite ler `.xsession` mas não ver arquivos privados
-- Boa prática para home directories multiusuário
+**Why 751 and not 755?**:
+- Safer: Others can join but not list content
+- Allows you to read `.xsession` but not see private files
+- Good practice for multi-user home directories
 
-**Resultado**:
-- Detecção de DE funciona perfeitamente
+**Result**:
+- ED detection works perfectly
 - Interface mostra o DE correto
-- Segurança mantida
+- Security maintained
 
 ---
 
-## 📊 Status Atual
+## 📊 Current Status
 
 ### ✅ Core Features
-- [x] Gerenciamento de usuários: **100%**
-- [x] Instalação de DEs: **100%**
-- [x] Conexão RDP: **100%**
-- [x] Sistema de logs: **100%**
-- [x] Interface gráfica: **100%**
-- [x] Segurança (PolicyKit): **100%**
-- [x] Gerenciamento de dependências: **100%**
+- [x] User management: **100%**
+- [x] DE installation: **100%**
+- [x] RDP Connection: **100%**
+- [x] Log system: **100%**
+- [x] Graphical interface: **100%**
+- [x] Security (PolicyKit): **100%**
+- [x] Dependency management: **100%**
 
 ### ⚠️ Features Pendentes (Futuras)
-- [ ] Quotas de disco por usuário
-- [ ] Limites de recursos (cgroups)
+- [ ] Disk quotas per user
+- [ ] Resource limits (cgroups)
 - [ ] Pool de portas RDP
 - [ ] Interface web
 - [ ] LDAP/Active Directory
@@ -383,161 +383,161 @@ chmod_result = subprocess.run(
 
 ---
 
-## 🎯 Estatísticas do Projeto
+## 🎯 Project Statistics
 
-| Métrica | Valor |
+| Metric | Value |
 |---------|-------|
-| **Arquivos Python** | 25+ |
-| **Linhas de Código** | ~4500+ |
-| **Módulos Core** | 6 |
-| **Módulos UI** | 2 |
+| **Python Files** | 25+ |
+| **Lines of Code** | ~4500+ |
+| **Core Modules** | 6 |
+| **UI Modules** | 2 |
 | **Testes** | 5+ |
-| **Documentação** | 10 arquivos |
+| **Documentation** | 10 files |
 | **Features Implementadas** | 45+ |
 | **Bugs Conhecidos** | 0 |
-| **Status** | ✅ **Produção** |
+| **Status** | ✅ **Production** |
 
 ---
 
-## 🐛 Problemas Resolvidos
+## 🐛 Problems Solved
 
-| # | Problema | Status | Versão |
+| # | Problem | Status | Version |
 |---|----------|--------|--------|
 | 1 | Namespace Adw '1.0' vs '1' | ✅ Resolvido | v0.1.0 |
-| 2 | API depreciada GTK Widget.get_default_display() | ✅ Resolvido | v0.1.0 |
+| 2 | Deprecated API GTK Widget.get_default_display() | ✅ Resolved | v0.1.0 |
 | 3 | psutil.process_iter(['connections']) | ✅ Resolvido | v0.1.0 |
-| 4 | Logs apenas do módulo principal | ✅ Resolvido | v0.2.0 |
-| 5 | pkexec não encontra comandos (código 127) | ✅ Resolvido | v0.2.0 |
-| 6 | Não detecta FreeRDP | ✅ Resolvido | v0.2.0 |
-| 7 | Sem dialog para credenciais RDP | ✅ Resolvido | v0.2.0 |
-| 8 | Não consegue deletar usuário conectado | ✅ Resolvido | v0.2.0 |
-| 9 | Campo de senha com problemas de foco | ✅ Resolvido | v0.2.0 |
-| 10 | Sem aviso se xrdp não instalado | ✅ Resolvido | v0.2.0 |
-| 11 | Todos usuários apareciam como XFCE • Porta 3389 | ✅ Resolvido | v0.2.0 |
-| 12 | Desktop Environment aparecia como "Desconhecida" | ✅ Resolvido | v0.2.0 |
+| 4 | Main module logs only | ✅ Resolved | v0.2.0 |
+| 5 | pkexec does not find commands (code 127) | ✅ Resolved | v0.2.0 |
+| 6 | Does not detect FreeRDP | ✅ Resolved | v0.2.0 |
+| 7 | No dialog for RDP credentials | ✅ Resolved | v0.2.0 |
+| 8 | Unable to delete logged in user | ✅ Resolved | v0.2.0 |
+| 9 | Password field has focus issues | ✅ Resolved | v0.2.0 |
+| 10 | No warning if xrdp not installed | ✅ Resolved | v0.2.0 |
+| 11 | All users appeared as XFCE • Port 3389 | ✅ Resolved | v0.2.0 |
+| 12 | Desktop Environment appeared as "Unknown" | ✅ Resolved | v0.2.0 |
 
 ---
 
-## 📸 Screenshots da Aplicação
+## 📸 Application Screenshots
 
-### Tela Principal
+### Main Screen
 ```
 ┌────────────────────────────────────────────────┐
-│  [+]  Gerenciador de Sessões RDP  [≡]         │
+│ [+] RDP Session Manager [≡] │
 ├────────────────────────────────────────────────┤
 │                                                 │
-│  📊 Informações do Servidor                    │
-│  ├─ Endereço IP: 192.168.1.100                │
-│  └─ Sessões Ativas: 1 sessões                 │
+│ 📊 Server Information │
+│ ├─ IP address: 192.168.1.100 │
+│ └─ Active Sessions: 1 sessions │
 │                                                 │
-│  👤 Usuários RDP                                │
+│ 👤 RDP Users │
 │  ┌───────────────────────────────────────────┐ │
-│  │ testuser                       ● Ativo    │ │
-│  │ XFCE • Porta 3389 • IP: 192.168.1.100    │ │
+│ │ testuser ● Active │ │
+│ │ XFCE • Port 3389 • IP: 192.168.1.100 │ │
 │  │                            [🔗] [🗑]      │ │
 │  └───────────────────────────────────────────┘ │
 │                                                 │
 └────────────────────────────────────────────────┘
 ```
 
-### Dialog de Credenciais
+### Credentials Dialog
 ```
 ┌─────────────────────────────────┐
-│  Conectar a testuser            │
+│ Connect to testuser │
 ├─────────────────────────────────┤
-│  Digite as credenciais para     │
-│  conectar via RDP.              │
+│ Enter credentials to │
+│ connect via RDP.              │
 │                                 │
-│  Domínio (opcional):            │
+│ Domain (optional): │
 │  [___________________________]  │
 │                                 │
-│  Senha:                         │
+│ Password: │
 │  [•••••••••••••••••••••••••••]  │
 │                                 │
-│  [Cancelar]     [Conectar]     │
+│ [Cancel] [Connect] │
 └─────────────────────────────────┘
 ```
 
-### Dialog de Exclusão (Usuário Ativo)
+### Exclusion Dialog (Active User)
 ```
 ┌─────────────────────────────────┐
-│  ⚠ testuser está ativo          │
+│ ⚠ testuser is active │
 ├─────────────────────────────────┤
-│  O usuário testuser está        │
-│  conectado via RDP.             │
+│ The user testuser is │
+│ connected via RDP.             │
 │                                 │
-│  Para remover o usuário, suas   │
-│  sessões serão encerradas       │
+│ To remove the user, their │
+│ sessions will be closed │
 │  automaticamente.               │
 │                                 │
-│  Deseja continuar?              │
+│ Do you want to continue?              │
 │                                 │
-│  [Cancelar] [Encerrar e Remover]│
+│ [Cancel] [Terminate and Remove]│
 └─────────────────────────────────┘
 ```
 
 ---
 
-## 🚀 Como Testar
+## 🚀 How to Test
 
-### Teste Completo (15 minutos)
+### Full Test (15 minutes)
 
 ```bash
-# 1. Inicie a aplicação
+# 1. Launch the application
 ./run.sh
 
-# 2. Instale xrdp (se necessário)
-# - Clique no banner "Instalar Agora"
+# 2. Install xrdp (if necessary)
+# - Click on the "Install Now" banner
 # - Aguarde ~2 minutos
 
-# 3. Crie um usuário de teste
-# - Clique no botão "+"
+# 3. Create a test user
+# - Click on the "+" button
 # - Preencha:
 #   * Username: testuser
-#   * Nome: Usuário de Teste
-#   * Senha: TestPass123
+# * Name: Test User
+# * Password: TestPass123
 #   * DE: XFCE
-# - Clique "Criar"
-# - Aguarde ~5-10 minutos (se instalar XFCE)
+# - Click "Create"
+# - Wait ~5-10 minutes (if installing XFCE)
 
 # 4. Conecte via RDP
-# - Clique no botão de rede
-# - Clique "Abrir FreeRDP"
-# - Digite senha: TestPass123
-# - Clique "Conectar"
-# - Sessão RDP deve abrir!
+# - Click on the network button
+# - Click "Open FreeRDP"
+# - Enter password: TestPass123
+# - Click "Connect"
+# - RDP session should open!
 
-# 5. Delete o usuário (com sessão ativa)
-# - Feche o FreeRDP ou deixe aberto
-# - Clique no botão de lixeira
-# - Confirme "Encerrar e Remover"
-# - Usuário removido completamente!
+# 5. Delete the user (with active session)
+# - Close FreeRDP or leave it open
+# - Click on the trash can button
+# - Confirm "Shutdown and Remove"
+# - User removed completely!
 
-# 6. Verifique logs
+# 6. Check logs
 tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
 ```
 
 ---
 
-## 📞 Suporte e Próximos Passos
+## 📞 Support and Next Steps
 
 ### Suporte
 - 📁 Logs: `~/.local/share/rdp-session-manager/logs/`
 - 📚 Docs: `docs/`
 - 🐛 Issues: GitHub Issues
 
-### Próximas Versões
+### Next Versions
 
-**v0.3.0 - Melhorias de Segurança** (Próximos 2 meses):
-- Quotas de disco por usuário
-- Limites de recursos (CPU/RAM)
+**v0.3.0 - Security Improvements** (Next 2 months):
+- Disk quotas per user
+- Resource limits (CPU/RAM)
 - AppArmor profiles
-- Auditoria avançada
+- Advanced audit
 
 **v0.4.0 - Performance** (3-4 meses):
 - Pool de portas RDP
 - Async UI
-- Otimizações de rede
+- Network optimizations
 
 **v1.0.0 - Enterprise** (6+ meses):
 - LDAP/AD integration
@@ -547,17 +547,17 @@ tail -f ~/.local/share/rdp-session-manager/logs/rdp-session-manager.log
 
 ---
 
-## 🎉 Conclusão
+## 🎉 Conclusion
 
-O RDP Session Manager está **totalmente funcional** e pronto para uso em produção!
+RDP Session Manager is **fully functional** and ready for production use!
 
 **Principais Conquistas**:
-- ✅ Interface moderna e intuitiva
-- ✅ Gerenciamento completo de usuários
-- ✅ Instalação automática de dependências
-- ✅ Conexão RDP visual e fácil
-- ✅ Exclusão inteligente com encerramento de sessões
-- ✅ Segurança com PolicyKit
+- ✅ Modern and intuitive interface
+- ✅ Complete user management
+- ✅ Automatic installation of dependencies
+- ✅ Visual and easy RDP connection
+- ✅ Smart deletion with session termination
+- ✅ Security with PolicyKit
 - ✅ Logs completos e detalhados
 
 **Testado e Aprovado**:
@@ -568,8 +568,8 @@ O RDP Session Manager está **totalmente funcional** e pronto para uso em produ�
 
 ---
 
-**Data da Última Atualização**: 2025-10-18
-**Versão**: v0.2.0
-**Status**: ✅ **PRODUÇÃO**
+**Last Update Date**: 2025-10-18
+**Version**: v0.2.0
+**Status**: ✅ **PRODUCTION**
 
-🎊 **O projeto está completo, funcional e documentado!** 🎊
+🎊 **The project is complete, functional and documented!** 🎊

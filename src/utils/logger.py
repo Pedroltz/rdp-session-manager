@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sistema de logs e auditoria
+Log and audit system
 """
 
 import logging
@@ -13,18 +13,18 @@ from typing import Dict, Optional
 
 
 class AuditLogger:
-    """Logger específico para auditoria de ações administrativas"""
+    """Specific logger for auditing administrative actions"""
 
     def __init__(self, log_dir: str = "/var/log/rdp-session-manager"):
         self.log_dir = Path(log_dir)
         self.audit_file = self.log_dir / "audit.log"
         self.json_audit_file = self.log_dir / "audit.json"
 
-        # Criar diretório de logs se não existir
+        # Create log directory if it does not exist
         try:
             self.log_dir.mkdir(parents=True, exist_ok=True)
         except PermissionError:
-            # Fallback para diretório do usuário
+            # Fallback to user directory
             self.log_dir = Path.home() / ".local" / "share" / "rdp-session-manager" / "logs"
             self.log_dir.mkdir(parents=True, exist_ok=True)
             self.audit_file = self.log_dir / "audit.log"
@@ -33,19 +33,19 @@ class AuditLogger:
     def log_event(self, event_type: str, action: str, username: str = "",
                  target_user: str = "", details: Dict = None, success: bool = True):
         """
-        Registra evento de auditoria
+        Records audit event
 
         Args:
-            event_type: Tipo do evento (user_create, user_delete, etc)
-            action: Descrição da ação
-            username: Usuário que executou a ação
-            target_user: Usuário alvo da ação
-            details: Detalhes adicionais
-            success: Se a ação foi bem sucedida
+            event_type: Event type (user_create, user_delete, etc.)
+            action: Description of the action
+            username: User who performed the action
+            target_user: Target user of the action
+            details: Additional details
+            success: If the action was successful
         """
         timestamp = datetime.now()
 
-        # Log estruturado em JSON
+        # Log structured in JSON
         audit_entry = {
             'timestamp': timestamp.isoformat(),
             'event_type': event_type,
@@ -72,10 +72,10 @@ class AuditLogger:
                 f.write(log_line)
 
         except Exception as e:
-            logging.error(f"Erro ao escrever log de auditoria: {e}")
+            logging.error(f"Error writing audit log: {e}")
 
     def get_recent_events(self, limit: int = 100) -> list:
-        """Retorna eventos recentes de auditoria"""
+        """Returns recent audit events"""
         events = []
 
         try:
@@ -87,17 +87,17 @@ class AuditLogger:
                     except json.JSONDecodeError:
                         continue
 
-            # Retornar os mais recentes
+            # Return the most recent
             return events[-limit:]
 
         except FileNotFoundError:
             return []
         except Exception as e:
-            logging.error(f"Erro ao ler eventos de auditoria: {e}")
+            logging.error(f"Error reading audit events: {e}")
             return []
 
     def get_user_events(self, username: str, limit: int = 50) -> list:
-        """Retorna eventos relacionados a um usuário específico"""
+        """Returns events related to a specific user"""
         all_events = self.get_recent_events(limit=1000)
 
         user_events = [
@@ -112,21 +112,21 @@ def setup_logger(name: str = 'rdp-session-manager',
                 log_level: int = logging.INFO,
                 log_dir: Optional[str] = None) -> logging.Logger:
     """
-    Configura o sistema de logging
+    Configure the logging system
 
     Args:
-        name: Nome do logger
-        log_level: Nível de log
-        log_dir: Diretório para arquivos de log
+        name: Name of the logger
+        log_level: Log level
+        log_dir: Directory for log files
 
     Returns:
         Logger configurado
     """
-    # Configurar o ROOT logger para capturar TODOS os logs de TODOS os módulos
+    # Configure ROOT logger to capture ALL logs from ALL modules
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
-    # Evitar duplicação de handlers
+    # Avoid duplication of handlers
     if root_logger.handlers:
         return logging.getLogger(name)
 
@@ -163,14 +163,14 @@ def setup_logger(name: str = 'rdp-session-manager',
         root_logger.addHandler(file_handler)
 
     except Exception as e:
-        root_logger.warning(f"Não foi possível criar arquivo de log: {e}")
+        root_logger.warning(f"Unable to create log file: {e}")
 
-    # Retornar o logger específico deste módulo
+    # Return the specific logger of this module
     return logging.getLogger(name)
 
 
 def get_logger(name: str = 'rdp-session-manager') -> logging.Logger:
-    """Retorna logger existente ou cria um novo"""
+    """Returns existing logger or creates a new one"""
     logger = logging.getLogger(name)
 
     if not logger.handlers:

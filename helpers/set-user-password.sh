@@ -1,19 +1,19 @@
 #!/bin/bash
-# Helper script para definir senha de usuário com pkexec
+# Helper script to set user password with pkexec
 # Uso: echo "username:password" | pkexec helpers/set-user-password.sh
 
 set -e
 
-# Ler credenciais do stdin
+# Read credentials from stdin
 read -r CREDENTIALS
 
 if [ -z "$CREDENTIALS" ]; then
-    echo "Erro: Credenciais não fornecidas via stdin"
+    echo "Error: Credentials not provided via stdin"
     exit 1
 fi
 
-# Definir senha usando chpasswd
+# Set password using chpasswd
 echo "$CREDENTIALS" | /usr/sbin/chpasswd
 
-echo "OK Senha definida com sucesso!"
+echo "OK Password set successfully!"
 exit 0

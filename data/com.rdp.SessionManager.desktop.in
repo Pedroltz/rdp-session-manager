@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=RDP Session Manager
-Comment=Gerenciador de sessões RDP
+Comment=RDP session manager
 Exec=@bindir@/rdp-session-manager
 Icon=com.rdp.SessionManager
 Terminal=false

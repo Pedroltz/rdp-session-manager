@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Módulo de monitoramento de sessões RDP
+RDP session monitoring module
 """
 
 import subprocess
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionInfo:
-    """Informações de uma sessão RDP"""
+    """Information from an RDP session"""
 
     def __init__(self, username: str, session_id: str = "", ip_address: str = "",
                  port: int = 0, connected: bool = False, start_time: datetime = None):
@@ -26,7 +26,7 @@ class SessionInfo:
         self.start_time = start_time or datetime.now()
 
     def to_dict(self) -> Dict:
-        """Converte para dicionário"""
+        """Converts to dictionary"""
         return {
             'username': self.username,
             'session_id': self.session_id,
@@ -38,24 +38,24 @@ class SessionInfo:
         }
 
     def get_duration(self) -> int:
-        """Retorna duração da sessão em segundos"""
+        """Returns session duration in seconds"""
         if self.start_time:
             return int((datetime.now() - self.start_time).total_seconds())
         return 0
 
 
 class SessionMonitor:
-    """Monitor de sessões RDP"""
+    """RDP session monitor"""
 
     def __init__(self):
         self.sessions = {}
 
     def get_active_sessions(self) -> List[SessionInfo]:
-        """Retorna lista de sessões ativas"""
+        """Returns list of active sessions"""
         sessions = []
 
         try:
-            # Verificar conexões RDP ativas
+            # Check active RDP connections
             connections = self._get_rdp_connections()
 
             for conn in connections:
@@ -69,28 +69,28 @@ class SessionMonitor:
                 sessions.append(session)
 
         except Exception as e:
-            logger.error(f"Erro ao obter sessões ativas: {e}")
+            logger.error(f"Error getting active sessions: {e}")
 
         return sessions
 
     def _get_rdp_connections(self) -> List[Dict]:
-        """Obtém conexões RDP ativas do sistema"""
+        """Gets active RDP connections from the system"""
         connections = []
         seen_users = set()
 
         try:
-            # Método 1: Verificar processos xrdp-sesman de usuários específicos
+            # Method 1: Check xrdp-sesman processes of specific users
             for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
-                    # Procurar por processos xrdp-sesman rodando como usuários (não root)
+                    # Search for xrdp-sesman processes running as users (not root)
                     if 'xrdp-sesman' in proc.info['name'].lower():
                         username = proc.info['username']
 
-                        # Ignorar processos root (são os daemons principais)
+                        # Ignore root processes (these are the main daemons)
                         if username != 'root' and username not in seen_users:
-                            # Este é um processo de sessão de usuário
+                            # This is a user session process
                             try:
-                                # Verificar se tem conexões estabelecidas
+                                # Check if you have established connections
                                 proc_connections = proc.connections(kind='inet')
 
                                 for conn in proc_connections:
@@ -109,7 +109,7 @@ class SessionMonitor:
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
 
-            # Método 2: Verificar via loginctl (sessões gráficas)
+            # Method 2: Check via loginctl (graphical sessions)
             try:
                 result = subprocess.run(
                     ['loginctl', 'list-sessions', '--no-legend'],
@@ -128,7 +128,7 @@ class SessionMonitor:
                             session_id = parts[0]
                             username = parts[2]
 
-                            # Verificar detalhes da sessão
+                            # Check session details
                             session_details = subprocess.run(
                                 ['loginctl', 'show-session', session_id],
                                 capture_output=True,
@@ -139,7 +139,7 @@ class SessionMonitor:
                             if session_details.returncode == 0:
                                 session_info = session_details.stdout
 
-                                # Verificar se é sessão xrdp (tem display remoto)
+                                # Check if it is an xrdp session (has a remote display)
                                 if 'Remote=yes' in session_info or 'xrdp' in session_info.lower():
                                     if username not in seen_users:
                                         connections.append({
@@ -151,16 +151,16 @@ class SessionMonitor:
                                         seen_users.add(username)
 
             except (subprocess.TimeoutExpired, FileNotFoundError):
-                # loginctl não disponível ou timeout
+                # loginctl not available or timeout
                 pass
 
         except Exception as e:
-            logger.error(f"Erro ao obter conexões RDP: {e}")
+            logger.error(f"Error getting RDP connections: {e}")
 
         return connections
 
     def get_user_session(self, username: str) -> Optional[SessionInfo]:
-        """Obtém informações da sessão de um usuário específico"""
+        """Gets session information for a specific user"""
         for session in self.get_active_sessions():
             if session.username == username:
                 return session
@@ -168,17 +168,17 @@ class SessionMonitor:
         return None
 
     def is_user_connected(self, username: str) -> bool:
-        """Verifica se um usuário está conectado"""
+        """Checks if a user is logged in"""
         return self.get_user_session(username) is not None
 
     def get_session_count(self) -> int:
-        """Retorna número de sessões ativas"""
+        """Returns number of active sessions"""
         return len(self.get_active_sessions())
 
     def get_ip_address(self) -> str:
-        """Obtém endereço IP do servidor"""
+        """Get server IP address"""
         try:
-            # Criar socket para determinar IP principal
+            # Create socket to determine main IP
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
@@ -186,9 +186,9 @@ class SessionMonitor:
             return ip
 
         except Exception as e:
-            logger.error(f"Erro ao obter IP: {e}")
+            logger.error(f"Error obtaining IP: {e}")
 
-            # Tentar via hostname
+            # Try via hostname
             try:
                 hostname = socket.gethostname()
                 return socket.gethostbyname(hostname)
@@ -196,7 +196,7 @@ class SessionMonitor:
                 return "127.0.0.1"
 
     def get_all_network_ips(self) -> List[str]:
-        """Retorna todos os endereços IP do servidor"""
+        """Returns all server IP addresses"""
         ips = []
 
         try:
@@ -212,40 +212,40 @@ class SessionMonitor:
                             ips.append(ip)
 
         except ImportError:
-            # netifaces não disponível, usar método alternativo
+            # netifaces not available, use alternative method
             for interface, snics in psutil.net_if_addrs().items():
                 for snic in snics:
                     if snic.family == socket.AF_INET and snic.address != '127.0.0.1':
                         ips.append(snic.address)
 
         except Exception as e:
-            logger.error(f"Erro ao obter IPs: {e}")
+            logger.error(f"Error obtaining IPs: {e}")
 
         return ips if ips else ["127.0.0.1"]
 
     def disconnect_user(self, username: str) -> bool:
-        """Desconecta um usuário"""
+        """Disconnects a user"""
         try:
             session = self.get_user_session(username)
 
             if not session:
-                logger.warning(f"Nenhuma sessão ativa para {username}")
+                logger.warning(f"No active sessions for {username}")
                 return False
 
-            # Desconectar via comando do sistema
-            # TODO: Implementar desconexão real
-            logger.info(f"Desconectando usuário {username}")
+            # Disconnect via system command
+            # TODO: Implement real disconnection
+            logger.info(f"Disconnecting user {username}")
 
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao desconectar {username}: {e}")
+            logger.error(f"Error disconnecting {username}: {e}")
             return False
 
     def kill_user_session(self, username: str) -> bool:
-        """Encerra forçadamente a sessão de um usuário"""
+        """Forcibly ends a user's session"""
         try:
-            # Obter processos do usuário
+            # Get user processes
             killed = False
 
             for proc in psutil.process_iter(['pid', 'name', 'username']):
@@ -258,16 +258,16 @@ class SessionMonitor:
                     continue
 
             if killed:
-                logger.info(f"Sessão de {username} encerrada")
+                logger.info(f"{username} session closed")
 
             return killed
 
         except Exception as e:
-            logger.error(f"Erro ao encerrar sessão de {username}: {e}")
+            logger.error(f"Error closing session of {username}: {e}")
             return False
 
     def get_system_stats(self) -> Dict:
-        """Retorna estatísticas do sistema"""
+        """Returns system statistics"""
         try:
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
@@ -285,11 +285,11 @@ class SessionMonitor:
             }
 
         except Exception as e:
-            logger.error(f"Erro ao obter estatísticas: {e}")
+            logger.error(f"Error getting statistics: {e}")
             return {}
 
     def check_port_status(self, port: int) -> bool:
-        """Verifica se uma porta está em uso"""
+        """Checks if a port is in use"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1)
@@ -297,15 +297,15 @@ class SessionMonitor:
                 return result == 0
 
         except Exception as e:
-            logger.error(f"Erro ao verificar porta {port}: {e}")
+            logger.error(f"Error checking port {port}: {e}")
             return False
 
     def get_connection_history(self, username: str, limit: int = 10) -> List[Dict]:
         """
-        Obtém histórico de conexões de um usuário
+        Gets a user's connection history
 
-        TODO: Implementar persistência do histórico
+        TODO: Implement history persistence
         """
-        # Por enquanto retornar lista vazia
-        # Futuramente implementar leitura de logs
+        # For now return empty list
+        # In the future implement log reading
         return []

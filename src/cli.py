@@ -19,7 +19,7 @@ from utils.logger import setup_logger
 from utils.polkit import get_privilege_command, set_cli_mode
 from version import __version__
 
-# Ativar modo CLI - força uso de sudo ao invés de pkexec
+# Enable CLI mode - forces use of sudo instead of pkexec
 set_cli_mode(True)
 
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ class CLI:
                     self.print_info("Example: rdpsm user create USERNAME --session-type winege-remoteapp --app-command /path/to/app.exe")
                     return 1
 
-                # Verificar se o arquivo .exe existe
+                # Check if the .exe file exists
                 from pathlib import Path
                 exe_path = Path(app_command)
                 if not exe_path.exists():
@@ -457,7 +457,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("IMPORTANT NOTICE: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation
@@ -506,7 +506,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("IMPORTANT NOTICE: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation
@@ -722,7 +722,7 @@ class CLI:
                     return 1
 
             # Use helper script
-            # Obter comando de elevação apropriado (pkexec ou sudo)
+            # Get appropriate elevation command (pkexec or sudo)
             _, priv_cmd = get_privilege_command()
 
             result = subprocess.run(
@@ -824,22 +824,22 @@ class CLI:
 
             self.print_info(f"Killing session for '{username}'...")
 
-            # Primeiro tenta encerramento gracioso com SIGTERM
+            # First try graceful termination with SIGTERM
             success = self.user_manager.kill_user_processes(username, force=False)
 
             if not success:
                 self.print_error("Failed to kill session")
                 return 1
 
-            # Aguarda um momento para os processos encerrarem
+            # Wait a moment for the processes to terminate
             time.sleep(2)
 
-            # Verifica se ainda há processos ativos
+            # Check if there are still active processes
             remaining_processes = self.user_manager.get_user_processes(username)
 
             if remaining_processes:
                 self.print_info(f"Some processes still running, forcing termination...")
-                # Força o encerramento com SIGKILL
+                # Force shutdown with SIGKILL
                 success = self.user_manager.kill_user_processes(username, force=True)
 
                 if not success:

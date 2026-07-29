@@ -19,7 +19,7 @@ class TestUserManager(unittest.TestCase):
 
     def setUp(self):
         """Setup test fixtures"""
-        # UserManager agora recebe app_config como primeiro parâmetro, rdp_users_home como segundo
+        # UserManager now receives app_config as first parameter, rdp_users_home as second
         self.user_manager = UserManager(app_config=None, rdp_users_home="/tmp/test-rdp-users")
 
     def test_rdp_user_to_dict(self):
@@ -120,9 +120,9 @@ class TestUserManager(unittest.TestCase):
 
     def test_get_next_rdp_port(self):
         """Test RDP port generation"""
-        # _detect_rdp_port agora recebe UID e retorna a porta baseada na config global
+        # _detect_rdp_port now receives UID and returns port based on global config
         port = self.user_manager._detect_rdp_port(5001)
-        self.assertEqual(port, 3389)  # Deve retornar a porta padrão
+        self.assertEqual(port, 3389) # Must return the default port
 
     def test_rdp_user_defaults(self):
         """Test RDPUser default values"""
@@ -134,7 +134,7 @@ class TestUserManager(unittest.TestCase):
             rdp_port=3389
         )
 
-        # Verificar defaults
+        # Check defaults
         self.assertFalse(user.active)
         self.assertTrue(user.enabled)
         self.assertFalse(user.is_superuser)
@@ -152,11 +152,11 @@ class TestUserManager(unittest.TestCase):
             is_superuser=True
         )
 
-        # Converter para dict e de volta
+        # Convert to dict and back
         user_dict = original_user.to_dict()
         restored_user = RDPUser.from_dict(user_dict)
 
-        # Verificar que todos os valores foram preservados
+        # Check that all values ​​have been preserved
         self.assertEqual(restored_user.username, original_user.username)
         self.assertEqual(restored_user.uid, original_user.uid)
         self.assertEqual(restored_user.home_dir, original_user.home_dir)
@@ -169,7 +169,7 @@ class TestUserManager(unittest.TestCase):
     @patch('grp.getgrnam')
     def test_ensure_rdp_group_exists(self, mock_getgrnam):
         """Test that RDP group check works when group exists"""
-        # Simular grupo existente
+        # Simulate existing group
         mock_group = Mock()
         mock_group.gr_gid = 1001
         mock_getgrnam.return_value = mock_group
@@ -182,7 +182,7 @@ class TestUserManager(unittest.TestCase):
     @patch('grp.getgrnam')
     def test_ensure_rdp_group_not_exists(self, mock_getgrnam):
         """Test that RDP group check fails when group doesn't exist"""
-        # Simular grupo não existente
+        # Simulate non-existing group
         mock_getgrnam.side_effect = KeyError('rdp-users')
 
         gid = self.user_manager._ensure_rdp_group()
@@ -191,20 +191,20 @@ class TestUserManager(unittest.TestCase):
 
     def test_validate_username_edge_cases(self):
         """Test username validation edge cases"""
-        # Caso limite: 3 caracteres (mínimo)
+        # Limit case: 3 characters (minimum)
         self.assertTrue(self.user_manager._validate_username('abc'))
 
-        # Caso limite: 32 caracteres (máximo)
+        # Limit case: 32 characters (maximum)
         self.assertTrue(self.user_manager._validate_username('a' * 32))
 
-        # Muito longo: 33 caracteres
+        # Too long: 33 characters
         self.assertFalse(self.user_manager._validate_username('a' * 33))
 
-        # Caracteres especiais válidos
+        # Valid special characters
         self.assertTrue(self.user_manager._validate_username('user-name'))
         self.assertTrue(self.user_manager._validate_username('user_name'))
 
-        # Caracteres especiais inválidos
+        # Invalid special characters
         self.assertFalse(self.user_manager._validate_username('user@name'))
         self.assertFalse(self.user_manager._validate_username('user.name'))
 

@@ -153,12 +153,12 @@ class RDPSessionManagerApp(Adw.Application):
         """Show dialog to install xrdp"""
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Servidor xrdp não encontrado",
-            body="O servidor xrdp é necessário para criar sessões RDP remotas.\n\nDeseja instalar agora?"
+            heading="xrdp server not found",
+            body="xrdp server is required to create remote RDP sessions.\n\nDo you want to install now?"
         )
 
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("install", "Instalar xrdp")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("install", "Install xrdp")
         dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
         dialog.connect("response", self.on_xrdp_install_response)
         dialog.present()
@@ -173,8 +173,8 @@ class RDPSessionManagerApp(Adw.Application):
         # Create progress dialog
         progress_dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Instalando xrdp",
-            body="Instalando servidor RDP...\nIsso pode levar alguns minutos."
+            heading="Installing xrdp",
+            body="Installing RDP server...\nThis may take a few minutes."
         )
 
         # Main container
@@ -190,7 +190,7 @@ class RDPSessionManagerApp(Adw.Application):
         spinner.set_size_request(32, 32)
         header_box.append(spinner)
 
-        status_label = Gtk.Label(label="Preparando instalação...")
+        status_label = Gtk.Label(label="Preparing installation...")
         status_label.add_css_class('title-3')
         header_box.append(status_label)
 
@@ -247,23 +247,23 @@ class RDPSessionManagerApp(Adw.Application):
             spinner.stop()
 
             if success:
-                append_log("OK xrdp instalado e configurado com sucesso!")
-                update_status("OK Instalação concluída!")
+                append_log("OK xrdp installed and configured successfully!")
+                update_status("OK Installation complete!")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_xrdp_success())
             else:
-                append_log(f"X ERRO: {message}")
-                update_status("X Erro na instalação")
+                append_log(f"X ERROR: {message}")
+                update_status("X Installation error")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_xrdp_error(message))
 
         def install_in_thread():
             try:
-                GLib.idle_add(append_log, "=== Instalando xrdp ===")
+                GLib.idle_add(append_log, "=== Installing xrdp ===")
                 GLib.idle_add(append_log, "")
-                GLib.idle_add(update_status, "Instalando xrdp...")
+                GLib.idle_add(update_status, "Installing xrdp...")
 
                 success, message = self.system_deps.install_package(
                     'xrdp',
@@ -282,14 +282,14 @@ class RDPSessionManagerApp(Adw.Application):
 
     def show_xrdp_success(self):
         """Show xrdp installation success"""
-        # Atualizar status na janela principal
+        # Update status in main window
         if self.window and hasattr(self.window, 'update_xrdp_status'):
             self.window.update_xrdp_status()
 
         dialog = Adw.MessageDialog(
             transient_for=self.window,
             heading="OK xrdp Instalado!",
-            body="O servidor xrdp foi instalado e configurado com sucesso.\n\nAgora você pode criar usuários RDP!"
+            body="The xrdp server has been successfully installed and configured.\n\nYou can now create RDP users!"
         )
         dialog.add_response("ok", "OK")
         dialog.present()
@@ -298,12 +298,12 @@ class RDPSessionManagerApp(Adw.Application):
         """Show xrdp installation error"""
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Erro na Instalação do xrdp",
-            body=f"Não foi possível instalar o xrdp.\n\nErro: {error}\n\nO servidor xrdp é NECESSÁRIO para criar usuários RDP.\n\nVocê pode:\n• Tentar instalar novamente\n• Instalar manualmente: sudo apt install xrdp"
+            heading="xrdp Installation Error",
+            body=f"Unable to install xrdp.\n\nError: {error}\n\nThe xrdp server is REQUIRED to create RDP users.\n\nYou can:\n• Try installing again\n• Install manually: sudo apt install xrdp"
         )
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("retry", "Tentar Novamente")
-        dialog.add_response("manual", "Ver Instruções")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("retry", "Try Again")
+        dialog.add_response("manual", "See Instructions")
         dialog.set_response_appearance("retry", Adw.ResponseAppearance.SUGGESTED)
         dialog.connect("response", self.on_xrdp_error_response)
         dialog.present()
@@ -311,38 +311,38 @@ class RDPSessionManagerApp(Adw.Application):
     def on_xrdp_error_response(self, dialog, response):
         """Handle xrdp error dialog response"""
         if response == "retry":
-            # Tentar instalar novamente
+            # Try installing again
             self.install_xrdp_with_progress()
         elif response == "manual":
-            # Mostrar instruções de instalação manual
+            # Show manual installation instructions
             self.show_manual_install_instructions()
 
     def show_manual_install_instructions(self):
         """Show manual installation instructions"""
-        instructions = """Para instalar o xrdp manualmente, execute os seguintes comandos no terminal:
+        instructions = """To install xrdp manually, run the following commands in the terminal:
 
-1. Atualizar lista de pacotes:
+1. Update package list:
    sudo apt update
 
-2. Instalar xrdp:
+2. Install xrdp:
    sudo apt install -y xrdp xorgxrdp
 
-3. Habilitar e iniciar o serviço:
+3. Enable and start the service:
    sudo systemctl enable xrdp
    sudo systemctl start xrdp
 
-4. Verificar se está rodando:
+4. Check if it is running:
    sudo systemctl status xrdp
 
-Após a instalação manual, reinicie esta aplicação para que o xrdp seja detectado."""
+After manual installation, restart this application for xrdp to be detected."""
 
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Instalação Manual do xrdp",
+            heading="Manual Installation of xrdp",
             body=instructions
         )
-        dialog.add_response("close", "Fechar")
-        dialog.add_response("copy", "Copiar Comandos")
+        dialog.add_response("close", "Close")
+        dialog.add_response("copy", "Copy Commands")
         dialog.set_response_appearance("copy", Adw.ResponseAppearance.SUGGESTED)
         dialog.connect("response", lambda d, r: self.on_manual_instructions_response(r, instructions))
         dialog.present()
@@ -350,7 +350,7 @@ Após a instalação manual, reinicie esta aplicação para que o xrdp seja dete
     def on_manual_instructions_response(self, response, instructions):
         """Handle manual instructions response"""
         if response == "copy":
-            # Copiar comandos para clipboard
+            # Copy commands to clipboard
             clipboard = self.window.get_clipboard()
             commands = """sudo apt update
 sudo apt install -y xrdp xorgxrdp
@@ -359,17 +359,17 @@ sudo systemctl start xrdp
 sudo systemctl status xrdp"""
             clipboard.set(commands)
 
-            # Mostrar toast
+            # Show toast
             if hasattr(self.window, 'show_toast'):
-                self.window.show_toast("OK Comandos copiados para a área de transferência!")
+                self.window.show_toast("OK Commands copied to clipboard!")
 
     def install_freerdp_with_progress(self):
         """Install FreeRDP with progress dialog"""
         # Create progress dialog
         progress_dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Instalando FreeRDP",
-            body="Instalando cliente RDP...\nIsso pode levar alguns minutos."
+            heading="Installing FreeRDP",
+            body="Installing RDP client...\nThis may take a few minutes."
         )
 
         # Main container
@@ -385,7 +385,7 @@ sudo systemctl status xrdp"""
         spinner.set_size_request(32, 32)
         header_box.append(spinner)
 
-        status_label = Gtk.Label(label="Preparando instalação...")
+        status_label = Gtk.Label(label="Preparing installation...")
         status_label.add_css_class('title-3')
         header_box.append(status_label)
 
@@ -442,23 +442,23 @@ sudo systemctl status xrdp"""
             spinner.stop()
 
             if success:
-                append_log("OK FreeRDP instalado com sucesso!")
-                update_status("OK Instalação concluída!")
+                append_log("OK FreeRDP installed successfully!")
+                update_status("OK Installation complete!")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_freerdp_success())
             else:
-                append_log(f"X ERRO: {message}")
-                update_status("X Erro na instalação")
+                append_log(f"X ERROR: {message}")
+                update_status("X Installation error")
 
                 GLib.timeout_add(1500, lambda: progress_dialog.close())
                 GLib.timeout_add(1600, lambda: self.show_freerdp_error(message))
 
         def install_in_thread():
             try:
-                GLib.idle_add(append_log, "=== Instalando FreeRDP ===")
+                GLib.idle_add(append_log, "=== Installing FreeRDP ===")
                 GLib.idle_add(append_log, "")
-                GLib.idle_add(update_status, "Instalando FreeRDP...")
+                GLib.idle_add(update_status, "Installing FreeRDP...")
 
                 success, message = self.system_deps.install_package(
                     'freerdp',
@@ -480,7 +480,7 @@ sudo systemctl status xrdp"""
         dialog = Adw.MessageDialog(
             transient_for=self.window,
             heading="OK FreeRDP Instalado!",
-            body="O cliente FreeRDP foi instalado com sucesso.\n\nAgora você pode conectar aos seus usuários RDP!"
+            body="The FreeRDP client has been successfully installed.\n\nNow you can connect to your RDP users!"
         )
         dialog.add_response("ok", "OK")
         dialog.present()
@@ -489,11 +489,11 @@ sudo systemctl status xrdp"""
         """Show FreeRDP installation error"""
         dialog = Adw.MessageDialog(
             transient_for=self.window,
-            heading="Erro na Instalação do FreeRDP",
-            body=f"Não foi possível instalar o FreeRDP.\n\nErro: {error}\n\nVocê pode:\n• Tentar instalar novamente\n• Instalar manualmente: sudo apt install freerdp3-x11"
+            heading="FreeRDP Installation Error",
+            body=f"Unable to install FreeRDP.\n\nError: {error}\n\nYou can:\n• Try installing again\n• Install manually: sudo apt install freerdp3-x11"
         )
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("retry", "Tentar Novamente")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("retry", "Try Again")
         dialog.set_response_appearance("retry", Adw.ResponseAppearance.SUGGESTED)
         dialog.connect("response", self.on_freerdp_error_response)
         dialog.present()
@@ -501,7 +501,7 @@ sudo systemctl status xrdp"""
     def on_freerdp_error_response(self, dialog, response):
         """Handle FreeRDP error dialog response"""
         if response == "retry":
-            # Tentar instalar novamente
+            # Try installing again
             self.install_freerdp_with_progress()
 
     def load_css(self):

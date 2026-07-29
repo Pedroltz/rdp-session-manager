@@ -3,57 +3,58 @@
 ## [0.3.6] - 2026-07-28
 
 ### Changed
-- No Arch, o instalador agora prepara automaticamente o `yay` pelo PKGBUILD oficial `yay-bin` quando nenhum helper AUR está disponível
-- Comandos AUR que podem renovar a autenticação do `sudo` passam a usar diretamente o terminal
+- On Arch, the installer now automatically prepares `yay` by the official PKGBUILD `yay-bin` when no AUR helper is available
+- AUR commands that can renew `sudo` authentication now use the terminal directly
+- Installer, application interface, helper output, documentation, and tests are now maintained entirely in English
 
 ### Fixed
-- Evita que prompts internos do `makepkg` expirem escondidos atrás da barra de progresso durante a instalação do xrdp
+- Prevent internal `makepkg` prompts from expiring hidden behind the progress bar during xrdp installation
 
 ## [0.3.5] - 2026-07-28
 
 ### Changed
-- Releases agora publicam somente `install.sh` e um bundle ZIP verificado com o instalador e os pacotes Debian/Arch
-- O bootstrap valida o digest SHA-256 fornecido pelo GitHub e remove os arquivos temporários ao finalizar
+- Releases now publish only `install.sh` and a verified ZIP bundle with the installer and Debian/Arch packages
+- Bootstrap validates the SHA-256 digest provided by GitHub and removes temporary files when finished
 
 ### Fixed
-- `--release` mantém compatibilidade com releases antigas que ainda usam assets separados
+- `--release` maintains compatibility with older releases that still use separate assets
 
 ## [0.3.4] - 2026-07-28
 
 ### Fixed
-- O comando `curl | bash` agora lê confirmações interativas pelo terminal em vez do pipe já consumido
-- Execuções sem terminal recebem uma mensagem clara e ainda podem usar `--yes` para o modo não interativo
+- The `curl | bash` command now reads interactive commits from the terminal instead of the already consumed pipe
+- Non-terminal runs receive a clear message and can still use `--yes` for non-interactive mode
 
 ## [0.3.3] - 2026-07-28
 
 ### Changed
-- O link público do instalador acompanha automaticamente a release estável mais recente
-- O workflow de release valida todos os artefatos e executa os testes do bootstrap antes da publicação
+- Public installer link automatically tracks the latest stable release
+- The release workflow validates all artifacts and runs bootstrap tests before publishing
 
 ### Fixed
-- O bootstrap agora aceita entradas `SHA256SUMS` nos formatos texto (`installer.pyz`) e binário (`*installer.pyz`)
+- Bootstrap now accepts `SHA256SUMS` inputs in text (`installer.pyz`) and binary (`*installer.pyz`) formats
 
 ## [0.3.2] - 2026-07-28
 
 ### Added
-- Novo instalador visual em Python com interface Rich, barras de progresso e logs detalhados
-- Bootstrap seguro para instalação direta pela release estável do GitHub, com validação SHA-256
-- Suporte documentado a Ubuntu/Debian e Arch/Manjaro/EndeavourOS/CachyOS
-- Instalação opcional de Wine, bibliotecas de 32 bits e `multilib` no Arch
-- Fallback transparente para compilar `xrdp` e `xorgxrdp` pelo AUR sem `yay` ou `paru`
-- Workflows de CI e release para gerar DEB, pacote Arch, zipapp, bootstrap e `SHA256SUMS`
+- New visual Python installer with rich interface, progress bars and detailed logs
+- Secure Bootstrap for direct installation via GitHub stable release, with SHA-256 validation
+- Documented support for Ubuntu/Debian and Arch/Manjaro/EndeavourOS/CachyOS
+- Optional installation of Wine, 32-bit libraries and `multilib` on Arch
+- Transparent fallback to compile `xrdp` and `xorgxrdp` from the AUR without `yay` or `paru`
+- CI and release workflows to generate DEB, Arch package, zipapp, bootstrap and `SHA256SUMS`
 
 ### Changed
-- Organizadas as ferramentas de instalação em `installer/`
-- Instalador local executável com `python -m installer --local`
-- Operações do `apt`, `pacman`, AUR e downloads agora ficam registradas no log de instalação
-- Barras de operação usam percentuais nativos quando os gerenciadores fornecem progresso real
-- Atualizada a documentação de instalação, teste local, Wine, AUR e desinstalação
+- Organized installation tools in `installer/`
+- Local installer executable with `python -m installer --local`
+- `apt`, `pacman`, AUR operations and downloads are now recorded in the installation log
+- Operation bars use native percentages when managers provide real progress
+- Updated installation, local testing, Wine, AUR and uninstallation documentation
 
 ### Fixed
-- Confirmações interativas não ficam mais escondidas atrás da barra de progresso
-- Arch não usa mais `pacman -Sy` isolado e importa as chaves PGP declaradas pelos PKGBUILDs
-- Testes de dependências Arch usam uma distribuição simulada em CI
+- Interactive confirmations are no longer hidden behind the progress bar
+- Arch no longer uses isolated `pacman -Sy` and imports PGP keys declared by PKGBUILDs
+- Arch dependency tests use a simulated CI distribution
 
 ## [0.3.1] - 2026-03-19
 

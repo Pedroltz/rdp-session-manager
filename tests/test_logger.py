@@ -23,13 +23,13 @@ class TestAuditLogger(unittest.TestCase):
 
     def setUp(self):
         """Setup test fixtures"""
-        # Criar diretório temporário para logs
+        # Create temporary directory for logs
         self.test_dir = Path(tempfile.mkdtemp())
         self.audit_logger = AuditLogger(str(self.test_dir))
 
     def tearDown(self):
         """Cleanup test fixtures"""
-        # Remover diretório temporário
+        # Remove temporary directory
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
 
@@ -45,29 +45,29 @@ class TestAuditLogger(unittest.TestCase):
         """Test AuditLogger fallback to home directory on permission error"""
         mock_home.return_value = self.test_dir
 
-        # Criar um diretório que vai dar PermissionError
+        # Create a directory that will give PermissionError
         restricted_dir = Path("/var/log/restricted_test_dir")
 
-        # Simular PermissionError no primeiro mkdir (diretório restrito)
-        # Mas permitir o segundo mkdir (diretório home)
+        # Simulate PermissionError in the first mkdir (restricted directory)
+        # But allow the second mkdir (home directory)
         call_count = [0]
 
         def mkdir_side_effect(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
-                # Primeira chamada: falhar com PermissionError
+                # First call: fail with PermissionError
                 raise PermissionError("Permission denied")
-            # Segunda chamada: criar diretório real no test_dir
+            # Second call: create real directory in test_dir
             original_mkdir = Path.mkdir.__wrapped__ if hasattr(Path.mkdir, '__wrapped__') else Path.mkdir
-            # Não fazer nada, apenas retornar (simular sucesso)
+            # Do nothing, just return (simulate success)
             return None
 
         mock_mkdir.side_effect = mkdir_side_effect
 
-        # Tentar criar logger em diretório restrito (vai falhar e usar fallback)
+        # Try to create logger in restricted directory (will fail and use fallback)
         logger = AuditLogger(str(restricted_dir))
 
-        # Deve ter feito fallback para diretório home
+        # Must have fallen back to home directory
         expected_dir = self.test_dir / ".local" / "share" / "rdp-session-manager" / "logs"
         self.assertEqual(str(logger.log_dir), str(expected_dir))
 
@@ -81,7 +81,7 @@ class TestAuditLogger(unittest.TestCase):
             success=True
         )
 
-        # Verificar que arquivos foram criados
+        # Check which files were created
         self.assertTrue(self.audit_logger.audit_file.exists())
         self.assertTrue(self.audit_logger.json_audit_file.exists())
 
@@ -96,12 +96,12 @@ class TestAuditLogger(unittest.TestCase):
             success=True
         )
 
-        # Ler arquivo JSON
+        # Read JSON file
         with open(self.audit_logger.json_audit_file, 'r') as f:
             log_line = f.readline()
             event = json.loads(log_line)
 
-        # Verificar campos
+        # Check fields
         self.assertEqual(event['event_type'], 'user_create')
         self.assertEqual(event['action'], 'Created user')
         self.assertEqual(event['user'], 'admin')
@@ -120,11 +120,11 @@ class TestAuditLogger(unittest.TestCase):
             success=True
         )
 
-        # Ler arquivo texto
+        # Read text file
         with open(self.audit_logger.audit_file, 'r') as f:
             log_line = f.readline()
 
-        # Verificar conteúdo
+        # Check content
         self.assertIn('USER_DELETE', log_line)
         self.assertIn('Deleted user', log_line)
         self.assertIn('olduser', log_line)
@@ -132,7 +132,7 @@ class TestAuditLogger(unittest.TestCase):
 
     def test_log_event_multiple_events(self):
         """Test logging multiple events"""
-        # Registrar vários eventos
+        # Register multiple events
         for i in range(5):
             self.audit_logger.log_event(
                 event_type=f'event_{i}',
@@ -140,7 +140,7 @@ class TestAuditLogger(unittest.TestCase):
                 success=True
             )
 
-        # Verificar que todos foram registrados
+        # Check that everyone has been registered
         with open(self.audit_logger.json_audit_file, 'r') as f:
             lines = f.readlines()
 
@@ -148,7 +148,7 @@ class TestAuditLogger(unittest.TestCase):
 
     def test_get_recent_events(self):
         """Test get_recent_events method"""
-        # Registrar alguns eventos
+        # Register some events
         for i in range(10):
             self.audit_logger.log_event(
                 event_type=f'event_{i}',
@@ -156,11 +156,11 @@ class TestAuditLogger(unittest.TestCase):
                 success=True
             )
 
-        # Obter eventos recentes
+        # Get recent events
         events = self.audit_logger.get_recent_events(limit=5)
 
         self.assertEqual(len(events), 5)
-        # Deve retornar os mais recentes (5-9)
+        # Must return the most recent (5-9)
         self.assertEqual(events[0]['event_type'], 'event_5')
         self.assertEqual(events[4]['event_type'], 'event_9')
 
@@ -172,23 +172,23 @@ class TestAuditLogger(unittest.TestCase):
 
     def test_get_user_events(self):
         """Test get_user_events method"""
-        # Registrar eventos de diferentes usuários
+        # Register events from different users
         self.audit_logger.log_event('event1', 'Action 1', username='user1', success=True)
         self.audit_logger.log_event('event2', 'Action 2', username='user2', success=True)
         self.audit_logger.log_event('event3', 'Action 3', target_user='user1', success=True)
         self.audit_logger.log_event('event4', 'Action 4', username='user1', success=True)
 
-        # Obter eventos do user1
+        # Get events from user1
         events = self.audit_logger.get_user_events('user1')
 
-        # Deve retornar 3 eventos (onde user1 é user ou target_user)
+        # Must return 3 events (where user1 is user or target_user)
         self.assertEqual(len(events), 3)
 
     def test_get_user_events_not_found(self):
         """Test get_user_events with non-existent user"""
         self.audit_logger.log_event('event1', 'Action 1', username='user1', success=True)
 
-        # Buscar usuário inexistente
+        # Search for non-existent user
         events = self.audit_logger.get_user_events('nonexistent')
 
         self.assertEqual(len(events), 0)
@@ -201,11 +201,11 @@ class TestAuditLogger(unittest.TestCase):
             success=True
         )
 
-        # Ler evento
+        # Read event
         with open(self.audit_logger.json_audit_file, 'r') as f:
             event = json.loads(f.readline())
 
-        # details deve ser um dicionário vazio
+        # details must be an empty dictionary
         self.assertEqual(event['details'], {})
 
     def test_log_event_failure(self):
@@ -216,7 +216,7 @@ class TestAuditLogger(unittest.TestCase):
             success=False
         )
 
-        # Verificar que foi registrado como falha
+        # Check that it was registered as a failure
         with open(self.audit_logger.json_audit_file, 'r') as f:
             event = json.loads(f.readline())
 
@@ -229,14 +229,14 @@ class TestLoggerSetup(unittest.TestCase):
     def setUp(self):
         """Setup test fixtures"""
         self.test_dir = Path(tempfile.mkdtemp())
-        # Limpar handlers do root logger
+        # Clear root logger handlers
         logging.getLogger().handlers = []
 
     def tearDown(self):
         """Cleanup test fixtures"""
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
-        # Limpar handlers novamente
+        # Clear handlers again
         logging.getLogger().handlers = []
 
     def test_setup_logger_creates_logger(self):
@@ -253,7 +253,7 @@ class TestLoggerSetup(unittest.TestCase):
         # Escrever log
         logger.info("Test message")
 
-        # Verificar que arquivo foi criado
+        # Check which file was created
         log_file = self.test_dir / "rdp-session-manager.log"
         self.assertTrue(log_file.exists())
 
@@ -261,7 +261,7 @@ class TestLoggerSetup(unittest.TestCase):
         """Test setup_logger default log level"""
         logger = setup_logger('test-logger', log_dir=str(self.test_dir))
 
-        # Nível padrão deve ser INFO
+        # Default level must be INFO
         root_logger = logging.getLogger()
         self.assertEqual(root_logger.level, logging.INFO)
 
@@ -280,7 +280,7 @@ class TestLoggerSetup(unittest.TestCase):
         logger2 = setup_logger('test-logger', log_dir=str(self.test_dir))
         final_handler_count = len(logging.getLogger().handlers)
 
-        # Número de handlers não deve aumentar
+        # Number of handlers should not increase
         self.assertEqual(initial_handler_count, final_handler_count)
 
     @patch('pathlib.Path.home')
@@ -290,7 +290,7 @@ class TestLoggerSetup(unittest.TestCase):
 
         logger = setup_logger('test-logger')
 
-        # Deve criar no diretório padrão
+        # Must create in default directory
         expected_log_path = self.test_dir / ".local" / "share" / "rdp-session-manager" / "logs"
         self.assertTrue(expected_log_path.exists())
 
@@ -306,7 +306,7 @@ class TestLoggerSetup(unittest.TestCase):
         logger1 = setup_logger('existing-logger', log_dir=str(self.test_dir))
         logger2 = get_logger('existing-logger')
 
-        # Deve retornar o mesmo logger
+        # Must return the same logger
         self.assertEqual(logger1.name, logger2.name)
 
     def test_logger_console_handler(self):
@@ -314,7 +314,7 @@ class TestLoggerSetup(unittest.TestCase):
         logger = setup_logger('test-logger', log_dir=str(self.test_dir))
 
         root_logger = logging.getLogger()
-        # Deve ter pelo menos um StreamHandler (console)
+        # Must have at least one StreamHandler (console)
         console_handlers = [h for h in root_logger.handlers if isinstance(h, logging.StreamHandler)]
         self.assertGreater(len(console_handlers), 0)
 
@@ -323,7 +323,7 @@ class TestLoggerSetup(unittest.TestCase):
         logger = setup_logger('test-logger', log_dir=str(self.test_dir))
 
         root_logger = logging.getLogger()
-        # Deve ter pelo menos um RotatingFileHandler
+        # Must have at least one RotatingFileHandler
         file_handlers = [h for h in root_logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler)]
         self.assertGreater(len(file_handlers), 0)
 
@@ -336,7 +336,7 @@ class TestLoggerSetup(unittest.TestCase):
 
         if file_handlers:
             handler = file_handlers[0]
-            # Verificar configurações
+            # Check settings
             self.assertEqual(handler.maxBytes, 10*1024*1024)  # 10MB
             self.assertEqual(handler.backupCount, 5)
 

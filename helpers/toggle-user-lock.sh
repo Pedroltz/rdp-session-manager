@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script para habilitar/desabilitar usuário RDP com pkexec
+# Helper script to enable/disable RDP user with pkexec
 # Uso: pkexec helpers/toggle-user-lock.sh USERNAME lock|unlock
 
 set -e
@@ -7,33 +7,33 @@ set -e
 USERNAME="$1"
 ACTION="$2"
 
-# Validar parâmetros
+# Validate parameters
 if [ -z "$USERNAME" ] || [ -z "$ACTION" ]; then
-    echo "Erro: Parâmetros insuficientes"
+    echo "Error: Insufficient parameters"
     echo "Uso: $0 USERNAME lock|unlock"
     exit 1
 fi
 
-# Validar ação
+# Validate action
 if [ "$ACTION" != "lock" ] && [ "$ACTION" != "unlock" ]; then
-    echo "Erro: Ação inválida. Use 'lock' ou 'unlock'"
+    echo "Error: Invalid action. Use 'lock' or 'unlock'"
     exit 1
 fi
 
-# Verificar se usuário existe
+# Check if user exists
 if ! /usr/bin/id "$USERNAME" &> /dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
 if [ "$ACTION" = "lock" ]; then
-    echo "Desabilitando usuário $USERNAME..."
+    echo "Disabling user $USERNAME..."
     /usr/sbin/usermod --lock "$USERNAME"
-    echo "OK Usuário $USERNAME desabilitado (conta bloqueada)"
+    echo "OK User $USERNAME disabled (account blocked)"
 else
-    echo "Habilitando usuário $USERNAME..."
+    echo "Enabling user $USERNAME..."
     /usr/sbin/usermod --unlock "$USERNAME"
-    echo "OK Usuário $USERNAME habilitado (conta desbloqueada)"
+    echo "OK User $USERNAME enabled (account unlocked)"
 fi
 
 exit 0

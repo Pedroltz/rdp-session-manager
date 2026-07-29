@@ -4,21 +4,21 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>RDP Session Manager</name>
-  <summary>Gerenciador de sessões RDP para GNOME</summary>
+  <summary>RDP session manager for GNOME</summary>
 
   <description>
     <p>
-      RDP Session Manager é uma aplicação GTK4 para GNOME que permite criar,
-      gerenciar e monitorar sessões RDP de forma fácil e intuitiva.
+      RDP Session Manager is a GTK4 application for GNOME that allows you to create,
+      manage and monitor RDP sessions easily and intuitively.
     </p>
-    <p>Recursos principais:</p>
+    <p>Key Features:</p>
     <ul>
-      <li>Interface gráfica moderna usando GTK4</li>
-      <li>Criação automatizada de usuários RDP</li>
-      <li>Suporte para múltiplos ambientes gráficos (GNOME, XFCE, KDE)</li>
-      <li>Gerenciamento centralizado de sessões</li>
-      <li>Monitoramento de status em tempo real</li>
-      <li>Integração com PolicyKit para segurança</li>
+      <li>Modern graphical interface using GTK4</li>
+      <li>Automated RDP user creation</li>
+      <li>Support for multiple graphical environments (GNOME, XFCE, KDE)</li>
+      <li>Centralized session management</li>
+      <li>Real-time status monitoring</li>
+      <li>PolicyKit integration for security</li>
     </ul>
   </description>
 
@@ -26,7 +26,7 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>Janela principal do gerenciador</caption>
+      <caption>Main manager window</caption>
     </screenshot>
   </screenshots>
 
@@ -40,32 +40,32 @@
   <releases>
     <release version="0.3.6" date="2026-07-28">
       <description>
-        <p>Instala automaticamente o yay no Arch quando necessário e mantém prompts do sudo visíveis durante builds do AUR.</p>
+        <p>Automatically installs yay on Arch when needed and keeps sudo prompts visible during AUR builds.</p>
       </description>
     </release>
     <release version="0.3.5" date="2026-07-28">
       <description>
-        <p>Simplifica a distribuição para um bootstrap e um bundle verificado contendo os pacotes suportados.</p>
+        <p>Simplifies distribution to a bootstrap and a verified bundle containing supported packages.</p>
       </description>
     </release>
     <release version="0.3.4" date="2026-07-28">
       <description>
-        <p>Corrige a entrada interativa do autoinstaller quando executado pelo comando curl pipe bash.</p>
+        <p>Fixes interactive autoinstaller input when invoked through a curl pipe.</p>
       </description>
     </release>
     <release version="0.3.3" date="2026-07-28">
       <description>
-        <p>Corrige a validação de checksum do autoinstaller e reforça os testes dos artefatos de release.</p>
+        <p>Corrects autoinstaller checksum validation and strengthens release artifact testing.</p>
       </description>
     </release>
     <release version="0.3.2" date="2026-07-28">
       <description>
-        <p>Instalador multiplataforma renovado, com progresso, logs e suporte aprimorado a Arch e Ubuntu/Debian.</p>
+        <p>Revamped cross-platform installer with progress, logs and improved support for Arch and Ubuntu/Debian.</p>
       </description>
     </release>
     <release version="0.3.1" date="2026-03-19">
       <description>
-        <p>Versão inicial do RDP Session Manager</p>
+        <p>Initial version of RDP Session Manager</p>
       </description>
     </release>
   </releases>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Módulo de validação e sanitização de entrada
+Input validation and sanitization module
 """
 
 import re
@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class Validator:
-    """Validador de entrada de dados"""
+    """Data entry validator"""
 
-    # Padrões de validação
+    # Validation standards
     USERNAME_PATTERN = r'^[a-z][a-z0-9_-]{2,31}$'
     PASSWORD_MIN_LENGTH = 8
     PORT_MIN = 1024
@@ -22,132 +22,132 @@ class Validator:
     @staticmethod
     def validate_username(username: str) -> Tuple[bool, str]:
         """
-        Valida nome de usuário
+        Validate username
 
         Returns:
-            Tuple (válido, mensagem_erro)
+            Tuple (valid, error_message)
         """
         if not username:
-            return False, "Nome de usuário não pode ser vazio"
+            return False, "Username cannot be empty"
 
         if len(username) < 3:
-            return False, "Nome de usuário muito curto (mínimo 3 caracteres)"
+            return False, "Username too short (minimum 3 characters)"
 
         if len(username) > 32:
-            return False, "Nome de usuário muito longo (máximo 32 caracteres)"
+            return False, "Username too long (maximum 32 characters)"
 
         if not re.match(Validator.USERNAME_PATTERN, username):
-            return False, "Nome de usuário inválido. Deve começar com letra minúscula e conter apenas letras, números, - e _"
+            return False, "Invalid username. Must start with a lowercase letter and contain only letters, numbers, - and _"
 
-        # Verificar nomes reservados
+        # Check reserved names
         reserved = ['root', 'admin', 'administrator', 'sudo', 'system', 'daemon']
         if username.lower() in reserved:
-            return False, f"Nome '{username}' é reservado pelo sistema"
+            return False, f"Name '{username}' is reserved by the system"
 
         return True, ""
 
     @staticmethod
     def validate_password(password: str, confirm_password: str = None) -> Tuple[bool, str]:
         """
-        Valida senha
+        Validate password
 
         Returns:
-            Tuple (válido, mensagem_erro)
+            Tuple (valid, error_message)
         """
         if not password:
-            return False, "Senha não pode ser vazia"
+            return False, "Password cannot be empty"
 
         if len(password) < Validator.PASSWORD_MIN_LENGTH:
-            return False, f"Senha muito curta (mínimo {Validator.PASSWORD_MIN_LENGTH} caracteres)"
+            return False, f"Password too short (minimum {Validator.PASSWORD_MIN_LENGTH} characters)"
 
-        # Verificar complexidade
+        # Check complexity
         has_upper = any(c.isupper() for c in password)
         has_lower = any(c.islower() for c in password)
         has_digit = any(c.isdigit() for c in password)
 
         if not (has_upper and has_lower and has_digit):
-            return False, "Senha deve conter letras maiúsculas, minúsculas e números"
+            return False, "Password must contain uppercase letters, lowercase letters and numbers"
 
-        # Verificar confirmação
+        # Check confirmation
         if confirm_password is not None and password != confirm_password:
-            return False, "Senhas não coincidem"
+            return False, "Passwords do not match"
 
         return True, ""
 
     @staticmethod
     def validate_port(port: int) -> Tuple[bool, str]:
         """
-        Valida número de porta
+        Validate port number
 
         Returns:
-            Tuple (válido, mensagem_erro)
+            Tuple (valid, error_message)
         """
         if not isinstance(port, int):
             try:
                 port = int(port)
             except (ValueError, TypeError):
-                return False, "Porta deve ser um número inteiro"
+                return False, "Port must be an integer"
 
         if port < Validator.PORT_MIN:
-            return False, f"Porta muito baixa (mínimo {Validator.PORT_MIN})"
+            return False, f"Port too low (minimum {Validator.PORT_MIN})"
 
         if port > Validator.PORT_MAX:
-            return False, f"Porta muito alta (máximo {Validator.PORT_MAX})"
+            return False, f"Port too high (maximum {Validator.PORT_MAX})"
 
         return True, ""
 
     @staticmethod
     def validate_desktop_env(de: str) -> Tuple[bool, str]:
         """
-        Valida ambiente desktop
+        Validates desktop environment
 
         Returns:
-            Tuple (válido, mensagem_erro)
+            Tuple (valid, error_message)
         """
         valid_des = ['gnome', 'xfce', 'xfce4', 'kde', 'plasma', 'mate', 'cinnamon', 'lxde', 'lxqt']
 
         if de.lower() not in valid_des:
-            return False, f"Ambiente desktop '{de}' não suportado. Opções: {', '.join(valid_des)}"
+            return False, f"Desktop environment '{de}' not supported. Options: {', '.join(valid_des)}"
 
         return True, ""
 
     @staticmethod
     def validate_home_dir(home_dir: str) -> Tuple[bool, str]:
         """
-        Valida diretório home
+        Validates home directory
 
         Returns:
-            Tuple (válido, mensagem_erro)
+            Tuple (valid, error_message)
         """
         if not home_dir:
-            return False, "Diretório home não pode ser vazio"
+            return False, "Home directory cannot be empty"
 
         if not home_dir.startswith('/'):
-            return False, "Diretório home deve ser caminho absoluto"
+            return False, "Home directory must be absolute path"
 
-        # Evitar diretórios sensíveis
+        # Avoid sensitive directories
         forbidden = ['/root', '/bin', '/sbin', '/usr/bin', '/usr/sbin', '/etc', '/sys', '/proc']
         if home_dir in forbidden or any(home_dir.startswith(f) for f in forbidden):
-            return False, f"Diretório '{home_dir}' não é permitido"
+            return False, f"Directory '{home_dir}' is not allowed"
 
         return True, ""
 
     @staticmethod
     def sanitize_username(username: str) -> str:
-        """Remove caracteres inválidos do nome de usuário"""
-        # Remover caracteres não permitidos
+        """Remove invalid characters from username"""
+        # Remove disallowed characters
         sanitized = re.sub(r'[^a-z0-9_-]', '', username.lower())
 
-        # Garantir que começa com letra
+        # Make sure it starts with a letter
         if sanitized and not sanitized[0].isalpha():
             sanitized = 'u' + sanitized
 
-        return sanitized[:32]  # Limitar tamanho
+        return sanitized[:32] # Limit size
 
     @staticmethod
     def sanitize_path(path: str) -> str:
-        """Sanitiza caminho de arquivo/diretório"""
-        # Remover caracteres perigosos
+        """Sanitizes file/directory path"""
+        # Remove dangerous characters
         dangerous = ['..', '~', '$', '`', ';', '|', '&', '>', '<']
 
         for char in dangerous:

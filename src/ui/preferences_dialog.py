@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class PreferencesDialog(Adw.PreferencesWindow):
-    """Dialog de configurações da aplicação"""
+    """Application settings dialog"""
 
     def __init__(self, parent, app_config, **kwargs):
         super().__init__(**kwargs)
@@ -24,22 +24,22 @@ class PreferencesDialog(Adw.PreferencesWindow):
         self.set_modal(True)
         self.set_search_enabled(False)
 
-        # Criar página de configurações
+        # Create settings page
         page = Adw.PreferencesPage()
-        page.set_title("Configurações")
+        page.set_title("Settings")
         page.set_icon_name("preferences-system-symbolic")
 
-        # Grupo de configurações RDP
+        # RDP Settings Group
         rdp_group = Adw.PreferencesGroup()
-        rdp_group.set_title("Servidor RDP")
-        rdp_group.set_description("Configurações do servidor xrdp")
+        rdp_group.set_title("RDP Server")
+        rdp_group.set_description("xrdp server settings")
 
-        # Campo de porta padrão
+        # Default port field
         self.port_row = Adw.SpinRow()
-        self.port_row.set_title("Porta Padrão")
-        self.port_row.set_subtitle("Porta usada por todos os usuários RDP")
+        self.port_row.set_title("Default Port")
+        self.port_row.set_subtitle("Port used by all RDP users")
 
-        # Configurar adjustment (min, max, step)
+        # Configure adjustment (min, max, step)
         adjustment = Gtk.Adjustment()
         adjustment.set_lower(1)
         adjustment.set_upper(65535)
@@ -48,27 +48,27 @@ class PreferencesDialog(Adw.PreferencesWindow):
         adjustment.set_value(self.app_config.get_default_rdp_port())
 
         self.port_row.set_adjustment(adjustment)
-        self.port_row.set_digits(0)  # Sem casas decimais
+        self.port_row.set_digits(0) # No decimal places
 
-        # Conectar sinal de mudança
+        # Connect turn signal
         self.port_row.connect('changed', self.on_port_changed)
 
         rdp_group.add(self.port_row)
 
-        # Adicionar grupo à página
+        # Add group to page
         page.add(rdp_group)
 
-        # Adicionar página à janela
+        # Add page to window
         self.add(page)
 
     def on_port_changed(self, spin_row):
-        """Callback quando porta é alterada"""
+        """Callback when port is changed"""
         new_port = int(spin_row.get_value())
 
-        # Salvar configuração
+        # Save configuration
         success = self.app_config.set_default_rdp_port(new_port)
 
         if success:
-            logger.info(f"Porta padrão alterada para: {new_port}")
+            logger.info(f"Default port changed to: {new_port}")
         else:
-            logger.error(f"Erro ao alterar porta para: {new_port}")
+            logger.error(f"Error changing port to: {new_port}")

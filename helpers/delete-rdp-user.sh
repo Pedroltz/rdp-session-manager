@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script para deletar usuário RDP com pkexec
+# Helper script to delete RDP user with pkexec
 # Uso: pkexec helpers/delete-rdp-user.sh USERNAME [--remove-home] [--kill-processes]
 
 set -e
@@ -8,9 +8,9 @@ USERNAME="$1"
 REMOVE_HOME=false
 KILL_PROCESSES=false
 
-# Validar parâmetros
+# Validate parameters
 if [ -z "$USERNAME" ]; then
-    echo "Erro: Nome de usuário não especificado"
+    echo "Error: Username not specified"
     echo "Uso: $0 USERNAME [--remove-home] [--kill-processes]"
     exit 1
 fi
@@ -29,47 +29,47 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-echo "Deletando usuário RDP: $USERNAME"
+echo "Deleting RDP user: $USERNAME"
 
-# 1. Matar processos se solicitado
+# 1. Kill processes when requested
 if [ "$KILL_PROCESSES" = true ]; then
-    echo "→ Verificando processos ativos..."
+    echo "→ Checking active processes..."
 
-    # Tentar obter processos do usuário
+    # Try to get user processes
     if /usr/bin/pgrep -u "$USERNAME" > /dev/null 2>&1; then
         PROCESS_COUNT=$(/usr/bin/pgrep -u "$USERNAME" | wc -l)
-        echo "  Encontrados $PROCESS_COUNT processos ativos"
+        echo "Found $PROCESS_COUNT active processes"
 
-        echo "→ Terminando processos (SIGTERM)..."
+        echo "→ Terminating processes (SIGTERM)..."
         /usr/bin/pkill -15 -u "$USERNAME" 2>/dev/null || true
 
-        # Aguardar um pouco
+        # Wait briefly
         sleep 1
 
-        # Verificar se ainda há processos
+        # Check if there are still processes
         if /usr/bin/pgrep -u "$USERNAME" > /dev/null 2>&1; then
             REMAINING=$(/usr/bin/pgrep -u "$USERNAME" | wc -l)
-            echo "  Ainda há $REMAINING processos, forçando terminação (SIGKILL)..."
+            echo "There are still $REMAINING processes, forcing termination (SIGKILL)..."
             /usr/bin/pkill -9 -u "$USERNAME" 2>/dev/null || true
             sleep 0.5
         fi
 
-        echo "  OK Processos terminados"
+        echo "OK Processes finished"
     else
-        echo "  Nenhum processo ativo encontrado"
+        echo "No active processes found"
     fi
 fi
 
-# 2. Deletar usuário
-echo "→ Deletando usuário $USERNAME..."
+# 2. Delete user
+echo "→ Deleting user $USERNAME..."
 
 if [ "$REMOVE_HOME" = true ]; then
     /usr/sbin/userdel -r "$USERNAME"
-    echo "  OK Usuário e diretório home removidos"
+    echo "OK User and home directory removed"
 else
     /usr/sbin/userdel "$USERNAME"
-    echo "  OK Usuário removido (diretório home mantido)"
+    echo "OK User removed (home directory kept)"
 fi
 
-echo "OK Usuário $USERNAME deletado com sucesso!"
+echo "OK User $USERNAME deleted successfully!"
 exit 0

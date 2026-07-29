@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sistema de backup de configurações
+Settings backup system
 """
 
 import json
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class BackupManager:
-    """Gerenciador de backup de configurações"""
+    """Settings Backup Manager"""
 
     def __init__(self, backup_dir: str = None):
         if backup_dir:
@@ -26,13 +26,13 @@ class BackupManager:
 
     def create_backup(self, user_data: Dict) -> Optional[Path]:
         """
-        Cria backup das configurações de um usuário
+        Creates a backup of a user's settings
 
         Args:
-            user_data: Dados do usuário para backup
+            user_data: User data to backup
 
         Returns:
-            Path do arquivo de backup ou None se falhar
+            Backup file path or None if it fails
         """
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -56,13 +56,13 @@ class BackupManager:
 
     def restore_backup(self, backup_file: Path) -> Optional[Dict]:
         """
-        Restaura configuração de um arquivo de backup
+        Restores configuration from a backup file
 
         Args:
-            backup_file: Path do arquivo de backup
+            backup_file: Path of the backup file
 
         Returns:
-            Dicionário com dados do usuário ou None se falhar
+            Dictionary with user data or None if failed
         """
         try:
             with open(backup_file, 'r') as f:
@@ -77,13 +77,13 @@ class BackupManager:
 
     def list_backups(self, username: str = None) -> list:
         """
-        Lista backups disponíveis
+        List available backups
 
         Args:
-            username: Filtrar por usuário específico (opcional)
+            username: Filter by specific user (optional)
 
         Returns:
-            Lista de arquivos de backup
+            Backup File List
         """
         try:
             pattern = f"backup_{username}_*.json" if username else "backup_*.json"
@@ -96,7 +96,7 @@ class BackupManager:
             return []
 
     def delete_backup(self, backup_file: Path) -> bool:
-        """Remove um arquivo de backup"""
+        """Remove a backup file"""
         try:
             backup_file.unlink()
             logger.info(f"Backup deleted: {backup_file}")
@@ -111,11 +111,11 @@ class BackupManager:
         Remove backups antigos
 
         Args:
-            days: Remover backups mais antigos que N dias
-            username: Filtrar por usuário específico (opcional)
+            days: Remove backups older than N days
+            username: Filter by specific user (optional)
 
         Returns:
-            Número de backups removidos
+            Number of backups removed
         """
         try:
             from datetime import timedelta
@@ -126,7 +126,7 @@ class BackupManager:
             removed = 0
 
             for backup in backups:
-                # Extrair timestamp do nome do arquivo
+                # Extract timestamp from file name
                 parts = backup.stem.split('_')
 
                 if len(parts) >= 3:
@@ -152,16 +152,16 @@ class BackupManager:
 
     def export_all_configs(self, export_file: Path) -> bool:
         """
-        Exporta todas as configurações para um arquivo
+        Export all settings to a file
 
         Args:
-            export_file: Path do arquivo de exportação
+            export_file: Path of the export file
 
         Returns:
-            True se sucesso
+            True if success
         """
         try:
-            # Coletar todos os backups
+            # Collect all backups
             all_backups = []
 
             for backup in self.list_backups():
@@ -187,13 +187,13 @@ class BackupManager:
 
     def import_configs(self, import_file: Path) -> bool:
         """
-        Importa configurações de um arquivo
+        Import settings from a file
 
         Args:
-            import_file: Path do arquivo de importação
+            import_file: Path of the import file
 
         Returns:
-            True se sucesso
+            True if success
         """
         try:
             with open(import_file, 'r') as f:

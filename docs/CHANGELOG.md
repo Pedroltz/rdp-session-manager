@@ -151,22 +151,22 @@ All 109 unit tests passing:
 ### Example Usage
 
 **Create RemoteApp User**:
-1. Click "Novo Usuário"
-2. Select "RemoteApp (Aplicativo Único)"
+1. Click "New User"
+2. Select "RemoteApp (Single App)"
 3. Enter command: `firefox`
 4. Optional args: `--private-window`
 5. Create user
 
 **Change User Settings**:
 1. Click "..." menu next to user
-2. Select "Configurações de Usuário"
+2. Select "User Settings"
 3. Modify username, full name, or password
-4. Click "Salvar Alterações"
+4. Click "Save Changes"
 5. Authenticate with pkexec
 
 **Switch Session Type**:
 1. Open user settings
-2. Change "Tipo de Sessão" dropdown
+2. Change "Session Type" dropdown
 3. For RemoteApp: enter application command
 4. Save changes (will terminate active sessions)
 

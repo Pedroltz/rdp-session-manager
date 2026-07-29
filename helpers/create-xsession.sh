@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script para criar arquivo .xsession com pkexec
+# Helper script to create .xsession file with pkexec
 # Uso: pkexec helpers/create-xsession.sh USERNAME HOME_DIR DE_COMMAND
 
 set -e
@@ -8,28 +8,28 @@ USERNAME="$1"
 HOME_DIR="$2"
 DE_COMMAND="$3"
 
-# Validar parâmetros
+# Validate parameters
 if [ -z "$USERNAME" ] || [ -z "$HOME_DIR" ] || [ -z "$DE_COMMAND" ]; then
-    echo "Erro: Parâmetros insuficientes"
+    echo "Error: Insufficient parameters"
     echo "Uso: $0 USERNAME HOME_DIR DE_COMMAND"
     exit 1
 fi
 
 XSESSION_FILE="$HOME_DIR/.xsession"
 
-echo "Criando arquivo .xsession para $USERNAME..."
+echo "Creating .xsession file for $USERNAME..."
 
-# Detectar layout de teclado do sistema
+# Detect system keyboard layout
 XKBLAYOUT="us"
 XKBVARIANT=""
 XKBMODEL="pc105"
 
 if [ -f /etc/default/keyboard ]; then
     source /etc/default/keyboard
-    echo "Layout de teclado detectado: $XKBLAYOUT (variante: $XKBVARIANT, modelo: $XKBMODEL)"
+    echo "Keyboard layout detected: $XKBLAYOUT (variant: $XKBVARIANT, model: $XKBMODEL)"
 fi
 
-# Construir comando setxkbmap
+# Build command setxkbmap
 SETXKBMAP_CMD="setxkbmap -layout $XKBLAYOUT"
 if [ -n "$XKBVARIANT" ]; then
     SETXKBMAP_CMD="$SETXKBMAP_CMD -variant $XKBVARIANT"
@@ -38,7 +38,7 @@ if [ -n "$XKBMODEL" ]; then
     SETXKBMAP_CMD="$SETXKBMAP_CMD -model $XKBMODEL"
 fi
 
-# Criar arquivo .xsession
+# Create .xsession file
 cat > "$XSESSION_FILE" <<EOF
 #!/bin/bash
 # RDP Session startup script for $USERNAME
@@ -60,10 +60,10 @@ $SETXKBMAP_CMD
 exec $DE_COMMAND
 EOF
 
-# Ajustar permissões
+# Adjust permissions
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "OK Arquivo .xsession criado com sucesso!"
-echo "  - Layout de teclado: $XKBLAYOUT"
+echo "OK .xsession file created successfully!"
+echo " - Keyboard layout: $XKBLAYOUT"
 exit 0

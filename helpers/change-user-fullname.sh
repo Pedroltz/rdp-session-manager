@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script helper para alterar nome completo (GECOS) de usuário RDP
+# Helper script to change RDP user's full name (GECOS)
 # Uso: pkexec change-user-fullname.sh USERNAME "Full Name"
 
 set -e
@@ -12,16 +12,16 @@ fi
 USERNAME="$1"
 FULLNAME="$2"
 
-# Verificar se usuário existe
+# Check if user exists
 if ! id "$USERNAME" &>/dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
-echo "Alterando nome completo de $USERNAME para: $FULLNAME"
+echo "Changing full name of $USERNAME to: $FULLNAME"
 
-# Alterar GECOS (nome completo)
+# Change GECOS (full name)
 /usr/sbin/usermod -c "$FULLNAME" "$USERNAME"
 
-echo "OK Nome completo alterado com sucesso"
+echo "OK Full name changed successfully"
 exit 0

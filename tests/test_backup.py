@@ -23,13 +23,13 @@ class TestBackupManager(unittest.TestCase):
 
     def setUp(self):
         """Setup test fixtures"""
-        # Criar diretório temporário para backups
+        # Create temporary directory for backups
         self.test_dir = Path(tempfile.mkdtemp())
         self.backup_manager = BackupManager(str(self.test_dir))
 
     def tearDown(self):
         """Cleanup test fixtures"""
-        # Remover diretório temporário
+        # Remove temporary directory
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
 
@@ -46,7 +46,7 @@ class TestBackupManager(unittest.TestCase):
 
         manager = BackupManager()
 
-        # Deve criar no diretório padrão
+        # Must create in default directory
         expected_dir = self.test_dir / ".local" / "share" / "rdp-session-manager" / "backups"
         self.assertTrue(expected_dir.exists())
 
@@ -76,22 +76,22 @@ class TestBackupManager(unittest.TestCase):
 
         backup_file = self.backup_manager.create_backup(user_data)
 
-        # Ler conteúdo do backup
+        # Read backup content
         with open(backup_file, 'r') as f:
             backup_data = json.load(f)
 
-        # Verificar estrutura
+        # Check structure
         self.assertIn('timestamp', backup_data)
         self.assertIn('version', backup_data)
         self.assertIn('user_data', backup_data)
 
-        # Verificar dados do usuário
+        # Check user data
         self.assertEqual(backup_data['user_data']['username'], 'testuser')
         self.assertEqual(backup_data['user_data']['uid'], 5000)
 
     def test_restore_backup(self):
         """Test restore_backup method"""
-        # Criar backup
+        # Create backup
         user_data = {
             'username': 'testuser',
             'uid': 5000,
@@ -118,7 +118,7 @@ class TestBackupManager(unittest.TestCase):
         """Test list_backups method"""
         import time
 
-        # Criar alguns backups com pequeno delay para garantir timestamps únicos
+        # Create some backups with small delay to guarantee unique timestamps
         user_data1 = {'username': 'user1', 'uid': 5000}
         user_data2 = {'username': 'user2', 'uid': 5001}
         user_data3 = {'username': 'user1', 'uid': 5000}
@@ -129,11 +129,11 @@ class TestBackupManager(unittest.TestCase):
         time.sleep(0.01)  # Pequeno delay
         self.backup_manager.create_backup(user_data3)
 
-        # Listar todos
+        # List all
         all_backups = self.backup_manager.list_backups()
-        self.assertGreaterEqual(len(all_backups), 2)  # Pelo menos 2 (pode ter 3 se os timestamps forem diferentes)
+        self.assertGreaterEqual(len(all_backups), 2) # At least 2 (can have 3 if timestamps are different)
 
-        # Listar por usuário
+        # List by user
         user1_backups = self.backup_manager.list_backups(username='user1')
         self.assertGreaterEqual(len(user1_backups), 1)
 
@@ -148,30 +148,30 @@ class TestBackupManager(unittest.TestCase):
 
     def test_list_backups_sorted(self):
         """Test that list_backups returns sorted results (newest first)"""
-        # Criar backups com pequenos intervalos
+        # Create backups at short intervals
         for i in range(3):
             user_data = {'username': f'user{i}', 'uid': 5000 + i}
             self.backup_manager.create_backup(user_data)
 
         backups = self.backup_manager.list_backups()
 
-        # Verificar que estão ordenados (mais recentes primeiro)
+        # Check that they are ordered (most recent first)
         self.assertEqual(len(backups), 3)
-        # O mais recente deve ter user2
+        # The latest must have user2
         self.assertIn('user2', backups[0].name)
-        # O mais antigo deve ter user0
+        # The oldest must have user0
         self.assertIn('user0', backups[2].name)
 
     def test_delete_backup(self):
         """Test delete_backup method"""
-        # Criar backup
+        # Create backup
         user_data = {'username': 'testuser', 'uid': 5000}
         backup_file = self.backup_manager.create_backup(user_data)
 
-        # Verificar que existe
+        # Check that it exists
         self.assertTrue(backup_file.exists())
 
-        # Deletar
+        # Delete
         result = self.backup_manager.delete_backup(backup_file)
 
         self.assertTrue(result)
@@ -187,34 +187,34 @@ class TestBackupManager(unittest.TestCase):
 
     def test_cleanup_old_backups(self):
         """Test cleanup_old_backups method"""
-        # Criar backups "antigos" modificando o timestamp no nome
+        # Create "old" backups by modifying the timestamp in the name
         old_date = (datetime.now() - timedelta(days=35)).strftime("%Y%m%d_%H%M%S")
         old_backup = self.test_dir / f"backup_olduser_{old_date}.json"
 
-        # Criar arquivo antigo
+        # Create old file
         with open(old_backup, 'w') as f:
             json.dump({'timestamp': old_date, 'version': '1.0', 'user_data': {'username': 'olduser'}}, f)
 
-        # Criar backup recente
+        # Create recent backup
         recent_data = {'username': 'recentuser', 'uid': 5000}
         self.backup_manager.create_backup(recent_data)
 
-        # Limpar backups antigos (30 dias)
+        # Clear old backups (30 days)
         removed = self.backup_manager.cleanup_old_backups(days=30)
 
-        # Deve ter removido 1 backup
+        # Must have removed 1 backup
         self.assertEqual(removed, 1)
 
-        # Backup antigo não deve mais existir
+        # Old backup should no longer exist
         self.assertFalse(old_backup.exists())
 
-        # Backup recente deve existir
+        # Recent backup must exist
         backups = self.backup_manager.list_backups()
         self.assertEqual(len(backups), 1)
 
     def test_cleanup_old_backups_by_user(self):
         """Test cleanup_old_backups filtered by username"""
-        # Criar backups antigos de diferentes usuários
+        # Create old backups from different users
         old_date = (datetime.now() - timedelta(days=35)).strftime("%Y%m%d_%H%M%S")
 
         old_backup1 = self.test_dir / f"backup_user1_{old_date}.json"
@@ -224,7 +224,7 @@ class TestBackupManager(unittest.TestCase):
             with open(backup, 'w') as f:
                 json.dump({'timestamp': old_date, 'version': '1.0', 'user_data': {}}, f)
 
-        # Limpar apenas backups do user1
+        # Clear only user1's backups
         removed = self.backup_manager.cleanup_old_backups(days=30, username='user1')
 
         self.assertEqual(removed, 1)
@@ -233,7 +233,7 @@ class TestBackupManager(unittest.TestCase):
 
     def test_export_all_configs(self):
         """Test export_all_configs method"""
-        # Criar alguns backups
+        # Create some backups
         user1_data = {'username': 'user1', 'uid': 5000}
         user2_data = {'username': 'user2', 'uid': 5001}
 
@@ -247,7 +247,7 @@ class TestBackupManager(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(export_file.exists())
 
-        # Verificar conteúdo
+        # Check content
         with open(export_file, 'r') as f:
             export_data = json.load(f)
 
@@ -263,7 +263,7 @@ class TestBackupManager(unittest.TestCase):
 
         self.assertTrue(result)
 
-        # Verificar que arquivo foi criado com lista vazia
+        # Check which file was created with empty list
         with open(export_file, 'r') as f:
             export_data = json.load(f)
 
@@ -271,7 +271,7 @@ class TestBackupManager(unittest.TestCase):
 
     def test_import_configs(self):
         """Test import_configs method"""
-        # Criar arquivo de importação
+        # Create import file
         import_data = {
             'export_date': datetime.now().isoformat(),
             'version': '1.0',
@@ -290,7 +290,7 @@ class TestBackupManager(unittest.TestCase):
 
         self.assertTrue(result)
 
-        # Verificar que backups foram criados
+        # Check which backups have been created
         backups = self.backup_manager.list_backups()
         self.assertEqual(len(backups), 2)
 
@@ -308,7 +308,7 @@ class TestBackupManager(unittest.TestCase):
 
         backup_file = self.backup_manager.create_backup(user_data)
 
-        # Nome deve seguir o formato: backup_USERNAME_TIMESTAMP.json
+        # Name must follow the format: backup_USERNAME_TIMESTAMP.json
         self.assertTrue(backup_file.name.startswith('backup_testuser_'))
         self.assertTrue(backup_file.name.endswith('.json'))
 
@@ -318,25 +318,25 @@ class TestBackupManager(unittest.TestCase):
 
         user_data = {'username': 'testuser', 'uid': 5000}
 
-        # Criar múltiplos backups com pequeno delay para garantir timestamps únicos
+        # Create multiple backups with small delay to guarantee unique timestamps
         backup1 = self.backup_manager.create_backup(user_data)
         time.sleep(0.01)
         backup2 = self.backup_manager.create_backup(user_data)
         time.sleep(0.01)
         backup3 = self.backup_manager.create_backup(user_data)
 
-        # Todos devem existir
+        # Everyone must exist
         self.assertTrue(backup1.exists())
         self.assertTrue(backup2.exists())
         self.assertTrue(backup3.exists())
 
-        # Listar deve retornar pelo menos 1 backup (podem ter timestamp igual se executado muito rápido)
+        # List must return at least 1 backup (may have the same timestamp if run very fast)
         backups = self.backup_manager.list_backups(username='testuser')
         self.assertGreaterEqual(len(backups), 1)
 
     def test_backup_restore_roundtrip(self):
         """Test complete backup and restore cycle"""
-        # Dados originais
+        # Original data
         original_data = {
             'username': 'roundtripuser',
             'uid': 5000,
@@ -347,13 +347,13 @@ class TestBackupManager(unittest.TestCase):
             'is_superuser': False
         }
 
-        # Criar backup
+        # Create backup
         backup_file = self.backup_manager.create_backup(original_data)
 
         # Restaurar
         restored_data = self.backup_manager.restore_backup(backup_file)
 
-        # Verificar que todos os dados foram preservados
+        # Check that all data has been preserved
         self.assertEqual(restored_data['username'], original_data['username'])
         self.assertEqual(restored_data['uid'], original_data['uid'])
         self.assertEqual(restored_data['home_dir'], original_data['home_dir'])

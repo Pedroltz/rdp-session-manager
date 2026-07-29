@@ -1,37 +1,37 @@
-# Correção: Bug de Detecção de Privilégios Sudo
+# Fix: Sudo Privilege Detection Bug
 
-## Problema Identificado
+## Problem Identified
 
-Quando um usuário recebia privilégios sudo e depois os tinha revogados, a interface continuava mostrando que o usuário ainda tinha privilégios sudo.
+When a user was granted sudo privileges and then had them revoked, the interface continued to show that the user still had sudo privileges.
 
 ## Causa Raiz
 
-O problema tinha duas origens:
+The problem had two root causes:
 
-### 1. Detecção Incorreta no Python
+### 1. Incorrect Detection in Python
 
-O método `is_superuser()` usava:
+The `is_superuser()` method used:
 ```python
 sudo_group = grp.getgrnam('sudo')
 return username in sudo_group.gr_mem
 ```
 
-**Problema:** `grp.getgrnam().gr_mem` pode não refletir mudanças dinâmicas de grupo e pode não incluir todos os membros corretamente em todos os casos.
+**Issue:** `grp.getgrnam().gr_mem` may not reflect dynamic group changes and may not include all members correctly in all cases.
 
-### 2. Remoção Incompleta do Grupo
+### 2. Incomplete Group Removal
 
 O script helper usava:
 ```bash
 /usr/sbin/deluser "$USERNAME" sudo 2>/dev/null || true
 ```
 
-**Problema:** O comando `deluser` pode falhar silenciosamente em alguns casos sem remover o usuário do grupo corretamente.
+**Issue:** The `deluser` command may fail silently in some cases without correctly removing the user from the group.
 
-## Solução Implementada
+## Implemented Solution
 
-### 1. Detecção Melhorada (Python)
+### 1. Improved Detection (Python)
 
-Agora usamos o comando `id -nG` que retorna **todos** os grupos do usuário de forma confiável:
+Now we use the command `id -nG` which reliably returns **all** of the user's groups:
 
 ```python
 def is_superuser(self, username: str) -> bool:
@@ -48,140 +48,140 @@ def is_superuser(self, username: str) -> bool:
 ```
 
 **Vantagens:**
-- ✅ Retorna status em tempo real
-- ✅ Inclui todos os grupos (primário + secundários)
+- ✅ Returns status in real time
+- ✅ Includes all groups (primary + secondary)
 - ✅ Funciona independente de cache
-- ✅ Método padrão do sistema
+- ✅ System default method
 
-### 2. Remoção Robusta (Shell Script)
+### 2. Robust Removal (Shell Script)
 
-Agora usamos `gpasswd -d` com fallback para `deluser`:
+Now we use `gpasswd -d` with fallback to `deluser`:
 
 ```bash
 if /usr/bin/gpasswd -d "$USERNAME" sudo 2>/dev/null; then
-    echo "✓ Privilégios revogados"
+    echo "✓ Privileges revoked"
 else
-    # Fallback para deluser
+    # Fallback to deluser
     /usr/sbin/deluser "$USERNAME" sudo 2>/dev/null
 fi
 ```
 
 **Vantagens:**
-- ✅ `gpasswd` é mais confiável para remover usuários de grupos
-- ✅ Fallback garante compatibilidade
-- ✅ Feedback claro sobre o resultado
+- ✅ `gpasswd` is more reliable for removing users from groups
+- ✅ Fallback ensures compatibility
+- ✅ Clear feedback on the result
 
-## Como Testar
+## How to Test
 
-### 1. Criar um Usuário de Teste
+### 1. Create a Test User
 
 ```bash
 # Via CLI
 ./rdpsm user create testuser -p "senha123" -d xfce
 
 # Via GUI
-Clique em "+" → Preencha formulário → "Criar"
+Click "+" → Fill form → "Create"
 ```
 
-### 2. Conceder Privilégios Sudo
+### 2. Grant Sudo Privileges
 
 ```bash
 # Via CLI
 ./rdpsm user sudo grant testuser
 
 # Via GUI
-Clique em "..." ao lado do usuário → Toggle "Superusuário" ON
+Click "..." next to the user → Toggle "Superuser" ON
 ```
 
-### 3. Verificar Status (deve mostrar com sudo)
+### 3. Check Status (should show with sudo)
 
 ```bash
-# CLI - Lista em JSON
+# CLI - List in JSON
 ./rdpsm user list --format json | grep -A 10 testuser
 
-# Comando direto do sistema
-id -nG testuser | grep sudo && echo "TEM SUDO" || echo "NÃO TEM SUDO"
+# Direct system command
+id -nG testuser | grep sudo && echo "TEM SUDO" || echo "NO SUDO"
 
-# GUI - deve mostrar switch ativado
+# GUI - should show switch enabled
 ```
 
-### 4. Revogar Privilégios Sudo
+### 4. Revoke Sudo Privileges
 
 ```bash
 # Via CLI
 ./rdpsm user sudo revoke testuser
 
 # Via GUI
-Clique em "..." ao lado do usuário → Toggle "Superusuário" OFF
+Click "..." next to the user → Toggle "Superuser" OFF
 ```
 
-### 5. Verificar Status (deve mostrar sem sudo) ✅
+### 5. Check Status (should show without sudo) ✅
 
 ```bash
-# CLI - Lista em JSON
+# CLI - List in JSON
 ./rdpsm user list --format json | grep -A 10 testuser
 
-# Comando direto do sistema
-id -nG testuser | grep sudo && echo "TEM SUDO" || echo "NÃO TEM SUDO"
+# Direct system command
+id -nG testuser | grep sudo && echo "TEM SUDO" || echo "NO SUDO"
 
-# GUI - deve mostrar switch desativado
+# GUI - should show switch disabled
 ```
 
-## Script de Teste Automático
+## Automatic Test Script
 
-Você pode usar o script criado para testar:
+You can use the created script to test:
 
 ```bash
 /tmp/test-sudo-check.sh testuser
 ```
 
-Saída esperada:
+Expected output:
 ```
-=== Verificação de Privilégios Sudo para testuser ===
+=== Sudo Privilege Check for testuser ===
 
-1. Método id -nG (RECOMENDADO):
-   ✗ Não tem sudo
-   Grupos: testuser rdp-users
+1. Method id -nG (RECOMMENDED):
+   ✗ No sudo
+   Groups: testuser rdp-users
 
-2. Método getent group sudo:
-   ✗ Não tem sudo
-   Membros do grupo sudo: trix,outrouser
+2. getent group sudo method:
+   ✗ No sudo
+   sudo group members: trix,otheruser
 
-3. Método groups command:
-   ✗ Não tem sudo
-   Grupos: testuser : testuser rdp-users
+3. groups command method:
+   ✗ No sudo
+   Groups: testuser : testuser rdp-users
 ```
 
-## Verificação Manual Adicional
+## Additional Manual Verification
 
-Se ainda houver dúvidas, verifique diretamente:
+If you still have doubts, check directly:
 
 ```bash
-# 1. Ver todos os grupos do usuário
+#1. View all user groups
 id testuser
 
-# 2. Ver membros do grupo sudo
+# 2. View sudo group members
 getent group sudo
 
-# 3. Tentar usar sudo (conecte via RDP primeiro)
-# Conecte como testuser via RDP e execute:
+# 3. Try using sudo (connect via RDP first)
+# Connect as testuser via RDP and run:
 sudo whoami
-# Se sem privilégios, deve dar erro "user is not in the sudoers file"
+# If without privileges, it should give an error "user is not in the sudoers file"
 ```
 
-## Arquivos Modificados
+## Modified Files
 
-1. **`src/core/user_manager.py`** - Método `is_superuser()` melhorado
-2. **`helpers/toggle-user-sudo.sh`** - Script de revogação melhorado
-3. **`CHANGELOG.md`** - Documentação da correção
+1. **`src/core/user_manager.py`** - Improved `is_superuser()` method
+2. **`helpers/toggle-user-sudo.sh`** - Improved revocation script
+3. **`CHANGELOG.md`** - Fix documentation
 
-## Resultado Esperado
+## Expected Result
 
-✅ **Antes da correção:** Usuário mantinha sudo mesmo após revogação na interface
-✅ **Depois da correção:** Privilégios refletem imediatamente após revogação
+✅ **Before the fix:** User kept sudo even after revoking it in the interface
+✅ **After fix:** Privileges reflect immediately after revocation
 
 ---
 
-**Data da Correção:** 2025-10-23
-**Versão:** 0.2.1
-**Status:** ✅ CORRIGIDO
+**Correction Date:** 2025-10-23
+**Version:** 0.2.1
+**Status:** ✅ CORRECTED

@@ -1,19 +1,19 @@
 #!/bin/bash
-# Script de inicialização do RDP Session Manager
+# RDP Session Manager initialization script
 
-echo "Iniciando RDP Session Manager..."
+echo "Starting RDP Session Manager..."
 
-# Verificar dependências
+# Check dependencies
 if ! python3 -c "import gi" 2>/dev/null; then
-    echo "Erro: PyGObject não encontrado"
-    echo "Instale com: sudo apt install python3-gi"
+    echo "Error: PyGObject not found"
+    echo "Install with: sudo apt install python3-gi"
     exit 1
 fi
 
 if ! python3 -c "import psutil" 2>/dev/null; then
-    echo "Aviso: psutil não encontrado"
-    echo "Instale com: sudo apt install python3-psutil"
+    echo "Warning: psutil not found"
+    echo "Install with: sudo apt install python3-psutil"
 fi
 
-# Executar aplicação
+# Run application
 python3 src/main.py

@@ -1,142 +1,142 @@
-# Teste Completo: Privilégios Sudo v0.2.1
+# Full Test: Sudo Privileges v0.2.1
 
-## Problema Resolvido
+## Problem Solved
 
-### Comportamento Anterior (BUG):
-1. ✗ Ativar sudo com usuário conectado → Não funcionava
-2. ✗ Desativar sudo com usuário conectado → Não funcionava
-3. ✗ Ativar antes da primeira conexão → Funcionava, mas depois não conseguia desativar
+### Previous Behavior (BUG):
+1. ✗ Enable sudo with logged in user → Didn't work
+2. ✗ Disable sudo with logged in user → Didn't work
+3. ✗ Activate before first connection → It worked, but then I couldn't deactivate
 
-### Comportamento Atual (CORRIGIDO):
-1. ✓ Ativar sudo → Sessão é encerrada automaticamente → Reconectar → Funciona
-2. ✓ Desativar sudo → Sessão é encerrada automaticamente → Reconectar → Funciona
-3. ✓ Funciona em qualquer momento (antes ou depois da conexão)
+### Current Behavior (FIXED):
+1. ✓ Enable sudo → Session is automatically logged out → Reconnect → Works
+2. ✓ Disable sudo → Session is automatically logged out → Reconnect → Works
+3. ✓ Works at any time (before or after connection)
 
 ---
 
-## Por Que Isso Era Necessário?
+## Why Was This Necessary?
 
-### Explicação Técnica
+### Technical Explanation
 
-Linux gerencia permissões de grupo em **tempo de login**. Quando um usuário faz login:
-1. O sistema lê os grupos do usuário em `/etc/group`
-2. Cria a sessão com esses grupos
-3. **A sessão mantém os grupos até o logout**
+Linux manages group permissions at **login time**. When a user logs in:
+1. The system reads the user groups in `/etc/group`
+2. Create the session with these groups
+3. **Session maintains groups until logout**
 
 Portanto:
-- ✗ Adicionar usuário ao grupo `sudo` **não afeta sessões ativas**
-- ✓ Adicionar usuário ao grupo `sudo` + **forçar logout** = Funciona!
+- ✗ Add user to group `sudo` **does not affect active sessions**
+- ✓ Add user to group `sudo` + **force logout** = Works!
 
-### Solução Implementada
+### Implemented Solution
 
-Quando você altera privilégios sudo:
-1. Sistema adiciona/remove usuário do grupo sudo
-2. **Encerra automaticamente todas as sessões** do usuário
-3. Usuário reconecta via RDP
-4. Nova sessão já tem os privilégios corretos ✓
+When you change sudo privileges:
+1. System adds/removes user from sudo group
+2. **Automatically closes all user sessions**
+3. User reconnects via RDP
+4. New session already has the correct privileges ✓
 
 ---
 
-## Como Testar
+## How to Test
 
-### Pré-requisitos
+### Prerequisites
 
 ```bash
-# Criar usuário de teste
+# Create test user
 ./rdpsm user create testuser -p "senha123" -d xfce
 
-# Verificar que não tem sudo
+# Check that you don't have sudo
 ./rdpsm user list --format json | grep -A 10 testuser | grep is_superuser
-# Deve mostrar: "is_superuser": false
+# Should show: "is_superuser": false
 ```
 
 ---
 
-## Teste 1: Conceder Sudo com Usuário Desconectado
+## Test 1: Grant Sudo with User Logged Out
 
 ### Passos
 
-1. **Garantir que usuário não está conectado:**
+1. **Ensure user is not logged in:**
    ```bash
    ./rdpsm user processes testuser
-   # Deve mostrar: "No processes found"
+   # It should show: "No processes found"
    ```
 
-2. **Conceder sudo via CLI:**
+2. **Grant sudo via CLI:**
    ```bash
    ./rdpsm user sudo grant testuser
 
-   # Saída esperada:
+   # Expected output:
    # → Granting sudo privileges to 'testuser'...
    # ✓ Sudo privileges granted to 'testuser'
    # → User can now execute commands with sudo
    ```
 
-3. **Ou conceder sudo via GUI:**
-   - Abrir aplicação
-   - Clicar em "**...**" ao lado do usuário
-   - Toggle "Superusuário" para **ON**
-   - Aguardar toast: "✓ Privilégios sudo concedidos"
+3. **Or grant sudo via GUI:**
+   - Open application
+   - Click on "**...**" next to the user
+   - Toggle "Superuser" to **ON**
+   - Wait for toast: "✓ Sudo privileges granted"
 
-4. **Verificar status:**
+4. **Check status:**
    ```bash
    ./rdpsm user list --format json | grep -A 10 testuser | grep is_superuser
-   # Deve mostrar: "is_superuser": true
+   # Should show: "is_superuser": true
 
    id -nG testuser | grep sudo
-   # Deve mostrar "sudo" na lista de grupos
+   # Should show "sudo" in the group list
    ```
 
-5. **Conectar via RDP:**
+5. **Connect via RDP:**
    ```bash
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123
    ```
 
-6. **Dentro da sessão RDP, testar sudo:**
+6. **Within the RDP session, test sudo:**
    ```bash
-   # Abrir terminal (Ctrl+Alt+T ou menu)
+   # Open terminal (Ctrl+Alt+T or menu)
    sudo whoami
-   # Deve solicitar senha e retornar: root
+   # Must ask for password and return: root
 
    groups
-   # Deve mostrar "sudo" na lista
+   # Should show "sudo" in the list
    ```
 
-### Resultado Esperado
-✓ Usuário consegue usar sudo **imediatamente** após login
+### Expected Result
+✓ User can use sudo **immediately** after login
 
 ---
 
-## Teste 2: Conceder Sudo com Usuário Conectado
+## Test 2: Grant Sudo with Logged In User
 
 ### Passos
 
-1. **Conectar usuário via RDP primeiro:**
+1. **Connect user via RDP first:**
    ```bash
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123 &
    ```
 
-2. **Verificar que está conectado:**
+2. **Check that you are connected:**
    ```bash
    ./rdpsm session list
-   # Deve mostrar testuser na lista
+   # Should show testuser in the list
 
    ./rdpsm user processes testuser
-   # Deve mostrar vários PIDs
+   # Must show multiple PIDs
    ```
 
-3. **Tentar usar sudo (ainda não tem):**
+3. **Try using sudo (don't have it yet):**
    ```bash
-   # Dentro da sessão RDP, abrir terminal:
+   # Within the RDP session, open terminal:
    sudo whoami
-   # Deve dar erro: "testuser is not in the sudoers file"
+   # It should give error: "testuser is not in the sudoers file"
    ```
 
-4. **Conceder sudo via CLI:**
+4. **Grant sudo via CLI:**
    ```bash
    ./rdpsm user sudo grant testuser
 
-   # Saída esperada:
+   # Expected output:
    # ! User 'testuser' has active session(s)
    # ! ⚠ IMPORTANT: Group changes only take effect after logout/login
    # ! Active sessions will be terminated to apply changes
@@ -147,72 +147,72 @@ Quando você altera privilégios sudo:
    # → Sessions terminated - user must reconnect to apply changes
    ```
 
-5. **Ou conceder sudo via GUI:**
-   - Clicar em "**...**" ao lado do usuário
-   - Toggle "Superusuário" para **ON**
-   - **Aparece diálogo:**
+5. **Or grant sudo via GUI:**
+   - Click on "**...**" next to the user
+   - Toggle "Superuser" to **ON**
+   - **Dialog appears:**
      ```
-     ⚠ testuser está conectado
+     ⚠ testuser is logged in
 
-     Para conceder privilégios sudo, a sessão do usuário será
+     To grant sudo privileges, the user session will be
      encerrada automaticamente.
 
-     ⚠ IMPORTANTE: Mudanças de grupo só têm efeito após logout/login completo.
+     ⚠ IMPORTANT: Group changes only take effect after complete logout/login.
 
-     O usuário precisará reconectar via RDP para que os privilégios
-     de superusuário sejam aplicados.
+     The user will need to reconnect via RDP for privileges to
+     superuser settings are applied.
 
-     Deseja continuar?
+     Do you want to continue?
 
-     [Cancelar] [Continuar e Encerrar Sessão]
+     [Cancel] [Continue and Logout]
      ```
-   - Clicar em "Continuar e Encerrar Sessão"
-   - **Sessão RDP é encerrada automaticamente**
+   - Click on "Continue and Log Out"
+   - **RDP session is automatically closed**
 
 6. **Reconectar via RDP:**
    ```bash
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123
    ```
 
-7. **Testar sudo novamente:**
+7. **Test sudo again:**
    ```bash
-   # Dentro da nova sessão RDP:
+   # Within the new RDP session:
    sudo whoami
-   # Deve solicitar senha e retornar: root ✓
+   # Must ask for password and return: root ✓
 
    groups
-   # Deve mostrar "sudo" na lista ✓
+   # Should show "sudo" in the list ✓
    ```
 
-### Resultado Esperado
-✓ Sessão foi encerrada automaticamente
-✓ Após reconectar, sudo funciona perfeitamente
+### Expected Result
+✓ Session was automatically closed
+✓ After reconnecting, sudo works perfectly
 
 ---
 
-## Teste 3: Revogar Sudo com Usuário Conectado
+## Test 3: Revoke Sudo with Logged In User
 
 ### Passos
 
-1. **Usuário já está conectado com sudo:**
+1. **User is already logged in with sudo:**
    ```bash
-   # Verificar
+   # To check
    ./rdpsm session list  # testuser aparece
    ./rdpsm user list --format json | grep -A 10 testuser | grep is_superuser
-   # Deve mostrar: "is_superuser": true
+   # Should show: "is_superuser": true
    ```
 
-2. **Dentro da sessão RDP, testar sudo:**
+2. **Within the RDP session, test sudo:**
    ```bash
    sudo whoami
-   # Deve retornar: root (ainda funciona)
+   # Should return: root (still works)
    ```
 
-3. **Revogar sudo via CLI:**
+3. **Revoke sudo via CLI:**
    ```bash
    ./rdpsm user sudo revoke testuser
 
-   # Saída esperada:
+   # Expected output:
    # ! User 'testuser' has active session(s)
    # ! ⚠ IMPORTANT: Group changes only take effect after logout/login
    # ! Active sessions will be terminated to apply changes
@@ -223,19 +223,19 @@ Quando você altera privilégios sudo:
    # → Sessions terminated - user must reconnect to apply changes
    ```
 
-4. **Ou revogar via GUI:**
-   - Clicar em "**...**" ao lado do usuário
-   - Toggle "Superusuário" para **OFF**
-   - Confirmar no diálogo de aviso
-   - **Sessão é encerrada**
+4. **Or revoke via GUI:**
+   - Click on "**...**" next to the user
+   - Toggle "Superuser" to **OFF**
+   - Confirm in the warning dialog
+   - **Session is closed**
 
-5. **Verificar status:**
+5. **Check status:**
    ```bash
    ./rdpsm user list --format json | grep -A 10 testuser | grep is_superuser
-   # Deve mostrar: "is_superuser": false
+   # Should show: "is_superuser": false
 
    id -nG testuser | grep sudo
-   # NÃO deve mostrar "sudo"
+   # should NOT show "sudo"
    ```
 
 6. **Reconectar via RDP:**
@@ -243,34 +243,34 @@ Quando você altera privilégios sudo:
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123
    ```
 
-7. **Tentar usar sudo:**
+7. **Try using sudo:**
    ```bash
-   # Dentro da nova sessão:
+   # Inside the new session:
    sudo whoami
-   # Deve dar erro: "testuser is not in the sudoers file" ✓
+   # It should give error: "testuser is not in the sudoers file" ✓
 
    groups
-   # NÃO deve mostrar "sudo" ✓
+   # should NOT show "sudo" ✓
    ```
 
-### Resultado Esperado
-✓ Sessão foi encerrada automaticamente
-✓ Após reconectar, sudo foi removido corretamente
+### Expected Result
+✓ Session was automatically closed
+✓ After reconnecting, sudo was removed correctly
 
 ---
 
-## Teste 4: Alternar Sudo Múltiplas Vezes
+## Test 4: Toggle Sudo Multiple Times
 
 ### Passos
 
-1. **Com usuário conectado:**
-   - Ativar sudo → Sessão encerrada → Reconectar → ✓ Funciona
-   - Desativar sudo → Sessão encerrada → Reconectar → ✓ Removido
-   - Ativar sudo novamente → Sessão encerrada → Reconectar → ✓ Funciona
-   - Desativar sudo novamente → Sessão encerrada → Reconectar → ✓ Removido
+1. **With logged in user:**
+   - Enable sudo → Session closed → Reconnect → ✓ Works
+   - Disable sudo → Session closed → Reconnect → ✓ Removed
+   - Enable sudo again → Session closed → Reconnect → ✓ Works
+   - Disable sudo again → Session closed → Reconnect → ✓ Removed
 
-### Resultado Esperado
-✓ Funciona perfeitamente em todas as alternâncias
+### Expected Result
+✓ Works perfectly in all alternations
 
 ---
 
@@ -278,111 +278,111 @@ Quando você altera privilégios sudo:
 
 ### Passos
 
-1. **Conectar usuário:**
+1. **Connect user:**
    ```bash
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123 &
    ```
 
-2. **Usar --force para pular confirmação:**
+2. **Use --force to skip confirmation:**
    ```bash
-   # Conceder sem perguntar
+   # Grant without asking
    ./rdpsm user sudo grant testuser --force
 
-   # Deve executar direto, sem pedir confirmação
-   # Sessão é encerrada automaticamente
+   # Must execute directly, without asking for confirmation
+   # Session is automatically closed
 
-   # Reconectar e verificar
+   # Reconnect and check
    xfreerdp /v:localhost:3389 /u:testuser /p:senha123
-   # Dentro da sessão: sudo whoami → deve funcionar ✓
+   # Inside session: sudo whoami → should work ✓
    ```
 
-3. **Revogar com --force:**
+3. **Revoke with --force:**
    ```bash
    ./rdpsm user sudo revoke testuser --force
-   # Executa sem confirmação
+   # Execute without confirmation
    ```
 
-### Resultado Esperado
-✓ Flag --force pula confirmação mas mantém comportamento correto
+### Expected Result
+✓ Flag --force skips confirmation but maintains correct behavior
 
 ---
 
-## Verificações Finais
+## Final Checks
 
-### Checklist Completo
+### Complete Checklist
 
-- [ ] Sudo funciona quando ativado antes da primeira conexão
-- [ ] Sudo funciona quando ativado durante sessão ativa
-- [ ] Sudo é removido corretamente quando desativado
-- [ ] Diálogos de aviso aparecem na UI
-- [ ] Prompts de confirmação aparecem no CLI
-- [ ] Sessões são encerradas automaticamente
+- [ ] sudo works when enabled before first connection
+- [ ] sudo works when activated during active session
+- [ ] sudo is removed correctly when disabled
+- [ ] Warning dialogs appear in the UI
+- [ ] Confirmation prompts appear in the CLI
+- [ ] Sessions are automatically terminated
 - [ ] Flag --force funciona no CLI
-- [ ] Status é exibido corretamente no `rdpsm user list`
-- [ ] Campo `is_superuser` está correto no JSON
-- [ ] Comando `id -nG` mostra/remove grupo sudo
-- [ ] Dentro do RDP, `sudo` funciona/falha conforme esperado
-- [ ] Múltiplas alternâncias funcionam perfeitamente
+- [ ] Status is displayed correctly on `rdpsm user list`
+- [ ] Field `is_superuser` is correct in JSON
+- [ ] Command `id -nG` shows/removes sudo group
+- [ ] Within RDP, `sudo` works/fails as expected
+- [ ] Multiple toggles work perfectly
 
 ---
 
-## Comandos Úteis para Debug
+## Useful Debug Commands
 
 ```bash
-# Ver status atual
+# View current status
 ./rdpsm user list --format json | grep -A 12 testuser
 
-# Ver grupos do usuário
+# View user groups
 id -nG testuser
 
-# Ver processos ativos
+# View active processes
 ./rdpsm user processes testuser
 
-# Ver sessões ativas
+# View active sessions
 ./rdpsm session list
 
-# Testar detecção de sudo
+# Test sudo detection
 python3 -c "
 from src.core.user_manager import UserManager
 um = UserManager()
 print(f'Has sudo: {um.is_superuser(\"testuser\")}')
 "
 
-# Script de verificação completa
+# Full scan script
 /tmp/test-sudo-check.sh testuser
 ```
 
 ---
 
-## Comportamento Esperado vs Comportamento Anterior
+## Expected Behavior vs Previous Behavior
 
-| Situação | Antes (BUG) | Depois (CORRETO) |
+| Situation | Before (BUG) | After (CORRECT) |
 |----------|-------------|------------------|
-| Ativar com usuário offline | ✓ Funciona | ✓ Funciona |
-| Ativar com usuário online | ✗ Não funciona | ✓ Funciona + encerra sessão |
-| Desativar com usuário offline | ✓ Funciona | ✓ Funciona |
-| Desativar com usuário online | ✗ Não funciona | ✓ Funciona + encerra sessão |
-| Ativar antes da 1ª conexão | ✓ Funciona | ✓ Funciona |
-| Desativar após ter ativado antes | ✗ Não funciona | ✓ Funciona |
-| Múltiplas alternâncias | ✗ Inconsistente | ✓ Sempre funciona |
+| Activate with user offline | ✓ It works | ✓ It works |
+| Activate with user online | ✗ Doesn't work | ✓ Works + closes session |
+| Deactivate with user offline | ✓ It works | ✓ It works |
+| Deactivate with user online | ✗ Doesn't work | ✓ Works + closes session |
+| Activate before 1st connection | ✓ It works | ✓ It works |
+| Deactivate after activating before | ✗ Doesn't work | ✓ It works |
+| Multiple toggles | ✗ Inconsistent | ✓ Always works |
 
 ---
 
-## Conclusão
+## Conclusion
 
-✅ **PROBLEMA RESOLVIDO**
+✅ **PROBLEM SOLVED**
 
-Agora as mudanças de privilégios sudo:
-1. Funcionam **sempre**, independente do estado da sessão
-2. Encerram automaticamente sessões ativas
-3. Avisam claramente sobre necessidade de reconexão
-4. Detectam corretamente o status usando `id -nG`
-5. Removem corretamente o grupo usando `gpasswd -d`
+Now sudo privileges changes:
+1. They **always** work, regardless of the session state
+2. Automatically close active sessions
+3. Clearly warn about the need for reconnection
+4. Correctly detect status using `id -nG`
+5. Correctly remove the group using `gpasswd -d`
 
-**Usuário deve apenas reconectar após a mudança e tudo funcionará perfeitamente!**
+**User should just reconnect after the change and everything will work perfectly!**
 
 ---
 
-**Versão:** 0.2.1
+**Version:** 0.2.1
 **Data:** 2025-10-23
-**Status:** ✅ FUNCIONANDO PERFEITAMENTE
+**Status:** ✅ WORKING PERFECTLY

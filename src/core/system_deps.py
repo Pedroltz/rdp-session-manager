@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Módulo de gerenciamento de dependências do sistema
+System Dependency Management Module
 """
 
 import subprocess
@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class SystemDependencies:
-    """Gerenciador de dependências do sistema"""
+    """System Dependency Manager"""
 
-    # Pacotes necessários para o funcionamento básico
+    # Packages required for basic operation
     # Formato: distro -> packages
     REQUIRED_PACKAGES = {
         'xrdp': {
@@ -24,7 +24,7 @@ class SystemDependencies:
                 'debian': ['xrdp', 'xorgxrdp'],
                 'arch': ['xrdp']
             },
-            'description': 'Servidor RDP (Remote Desktop Protocol)',
+            'description': 'RDP (Remote Desktop Protocol) Server',
             'service': 'xrdp',
             'critical': True
         },
@@ -36,7 +36,7 @@ class SystemDependencies:
             },
             'description': 'Cliente RDP (Remote Desktop Protocol)',
             'service': None,
-            'critical': False  # Não é crítico para criar usuários, só para conectar
+            'critical': False # Not critical for creating users, just for connecting
         },
         'x11': {
             'name': 'X11',
@@ -44,7 +44,7 @@ class SystemDependencies:
                 'debian': ['xorg', 'x11-xserver-utils'],
                 'arch': ['xorg-server', 'xorg-server-utils']
             },
-            'description': 'Sistema de janelas X11',
+            'description': 'X11 Window System',
             'service': None,
             'critical': True
         }
@@ -55,13 +55,13 @@ class SystemDependencies:
         self.pkg_manager = self._get_package_manager()
 
     def _detect_distro(self) -> str:
-        """Detecta a distribuição Linux"""
+        """Detects Linux distribution"""
         try:
             with open('/etc/os-release', 'r') as f:
                 for line in f:
                     if line.startswith('ID='):
                         distro_id = line.split('=')[1].strip().strip('"')
-                        # Mapear para categorias principais
+                        # Map to main categories
                         if distro_id in ['arch', 'manjaro', 'endeavouros', 'cachyos']:
                             return 'arch'
                         elif distro_id in ['debian', 'ubuntu', 'linuxmint', 'pop']:
@@ -72,11 +72,11 @@ class SystemDependencies:
             return 'debian'  # default
 
     def _get_package_manager(self) -> str:
-        """Retorna o gerenciador de pacotes baseado na distro"""
+        """Returns the package manager based on the distro"""
         return 'pacman' if self.distro == 'arch' else 'apt'
 
     def is_package_installed(self, package_name: str) -> bool:
-        """Verifica se um pacote está instalado"""
+        """Checks if a package is installed"""
         try:
             if self.pkg_manager == 'pacman':
                 result = subprocess.run(
@@ -96,60 +96,60 @@ class SystemDependencies:
                 return result.returncode == 0 and 'ii' in result.stdout
 
         except Exception as e:
-            logger.error(f"Erro ao verificar pacote {package_name}: {e}")
+            logger.error(f"Error checking package {package_name}: {e}")
             return False
 
     def check_dependencies(self) -> Tuple[bool, list, list]:
         """
-        Verifica todas as dependências do sistema
+        Checks all system dependencies
 
         Returns:
-            Tuple (tudo_ok, faltando, instalados)
+        Tuple (all_ok, missing, installed)
         """
         missing = []
         installed = []
 
         for dep_id, dep_info in self.REQUIRED_PACKAGES.items():
-            # Verificação especial para FreeRDP (usa comando xfreerdp)
+            # Special check for FreeRDP (uses xfreerdp command)
             if dep_id == 'freerdp':
                 if self.is_freerdp_installed():
                     installed.append(dep_id)
-                    logger.info(f"OK {dep_info['name']} está instalado")
+                    logger.info(f"OK {dep_info['name']} is installed")
                 else:
                     if dep_info['critical']:
                         missing.append(dep_id)
-                    logger.info(f"ℹ {dep_info['name']} não está instalado (opcional)")
+                    logger.info(f"ℹ {dep_info['name']} is not installed (optional)")
                 continue
 
-            # Obter pacotes corretos para a distro atual
+            # Get correct packages for current distro
             packages = dep_info['packages'].get(self.distro, dep_info['packages'].get('debian', []))
             if not packages:
-                logger.warning(f"Nenhum pacote definido para {dep_id} na distro {self.distro}")
+                logger.warning(f"No packages defined for {dep_id} in distro {self.distro}")
                 continue
 
-            # Verifica o pacote principal
+            # Check the main package
             main_package = packages[0]
 
             if self.is_package_installed(main_package):
                 installed.append(dep_id)
-                logger.info(f"OK {dep_info['name']} está instalado")
+                logger.info(f"OK {dep_info['name']} is installed")
             else:
                 if dep_info['critical']:
                     missing.append(dep_id)
-                    logger.warning(f"X {dep_info['name']} NÃO está instalado")
+                    logger.warning(f"X {dep_info['name']} is NOT installed")
 
         return len(missing) == 0, missing, installed
 
     def install_package(self, dep_id: str, progress_callback: Optional[Callable] = None) -> Tuple[bool, str]:
         """
-        Instala um pacote de dependência
+        Install a dependency package
 
         Args:
-            dep_id: ID da dependência (ex: 'xrdp')
-            progress_callback: Função callback(progress, message)
+            dep_id: Dependency ID (ex: 'xrdp')
+            progress_callback: Function callback(progress, message)
 
         Returns:
-            Tuple (sucesso, mensagem)
+            Tuple (success, message)
         """
         def log(progress, message):
             if progress_callback:
@@ -157,40 +157,40 @@ class SystemDependencies:
             logger.info(message)
 
         if dep_id not in self.REQUIRED_PACKAGES:
-            return False, f"Dependência '{dep_id}' desconhecida"
+            return False, f"Unknown dependency '{dep_id}'"
 
         dep_info = self.REQUIRED_PACKAGES[dep_id]
 
-        # Obter pacotes corretos para a distro atual
+        # Get correct packages for current distro
         packages = dep_info['packages'].get(self.distro, dep_info['packages'].get('debian', []))
         if not packages:
-            return False, f"Nenhum pacote definido para {dep_id} na distro {self.distro}"
+            return False, f"No package defined for {dep_id} in distro {self.distro}"
 
-        # Verificar se já está instalado
+        # Check if it is already installed
         if self.is_package_installed(packages[0]):
-            msg = f"{dep_info['name']} já está instalado"
+            msg = f"{dep_info['name']} is already installed"
             log(100, f"OK {msg}")
             return True, msg
 
         try:
-            log(5, f"→ Instalando {dep_info['name']}...")
-            log(5, f"  Descrição: {dep_info['description']}")
-            log(5, f"  Pacotes: {', '.join(packages)}")
+            log(5, f"→ Installing {dep_info['name']}...")
+            log(5, f" Description: {dep_info['description']}")
+            log(5, f" Packets: {', '.join(packages)}")
             log(5, "")
 
-            # Obter comando de elevação apropriado (pkexec ou sudo)
+            # Get appropriate elevation command (pkexec or sudo)
             priv_method, priv_cmd = get_privilege_command()
             auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
 
-            log(10, f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+            log(10, f" WARNING You will be asked to authenticate ({auth_msg})")
             log(10, "")
 
-            # Usar script helper que agrupa update + install
+            # Use the helper script that groups update and install
             from pathlib import Path
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             install_script = script_dir / "install-packages.sh"
 
-            log(15, f"→ Executando instalação integrada...")
+            log(15, f"→ Running integrated installation...")
             log(15, "")
 
             cmd = priv_cmd + [str(install_script)] + packages
@@ -204,12 +204,12 @@ class SystemDependencies:
                 universal_newlines=True
             )
 
-            # Ler saída linha por linha
+            # Read output line by line
             progress = 30
             for line in process.stdout:
                 line = line.rstrip()
                 if line:
-                    # Filtrar e formatar saída do apt
+                    # Filter and format apt output
                     if any(kw in line for kw in ['Unpacking', 'Preparing', 'Setting up', 'Processing']):
                         log(progress, f"  {line}")
                         progress = min(progress + 2, 90)
@@ -222,29 +222,29 @@ class SystemDependencies:
                     else:
                         logger.debug(f"apt: {line}")
 
-            returncode = process.wait(timeout=600)  # 10 minutos para xrdp
+            returncode = process.wait(timeout=600) # 10 minutes for xrdp
 
             if returncode != 0:
-                error_msg = f"Falha na instalação de {dep_info['name']} (código: {returncode})"
+                error_msg = f"{dep_info['name']} installation failed (code: {returncode})"
                 logger.error(error_msg)
                 log(progress, f"X {error_msg}")
                 return False, error_msg
 
             log(90, "")
-            log(90, f"  OK {dep_info['name']} instalado com sucesso")
+            log(90, f" OK {dep_info['name']} installed successfully")
 
-            # Iniciar serviço se necessário
+            # Start service if necessary
             if dep_info['service']:
-                log(95, f"→ Iniciando serviço {dep_info['service']}...")
+                log(95, f"→ Starting service {dep_info['service']}...")
 
-                # Habilitar serviço
+                # Enable service
                 subprocess.run(
                     priv_cmd + ['/usr/bin/systemctl', 'enable', dep_info['service']],
                     capture_output=True,
                     timeout=10
                 )
 
-                # Iniciar serviço
+                # Start service
                 start_result = subprocess.run(
                     priv_cmd + ['/usr/bin/systemctl', 'start', dep_info['service']],
                     capture_output=True,
@@ -252,48 +252,48 @@ class SystemDependencies:
                 )
 
                 if start_result.returncode == 0:
-                    log(98, f"  OK Serviço {dep_info['service']} iniciado")
+                    log(98, f" OK Service {dep_info['service']} started")
                 else:
-                    log(98, f"  AVISO Falha ao iniciar serviço {dep_info['service']}")
+                    log(98, f" WARNING Failed to start service {dep_info['service']}")
 
             log(100, "")
-            log(100, f"OK {dep_info['name']} configurado e pronto para uso!")
+            log(100, f"OK {dep_info['name']} configured and ready to use!")
 
-            return True, f"{dep_info['name']} instalado com sucesso"
+            return True, f"{dep_info['name']} installed successfully"
 
         except subprocess.TimeoutExpired:
-            error_msg = f"Timeout na instalação de {dep_info['name']}"
+            error_msg = f"Timeout when installing {dep_info['name']}"
             logger.error(error_msg)
             log(0, f"X {error_msg}")
             return False, error_msg
         except Exception as e:
-            error_msg = f"Erro ao instalar {dep_info['name']}: {e}"
+            error_msg = f"Error installing {dep_info['name']}: {e}"
             logger.error(error_msg)
             log(0, f"X {error_msg}")
             return False, error_msg
 
     def ensure_dependencies(self, progress_callback: Optional[Callable] = None) -> Tuple[bool, str]:
         """
-        Garante que todas as dependências críticas estejam instaladas
+        Ensures all critical dependencies are installed
 
         Returns:
-            Tuple (sucesso, mensagem)
+            Tuple (success, message)
         """
         all_ok, missing, installed = self.check_dependencies()
 
         if all_ok:
-            return True, "Todas as dependências estão instaladas"
+            return True, "All dependencies are installed"
 
-        # Instalar dependências faltantes
+        # Install missing dependencies
         for dep_id in missing:
             success, msg = self.install_package(dep_id, progress_callback)
             if not success:
-                return False, f"Falha ao instalar {dep_id}: {msg}"
+                return False, f"Failed to install {dep_id}: {msg}"
 
-        return True, "Dependências instaladas com sucesso"
+        return True, "Dependencies installed successfully"
 
     def is_service_running(self, service_name: str) -> bool:
-        """Verifica se um serviço systemd está rodando"""
+        """Checks if a systemd service is running"""
         try:
             result = subprocess.run(
                 ['systemctl', 'is-active', service_name],
@@ -304,21 +304,21 @@ class SystemDependencies:
             return result.returncode == 0 and 'active' in result.stdout
 
         except Exception as e:
-            logger.error(f"Erro ao verificar serviço {service_name}: {e}")
+            logger.error(f"Error checking service {service_name}: {e}")
             return False
 
     def is_xrdp_ready(self) -> bool:
-        """Verifica se xrdp está instalado e funcionando"""
+        """Verifies that xrdp is installed and running"""
         return self.is_package_installed('xrdp')
 
     def is_freerdp_installed(self) -> bool:
-        """Verifica se FreeRDP está instalado"""
+        """Check if FreeRDP is installed"""
         import shutil
-        # Verificar se o comando xfreerdp3 ou xfreerdp está disponível
+        # Check if the xfreerdp3 or xfreerdp command is available
         return shutil.which('xfreerdp3') is not None or shutil.which('xfreerdp') is not None
 
     def get_freerdp_command(self) -> str:
-        """Retorna o comando FreeRDP disponível"""
+        """Returns the available FreeRDP command"""
         import shutil
         if shutil.which('xfreerdp3'):
             return 'xfreerdp3'
@@ -327,7 +327,7 @@ class SystemDependencies:
         return None
 
     def get_xrdp_status(self) -> dict:
-        """Retorna status detalhado do xrdp"""
+        """Returns detailed xrdp status"""
         return {
             'installed': self.is_package_installed('xrdp'),
             'service_running': self.is_service_running('xrdp'),
@@ -335,7 +335,7 @@ class SystemDependencies:
         }
 
     def _check_port_open(self, port: int) -> bool:
-        """Verifica se uma porta está aberta"""
+        """Checks if a port is open"""
         import socket
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

@@ -7,16 +7,16 @@ USERNAME="$2"
 [ -z "$COMMAND" ] || [ -z "$USERNAME" ] && {
     echo "Uso: $0 {list-exes|view-logs|copy-files} USERNAME"
     echo ""
-    echo "Comandos:"
-    echo "  list-exes   - Listar executaveis disponiveis"
-    echo "  view-logs   - Ver logs de execucao do Wine"
-    echo "  copy-files  - Copiar arquivos do app para home"
+    echo "Commands:"
+    echo "list-exes - List available executables"
+    echo " view-logs - View Wine execution logs"
+    echo "copy-files - Copy files from app to home"
     exit 1
 }
 
 HOME_DIR="/opt/rdp-users/$USERNAME"
 [ ! -d "$HOME_DIR" ] && {
-    echo "Erro: Usuario nao existe: $USERNAME"
+    echo "Error: User does not exist: $USERNAME"
     exit 1
 }
 
@@ -28,7 +28,7 @@ find_installed_apps() {
 
 case "$COMMAND" in
     list-exes)
-        echo "Executaveis para $USERNAME:"
+        echo "Executables for $USERNAME:"
         echo ""
 
         [ -d "$HOME_DIR/WindowsApps" ] && {
@@ -38,19 +38,19 @@ case "$COMMAND" in
         }
 
         [ -d "$HOME_DIR/.wine/drive_c" ] && {
-            echo "Aplicativos instalados:"
+            echo "Installed applications:"
             find_installed_apps | sed 's/^/  /'
             echo ""
         }
 
-        echo "Executavel atual:"
-        [ -f "$HOME_DIR/.winege_app_path" ] && cat "$HOME_DIR/.winege_app_path" || echo "  (nenhum)"
+        echo "Current executable:"
+        [ -f "$HOME_DIR/.winege_app_path" ] && cat "$HOME_DIR/.winege_app_path" || echo "(none)"
         ;;
 
     view-logs)
         LOG_FILE="$HOME_DIR/.winege_launch.log"
         [ ! -f "$LOG_FILE" ] && {
-            echo "Nenhum log encontrado"
+            echo "No logs found"
             exit 1
         }
         echo "=== Logs WineGE: $USERNAME ==="
@@ -59,18 +59,18 @@ case "$COMMAND" in
 
     copy-files)
         [ ! -d "$HOME_DIR/.wine" ] && {
-            echo "Erro: Wine Prefix nao encontrado"
+            echo "Error: Wine Prefix not found"
             exit 1
         }
 
         INSTALLED_APP=$(find_installed_apps | head -n 1)
         [ -z "$INSTALLED_APP" ] && {
-            echo "Erro: Nenhum aplicativo instalado"
+            echo "Error: No applications installed"
             exit 1
         }
 
         APP_DIR=$(dirname "$INSTALLED_APP")
-        echo "Copiando arquivos de: $(basename "$APP_DIR")"
+        echo "Copying files from: $(basename "$APP_DIR")"
 
         FILE_COUNT=0
         for EXT in ini dll dat png cfg xml conf jpg bmp ico; do
@@ -82,11 +82,11 @@ case "$COMMAND" in
             done < <(find "$APP_DIR" -maxdepth 1 -name "*.$EXT" -type f -print0 2>/dev/null)
         done
 
-        echo "OK $FILE_COUNT arquivos copiados"
+        echo "OK $FILE_COUNT files copied"
         ;;
 
     *)
-        echo "Comando invalido: $COMMAND"
+        echo "Invalid command: $COMMAND"
         exit 1
         ;;
 esac

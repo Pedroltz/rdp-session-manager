@@ -58,7 +58,7 @@ class TestSessionInfo(unittest.TestCase):
 
     def test_session_info_get_duration(self):
         """Test SessionInfo get_duration method"""
-        # Sessão iniciada há 60 segundos
+        # Session started 60 seconds ago
         start_time = datetime.now() - timedelta(seconds=60)
         session = SessionInfo(
             username='testuser',
@@ -67,7 +67,7 @@ class TestSessionInfo(unittest.TestCase):
 
         duration = session.get_duration()
 
-        # Duração deve ser aproximadamente 60 segundos (com margem de 2 segundos)
+        # Duration should be approximately 60 seconds (with a margin of 2 seconds)
         self.assertGreaterEqual(duration, 58)
         self.assertLessEqual(duration, 62)
 
@@ -75,11 +75,11 @@ class TestSessionInfo(unittest.TestCase):
         """Test SessionInfo with default start_time"""
         session = SessionInfo(username='testuser')
 
-        # start_time deve ser definido automaticamente
+        # start_time must be set automatically
         self.assertIsNotNone(session.start_time)
         self.assertIsInstance(session.start_time, datetime)
 
-        # Duração deve ser próxima de 0
+        # Duration must be close to 0
         duration = session.get_duration()
         self.assertLessEqual(duration, 2)
 
@@ -100,12 +100,12 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('psutil.process_iter')
     def test_get_active_sessions_no_processes(self, mock_process_iter, mock_subprocess):
         """Test get_active_sessions with no xrdp processes"""
-        # Simular processos sem xrdp
+        # Simulate processes without xrdp
         mock_proc = Mock()
         mock_proc.info = {'pid': 1234, 'name': 'bash', 'username': 'user'}
         mock_process_iter.return_value = [mock_proc]
 
-        # Simular loginctl sem sessões
+        # Simulate loginctl without sessions
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = ''
@@ -119,11 +119,11 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('psutil.process_iter')
     def test_get_active_sessions_with_xrdp(self, mock_process_iter, mock_subprocess):
         """Test get_active_sessions with xrdp processes"""
-        # Criar mock de processo xrdp
+        # Create xrdp process mock
         mock_proc = Mock()
         mock_proc.info = {'pid': 5678, 'name': 'xrdp-sesman', 'username': 'testuser'}
 
-        # Criar mock de conexão
+        # Create connection mock
         mock_conn = Mock()
         mock_conn.status = 'ESTABLISHED'
         mock_conn.raddr = Mock(ip='192.168.1.100')
@@ -132,7 +132,7 @@ class TestSessionMonitor(unittest.TestCase):
         mock_proc.connections.return_value = [mock_conn]
         mock_process_iter.return_value = [mock_proc]
 
-        # Simular loginctl sem sessões (para não duplicar)
+        # Simulate loginctl without sessions (so as not to duplicate)
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = ''
@@ -185,7 +185,7 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('socket.socket')
     def test_get_ip_address(self, mock_socket):
         """Test get_ip_address method"""
-        # Criar mock do socket
+        # Create socket mock
         mock_sock = MagicMock()
         mock_sock.getsockname.return_value = ('192.168.1.50', 0)
         mock_socket.return_value = mock_sock
@@ -197,7 +197,7 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('socket.socket')
     def test_get_ip_address_fallback(self, mock_socket):
         """Test get_ip_address fallback to localhost"""
-        # Simular erro no socket
+        # Simulate socket error
         mock_socket.side_effect = Exception("Network error")
 
         with patch('socket.gethostname', return_value='testhost'):
@@ -209,7 +209,7 @@ class TestSessionMonitor(unittest.TestCase):
     @patch.dict('sys.modules', {'netifaces': None})
     def test_get_all_network_ips(self, mock_net_if_addrs):
         """Test get_all_network_ips method"""
-        # Criar mock de interfaces de rede
+        # Create mock network interfaces
         mock_snic = Mock()
         mock_snic.family = 2  # AF_INET
         mock_snic.address = '192.168.1.100'
@@ -226,7 +226,7 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('psutil.process_iter')
     def test_kill_user_session(self, mock_process_iter):
         """Test kill_user_session method"""
-        # Criar mock de processo
+        # Create process mock
         mock_proc = Mock()
         mock_proc.info = {'pid': 9999, 'name': 'bash', 'username': 'testuser'}
         mock_process_iter.return_value = [mock_proc]
@@ -241,7 +241,7 @@ class TestSessionMonitor(unittest.TestCase):
     @patch('psutil.disk_usage')
     def test_get_system_stats(self, mock_disk, mock_memory, mock_cpu):
         """Test get_system_stats method"""
-        # Configurar mocks
+        # Configure mocks
         mock_cpu.return_value = 50.0
 
         mock_mem = Mock()
@@ -270,7 +270,7 @@ class TestSessionMonitor(unittest.TestCase):
     def test_check_port_status_open(self, mock_socket):
         """Test check_port_status with open port"""
         mock_sock = MagicMock()
-        mock_sock.connect_ex.return_value = 0  # Porta aberta
+        mock_sock.connect_ex.return_value = 0 # Port open
         mock_socket.return_value.__enter__.return_value = mock_sock
 
         result = self.monitor.check_port_status(3389)
@@ -281,7 +281,7 @@ class TestSessionMonitor(unittest.TestCase):
     def test_check_port_status_closed(self, mock_socket):
         """Test check_port_status with closed port"""
         mock_sock = MagicMock()
-        mock_sock.connect_ex.return_value = 1  # Porta fechada
+        mock_sock.connect_ex.return_value = 1 # Door closed
         mock_socket.return_value.__enter__.return_value = mock_sock
 
         result = self.monitor.check_port_status(9999)
@@ -290,7 +290,7 @@ class TestSessionMonitor(unittest.TestCase):
 
     def test_get_connection_history(self):
         """Test get_connection_history method"""
-        # Por enquanto retorna lista vazia (não implementado)
+        # For now returns empty list (not implemented)
         history = self.monitor.get_connection_history('testuser')
 
         self.assertIsInstance(history, list)

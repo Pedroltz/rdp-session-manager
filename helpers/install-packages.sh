@@ -1,10 +1,10 @@
 #!/bin/bash
-# Helper script para instalar pacotes com pkexec
+# Helper script to install packages with pkexec
 # Uso: pkexec helpers/install-packages.sh package1 package2 package3...
 
 set -e
 
-# Detectar distribuição
+# Detect distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -16,37 +16,37 @@ detect_distro() {
 
 DISTRO=$(detect_distro)
 
-# Verificar se há pacotes para instalar
+# Check if there are packages to install
 if [ $# -eq 0 ]; then
-    echo "Erro: Nenhum pacote especificado"
+    echo "Error: No package specified"
     exit 1
 fi
 
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
-        # Atualizar cache de pacotes
-        echo "Atualizando cache de pacotes..."
+        # Update package cache
+        echo "Updating package cache..."
         # Avoid partial upgrades: Arch requires a full sync before installing.
         /usr/bin/pacman -Syu --needed --noconfirm
 
-        # Instalar pacotes
-        echo "Instalando pacotes: $@"
+        # Install packages
+        echo "Installing packages: $@"
         /usr/bin/pacman -S --noconfirm "$@"
         ;;
     debian|ubuntu|linuxmint|pop)
-        # Atualizar cache de pacotes
-        echo "Atualizando cache de pacotes..."
+        # Update package cache
+        echo "Updating package cache..."
         /usr/bin/apt-get update
 
-        # Instalar pacotes
-        echo "Instalando pacotes: $@"
+        # Install packages
+        echo "Installing packages: $@"
         DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y "$@"
         ;;
     *)
-        echo "Erro: Distribuição não suportada: $DISTRO"
+        echo "Error: Unsupported distribution: $DISTRO"
         exit 1
         ;;
 esac
 
-echo "Instalação concluída com sucesso!"
+echo "Installation completed successfully!"
 exit 0

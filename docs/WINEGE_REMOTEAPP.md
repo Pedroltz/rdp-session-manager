@@ -1,64 +1,64 @@
 # WineGE RemoteApp - Guia de Uso
 
-Este documento explica como criar RemoteApps que executam aplicativos Windows usando **WineGE** (Wine-GE Custom) no RDP Session Manager.
+This document explains how to create RemoteApps that run Windows applications using **WineGE** (Wine-GE Custom) in RDP Session Manager.
 
-## O que é WineGE RemoteApp?
+## What is WineGE RemoteApp?
 
-WineGE RemoteApp permite que você execute aplicativos Windows (.exe) como RemoteApps via RDP, usando o Wine-GE (uma versão melhorada do Wine mantida por GloriousEggroll) em vez do Wine convencional.
+WineGE RemoteApp allows you to run Windows applications (.exe) as RemoteApps via RDP, using Wine-GE (an improved version of Wine maintained by GloriousEggroll) instead of conventional Wine.
 
-### Por que WineGE em vez de Wine?
+### Why WineGE Instead of Wine?
 
-- **Melhor compatibilidade** com jogos e aplicativos modernos
-- **Patches adicionais** para DirectX, DXVK, VKD3D
-- **Performance superior** em muitos casos
-- **Suporte a tecnologias recentes** (FSR, Ray Tracing via VKD3D, etc.)
-- **Atualizações frequentes** com correções de bugs
+- **Best compatibility** with modern games and apps
+- **Additional patches** for DirectX, DXVK, VKD3D
+- **Better performance** in many cases
+- **Support for recent technologies** (FSR, Ray Tracing via VKD3D, etc.)
+- **Frequent updates** with bug fixes
 
 ## Requisitos
 
-- Aplicativo Windows (.exe) - pode ser:
-  - Instalador (setup.exe, installer.exe)
-  - Executável portátil (app.exe)
-- Espaço em disco suficiente (~2-3GB para WineGE + aplicativo)
-- Conexão com internet (para download do WineGE na primeira vez)
+- Windows application (.exe) - can be:
+  - Installer (setup.exe, installer.exe)
+  - Portable executable (app.exe)
+- Enough disk space (~2-3GB for WineGE + app)
+- Internet connection (to download WineGE the first time)
 
-## Como Criar um Usuário WineGE RemoteApp
+## How to Create a WineGE RemoteApp User
 
-### Via Interface Gráfica (GUI)
+### Via Graphical Interface (GUI)
 
 1. Abra o RDP Session Manager
-2. Clique em "Add User"
-3. Preencha os dados do usuário
+2. Click "Add User"
+3. Fill in user data
 4. Em "Session Type", selecione **"WineGE RemoteApp"**
-5. Em "Application Command", clique em "Browse" e selecione o arquivo .exe
-6. (Opcional) Adicione argumentos em "Application Arguments"
-7. Clique em "Create User"
+5. In "Application Command", click "Browse" and select the .exe file
+6. (Optional) Add arguments in "Application Arguments"
+7. Click "Create User"
 
-O sistema irá:
-- Criar o usuário
-- Baixar e instalar o WineGE (~1.5GB)
-- Criar um Wine Prefix
-- Instalar o aplicativo (se for um instalador)
-- Configurar o RemoteApp
+The system will:
+- Create the user
+- Download and install WineGE (~1.5GB)
+- Create a Wine Prefix
+- Install the application (if it is an installer)
+- Configure RemoteApp
 
-### Via Linha de Comando (CLI)
+### Via Command Line (CLI)
 
-#### Criar novo usuário com WineGE RemoteApp:
+#### Create new user with WineGE RemoteApp:
 
 ```bash
-# Exemplo com aplicativo portátil
+# Example with portable application
 rdpsm user create winuser1 \
     --session-type winege-remoteapp \
     --app-command /path/to/MyApp.exe \
     --fullname "Windows App User"
 
-# Exemplo com instalador
+# Example with installer
 rdpsm user create winuser2 \
     --session-type winege-remoteapp \
     --app-command /path/to/MyAppSetup.exe \
     --fullname "Windows Game User"
 
-# Com argumentos
+# With arguments
 rdpsm user create winuser3 \
     --session-type winege-remoteapp \
     --app-command /path/to/MyApp.exe \
@@ -66,34 +66,34 @@ rdpsm user create winuser3 \
     --fullname "Windows App User"
 ```
 
-## Gerenciar Executáveis WineGE via CLI
+## Manage WineGE Executables via CLI
 
-### Listar executáveis disponíveis
+### List available executables
 
-Liste todos os executáveis .exe encontrados no Wine Prefix e WindowsApps do usuário:
+List all .exe executables found in the user's Wine Prefix and WindowsApps:
 
 ```bash
 rdpsm user winege list USERNAME
 ```
 
-Isso mostra:
-- Executáveis portáteis em `WindowsApps/`
-- Aplicativos instalados em `Program Files/` e `Program Files (x86)/`
-- Caminho do executável atual
+This shows:
+- Portable executables in `WindowsApps/`
+- Applications installed on `Program Files/` and `Program Files (x86)/`
+- Path of the current executable
 
-### Selecionar executável interativamente
+### Select executable interactively
 
-Selecione um executável de forma interativa e atualize automaticamente:
+Select an executable interactively and update automatically:
 
 ```bash
 rdpsm user winege select USERNAME
 ```
 
-Este comando:
-1. Lista todos os executáveis disponíveis
-2. Permite selecionar um por número
-3. Confirma a seleção
-4. Atualiza o caminho automaticamente usando `pkexec`
+This command:
+1. List all available executables
+2. Allows you to select one by number
+3. Confirm selection
+4. Update the path automatically using `pkexec`
 
 **Exemplo de uso:**
 
@@ -115,9 +115,9 @@ OK Executable updated successfully
 → New path: /opt/rdp-users/zionwine/.wine/drive_c/Program Files/MyApp/myapp.exe
 ```
 
-### Atualizar executável manualmente
+### Update executable manually
 
-Se você já sabe o caminho do executável:
+If you already know the executable path:
 
 ```bash
 sudo /usr/share/rdp-session-manager/helpers/update-winege-exe.sh \
@@ -125,90 +125,90 @@ sudo /usr/share/rdp-session-manager/helpers/update-winege-exe.sh \
     "/path/to/new/app.exe"
 ```
 
-## Adicionar WineGE App a Usuário Existente
+## Add WineGE App to Existing User
 
-Se você já tem um usuário criado e quer convertê-lo para WineGE RemoteApp:
+If you already have a user created and want to convert -lo to WineGE RemoteApp:
 
 ### Via CLI:
 
 ```bash
-# 1. Configurar WineGE no usuário (como root ou com pkexec)
+# 1. Configure WineGE on the user (as root or with pkexec)
 sudo /usr/share/rdp-session-manager/helpers/setup-winege-app.sh \
     USERNAME \
     /opt/rdp-users/USERNAME \
     /path/to/app.exe
 
-# 2. Alterar tipo de sessão do usuário
+# 2. Change user session type
 rdpsm user session-type USERNAME winege-remoteapp
 ```
 
-## Decoração de Janelas
+## Window Decoration
 
-Todos os RemoteApps (Linux e WineGE) agora incluem **decoração de janela** (window decorations) com botões de minimizar, maximizar e fechar. Isso é especialmente útil para aplicações Wine que precisam ser movimentadas ou redimensionadas.
+All RemoteApps (Linux and WineGE) now include **window decorations** (window decorations) with minimize, maximize and close buttons. This is especially useful for Wine applications that need to be moved or resized.
 
-### Características:
-- **Botões de controle**: Minimizar, maximizar, fechar
-- **Barra de título**: Permite arrastar e mover a janela
-- **Redimensionamento**: Bordas clicáveis para ajustar tamanho
-- **Window Manager**: Usa Openbox para gerenciamento eficiente
+### Features:
+- **Control buttons**: Minimize, maximize, close
+- **Title bar**: Allows you to drag and move the window
+- **Resizing**: Clickable borders to adjust size
+- **Window Manager**: Uses Openbox for efficient management
 
-Isso resolve o problema comum onde aplicações RemoteApp ficavam "presas" sem controles de janela.
+This solves the common problem where RemoteApp applications get "stuck" without window controls.
 
-## Estrutura de Arquivos
+## File Structure
 
-Após a configuração, o usuário WineGE terá a seguinte estrutura:
+After configuration, the WineGE user will have the following structure:
 
 ```
 /opt/rdp-users/USERNAME/
-├── .wine/                          # Wine Prefix (ambiente Windows virtualizado)
+├── .wine/ # Wine Prefix (virtualized Windows environment)
 │   ├── drive_c/                    # Disco C: virtual
-│   │   ├── Program Files/          # Aplicativos instalados
+│ │ ├── Program Files/ # Installed applications
 │   │   ├── Program Files (x86)/
-│   │   └── users/                  # Dados do usuário Windows
+│ │ └── users/ # Windows user data
 │   └── ...
-├── .local/share/winege/            # Instalação do WineGE
+├── .local/share/winege/ # WineGE installation
 │   └── wine-ge-custom-GE-Proton9-20/
-├── WindowsApps/                    # Executáveis copiados
+├── WindowsApps/ # Copied executables
 │   └── MyApp.exe
-├── .winege_app_path                # Caminho do executável principal
-├── .winege_config                  # Configuração do WineGE
-├── .launch_winege_app.sh           # Script wrapper de lançamento
-└── .xsession                       # Script de inicialização RDP
+├── .winege_app_path # Path of main executable
+├── .winege_config # WineGE Configuration
+├── .launch_winege_app.sh # Launch wrapper script
+└── .xsession # RDP initialization script
 ```
 
 ## Exemplos de Uso
 
-### Exemplo 1: Notepad++ (Aplicativo Portátil)
+### Example 1: Notepad++ (Portable Application)
 
 ```bash
-# Baixar Notepad++ portátil primeiro
+# Download portable Notepad++ first
 wget https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6/npp.8.6.portable.x64.zip
 unzip npp.8.6.portable.x64.zip -d /tmp/notepadpp
 
-# Criar usuário
+# Create user
 rdpsm user create notepad_user \
     --session-type winege-remoteapp \
     --app-command /tmp/notepadpp/notepad++.exe \
     --fullname "Notepad++ User"
 ```
 
-### Exemplo 2: Aplicativo com Instalador
+### Example 2: Application with Installer
 
 ```bash
-# Supondo que você tem um instalador MyAppSetup.exe
+# Assuming you have a MyAppSetup.exe installer
 rdpsm user create myapp_user \
     --session-type winege-remoteapp \
     --app-command /home/user/Downloads/MyAppSetup.exe \
     --fullname "My App User"
 
-# Durante a criação, o instalador será executado interativamente
-# Siga as instruções do instalador Windows
+# During creation, the installer will run interactively
+# Follow the Windows installer instructions
 ```
 
-### Exemplo 3: Jogo Steam (exemplo avançado)
+### Example 3: Steam Game (Advanced Example)
 
 ```bash
-# Para jogos, você pode precisar de argumentos especiais
+# For games you may need special arguments
 rdpsm user create game_user \
     --session-type winege-remoteapp \
     --app-command /path/to/game.exe \
@@ -218,9 +218,9 @@ rdpsm user create game_user \
 
 ## Troubleshooting
 
-### Aplicativo não inicia
+### Application does not start
 
-1. Verifique os logs:
+1. Check the logs:
    ```bash
    rdpsm user info USERNAME
    journalctl -xe | grep xrdp
@@ -232,71 +232,71 @@ rdpsm user create game_user \
    bash ~/.launch_winege_app.sh
    ```
 
-### Instalador não encontrou o executável
+### Installer did not find the executable
 
-Após a instalação, o sistema tenta encontrar automaticamente o .exe principal. Se falhar:
+After installation, the system automatically tries to find the main .exe. If it fails:
 
-1. Encontre o executável manualmente:
+1. Find the executable manually:
    ```bash
    find /opt/rdp-users/USERNAME/.wine/drive_c/ -name "*.exe" | grep -v unins
    ```
 
-2. Atualize o caminho:
+2. Update the path:
    ```bash
    echo "/path/to/correct/app.exe" | sudo tee /opt/rdp-users/USERNAME/.winege_app_path
    ```
 
-### WineGE não baixa
+### WineGE does not download
 
-- Verifique conexão com internet
-- Baixe manualmente de: https://github.com/GloriousEggroll/wine-ge-custom/releases
+- Check internet connection
+- Download manually from: https://github.com/GloriousEggroll/wine-ge-custom/releases
 - Extraia em `/opt/rdp-users/USERNAME/.local/share/winege/`
 
-### Aplicativo precisa de bibliotecas adicionais
+### Application needs additional libraries
 
-Entre no Wine Prefix do usuário e instale:
+Enter the user's Wine Prefix and install:
 
 ```bash
 su - USERNAME
 export WINEPREFIX="$HOME/.wine"
 export PATH="$HOME/.local/share/winege/wine-ge-custom-GE-Proton9-20/bin:$PATH"
 
-# Instalar dependências via winetricks
+# Install dependencies via winetricks
 winetricks vcrun2019 dotnet48
 ```
 
-## Limitações
+## Limitations
 
-- **Jogos com anti-cheat**: Podem não funcionar
+- **Games with anti-cheat**: May not work
 - **DirectX 12**: Suporte limitado via VKD3D
-- **Aplicativos que requerem drivers**: Podem ter problemas
-- **Performance**: Depende do hardware e compatibilidade do aplicativo
+- **Applications that require drivers**: May have problems
+- **Performance**: Depends on hardware and application compatibility
 
 ## Dicas de Performance
 
-1. **Use SSD**: WineGE funciona melhor com armazenamento rápido
-2. **RAM suficiente**: Recomendado 4GB+ por usuário
-3. **GPU dedicada**: Para jogos ou apps gráficos
-4. **Vulkan drivers**: Instale drivers Vulkan atualizados
+1. **Use SSD**: WineGE works best with fast storage
+2. **Sufficient RAM**: Recommended 4GB+ per user
+3. **Dedicated GPU**: For games or graphics apps
+4. **Vulkan drivers**: Install updated Vulkan drivers
 
-## Comparação: RemoteApp vs WineGE RemoteApp
+## Comparison: RemoteApp vs WineGE RemoteApp
 
-| Característica | RemoteApp | WineGE RemoteApp |
+| Feature | RemoteApp | WineGE RemoteApp |
 |----------------|-----------|------------------|
-| Tipo de App | Linux nativo | Windows (.exe) |
-| Instalação | Rápida | Lenta (download WineGE) |
-| Espaço em disco | Pequeno | ~2-3GB |
-| Performance | Nativa | Emulada (pode ser mais lenta) |
-| Compatibilidade | 100% Linux | Varia por app |
+| Application Type | Native Linux | Windows (.exe) |
+| Installation | Quick | Slow (WineGE download) |
+| Disk space | Small | ~2-3GB |
+| Performance | Native | Emulated (may be slower) |
+| Compatibility | 100% Linux | Varies by application |
 
-## Referências
+## References
 
 - [WineGE GitHub](https://github.com/GloriousEggroll/wine-ge-custom)
-- [Wine AppDB](https://appdb.winehq.org/) - Compatibilidade de aplicativos
-- [ProtonDB](https://www.protondb.com/) - Compatibilidade de jogos
+- [Wine AppDB](https://appdb.winehq.org/) - App Compatibility
+- [ProtonDB](https://www.protondb.com/) - Game compatibility
 - [Winetricks](https://github.com/Winetricks/winetricks)
 
 ## Suporte
 
-Para problemas específicos com WineGE RemoteApps, abra uma issue em:
-https://github.com/seu-usuario/rdp-session-manager/issues
+For specific issues with WineGE RemoteApps, please open an issue at:
+https://github.com/your-user/rdp-session-manager/issues

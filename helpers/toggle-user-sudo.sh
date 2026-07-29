@@ -1,5 +1,5 @@
 #!/bin/bash
-# Helper script para conceder/revogar privilégios sudo para usuário RDP com pkexec
+# Helper script to grant/revoke sudo privileges for RDP user with pkexec
 # Uso: pkexec helpers/toggle-user-sudo.sh USERNAME grant|revoke
 
 set -e
@@ -7,47 +7,47 @@ set -e
 USERNAME="$1"
 ACTION="$2"
 
-# Validar parâmetros
+# Validate parameters
 if [ -z "$USERNAME" ] || [ -z "$ACTION" ]; then
-    echo "Erro: Parâmetros insuficientes"
+    echo "Error: Insufficient parameters"
     echo "Uso: $0 USERNAME grant|revoke"
     exit 1
 fi
 
-# Validar ação
+# Validate action
 if [ "$ACTION" != "grant" ] && [ "$ACTION" != "revoke" ]; then
-    echo "Erro: Ação inválida. Use 'grant' ou 'revoke'"
+    echo "Error: Invalid action. Use 'grant' or 'revoke'"
     exit 1
 fi
 
-# Verificar se usuário existe
+# Check if user exists
 if ! /usr/bin/id "$USERNAME" &> /dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
 if [ "$ACTION" = "grant" ]; then
-    echo "Concedendo privilégios de superusuário para $USERNAME..."
+    echo "Granting superuser privileges to $USERNAME..."
 
-    # Adicionar usuário ao grupo sudo
+    # Add user to sudo group
     /usr/sbin/usermod -aG sudo "$USERNAME"
 
-    echo "OK Privilégios de superusuário concedidos para $USERNAME"
-    echo "  O usuário agora pode executar comandos com sudo"
+    echo "OK Superuser privileges granted to $USERNAME"
+    echo "User can now run commands with sudo"
 else
-    echo "Revogando privilégios de superusuário de $USERNAME..."
+    echo "Revoking superuser privileges from $USERNAME..."
 
-    # Remover usuário do grupo sudo usando gpasswd (mais confiável)
+    # Remove user from sudo group using gpasswd (more reliable)
     if /usr/bin/gpasswd -d "$USERNAME" sudo 2>/dev/null; then
-        echo "OK Privilégios de superusuário revogados de $USERNAME"
-        echo "  O usuário não pode mais executar comandos com sudo"
+        echo "OK Superuser privileges revoked from $USERNAME"
+        echo "User can no longer execute commands with sudo"
     else
-        # Fallback para deluser se gpasswd falhar
+        # Fallback to deluser if gpasswd fails
         if /usr/sbin/deluser "$USERNAME" sudo 2>/dev/null; then
-            echo "OK Privilégios de superusuário revogados de $USERNAME"
-            echo "  O usuário não pode mais executar comandos com sudo"
+            echo "OK Superuser privileges revoked from $USERNAME"
+            echo "User can no longer execute commands with sudo"
         else
-            echo "! Aviso: Comando completado mas verifique os grupos do usuário"
+            echo "! Warning: Command completed but check user groups"
         fi
     fi
 fi

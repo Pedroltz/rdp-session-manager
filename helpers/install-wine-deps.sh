@@ -1,14 +1,14 @@
 #!/bin/bash
-# Helper script para instalar dependências Wine adicionais para um usuário
+# Helper script to install additional Wine dependencies for a user
 # Uso: pkexec helpers/install-wine-deps.sh USERNAME [PACKAGES...]
 
 set -e
 
 USERNAME="$1"
-shift  # Remove USERNAME dos argumentos
+shift  # Remove USERNAME from the arguments
 
 if [ -z "$USERNAME" ]; then
-    echo "Erro: USERNAME não fornecido"
+    echo "Error: USERNAME not provided"
     echo "Uso: $0 USERNAME [PACKAGES...]"
     echo ""
     echo "Packages comuns:"
@@ -26,9 +26,9 @@ if [ -z "$USERNAME" ]; then
     exit 1
 fi
 
-# Verificar se o usuário existe
+# Check if the user exists
 if ! id "$USERNAME" &>/dev/null; then
-    echo "Erro: Usuário não existe: $USERNAME"
+    echo "Error: User does not exist: $USERNAME"
     exit 1
 fi
 
@@ -36,38 +36,38 @@ HOME_DIR="/opt/rdp-users/$USERNAME"
 WINE_PREFIX="$HOME_DIR/.wine"
 
 if [ ! -d "$WINE_PREFIX" ]; then
-    echo "Erro: Wine Prefix não encontrado para $USERNAME"
-    echo "  Esperado em: $WINE_PREFIX"
+    echo "Error: Wine Prefix not found for $USERNAME"
+    echo "  Expected at: $WINE_PREFIX"
     exit 1
 fi
 
-# Se não foram passados pacotes, instalar conjunto padrão
+# If no packages were passed, install default set
 if [ $# -eq 0 ]; then
-    echo "Nenhum pacote especificado. Instalando conjunto padrão..."
+    echo "No packages specified. Installing default set..."
     PACKAGES="corefonts vcrun2015 msxml3 d3dx9"
 else
     PACKAGES="$@"
 fi
 
-echo "Instalando dependências Wine para: $USERNAME"
+echo "Installing Wine dependencies for: $USERNAME"
 echo "  - Wine Prefix: $WINE_PREFIX"
-echo "  - Pacotes: $PACKAGES"
+echo " - Packets: $PACKAGES"
 echo ""
-echo "AVISO ATENÇÃO: Isso pode levar alguns minutos..."
+echo "WARNING ATTENTION: This may take a few minutes..."
 echo ""
 
-# Instalar cada pacote
+# Install each package
 for PACKAGE in $PACKAGES; do
-    echo "→ Instalando $PACKAGE..."
+    echo "→ Installing $PACKAGE..."
     su - "$USERNAME" -c "WINEPREFIX='$WINE_PREFIX' winetricks -q $PACKAGE" || {
-        echo "  AVISO Falha ao instalar $PACKAGE (continuando...)"
+        echo "WARNING Failed to install $PACKAGE (continuing...)"
     }
     echo "  OK $PACKAGE instalado"
 done
 
 echo ""
-echo "OK Dependências Wine instaladas com sucesso!"
+echo "OK Wine dependencies installed successfully!"
 echo ""
-echo "O usuário $USERNAME pode fazer login via RDP para testar."
+echo "User $USERNAME can log in via RDP to test."
 
 exit 0
