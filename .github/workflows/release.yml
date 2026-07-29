@@ -41,26 +41,28 @@ jobs:
 
       - name: Assemble release assets
         run: |
-          mkdir -p release-assets
-          cp release/rdp-session-manager.deb release-assets/
-          cp release/rdp-session-manager.pkg.tar.zst release-assets/
+          mkdir -p release-assets release-work/zipapp release-work/bundle
           cp installer/install.sh release-assets/install.sh
-          cp installer/core.py release-assets/installer.py
-          python3 -m pip install -r installer/requirements.txt --target release-assets/installer-bundle
-          cp installer/core.py release-assets/installer-bundle/__main__.py
-          python3 -m zipapp release-assets/installer-bundle \
-            --output release-assets/installer.pyz \
+          python3 -m pip install -r installer/requirements.txt --target release-work/zipapp
+          cp installer/core.py release-work/zipapp/__main__.py
+          python3 -m zipapp release-work/zipapp \
+            --output release-work/bundle/installer.pyz \
             --python '/usr/bin/env python3'
-          rm -rf release-assets/installer-bundle
+          cp release/rdp-session-manager.deb release-work/bundle/
+          cp release/rdp-session-manager.pkg.tar.zst release-work/bundle/
           (
-            cd release-assets
+            cd release-work/bundle
             sha256sum --binary \
-              install.sh \
-              installer.py \
               installer.pyz \
               rdp-session-manager.deb \
               rdp-session-manager.pkg.tar.zst \
               > SHA256SUMS
+            python3 -m zipfile -c \
+              ../../release-assets/rdp-session-manager-installer.zip \
+              installer.pyz \
+              rdp-session-manager.deb \
+              rdp-session-manager.pkg.tar.zst \
+              SHA256SUMS
           )
 
       - name: Validate release assets
@@ -68,19 +70,28 @@ jobs:
         run: |
           required_assets=(
             install.sh
-            installer.py
-            installer.pyz
-            rdp-session-manager.deb
-            rdp-session-manager.pkg.tar.zst
-            SHA256SUMS
+            rdp-session-manager-installer.zip
           )
+          mapfile -t published_assets < <(
+            find release-assets -maxdepth 1 -type f -printf '%f\n' | sort
+          )
+          mapfile -t expected_assets < <(printf '%s\n' "${required_assets[@]}" | sort)
+          test "${published_assets[*]}" = "${expected_assets[*]}" || {
+            echo "Unexpected release assets: ${published_assets[*]}" >&2
+            exit 1
+          }
           for asset in "${required_assets[@]}"; do
             test -s "release-assets/$asset" || {
               echo "Missing or empty release asset: $asset" >&2
               exit 1
             }
           done
-          (cd release-assets && sha256sum --check SHA256SUMS)
+          mkdir -p release-validation
+          python3 -m zipfile -e \
+            release-assets/rdp-session-manager-installer.zip \
+            release-validation
+          test "$(find release-validation -maxdepth 1 -type f | wc -l)" -eq 4
+          (cd release-validation && sha256sum --check --strict SHA256SUMS)
           RDPSM_RELEASE_ASSETS_DIR="$PWD/release-assets" \
             bash tests/test_installer_bootstrap.sh
 

@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.3.5" date="2026-07-28">
+      <description>
+        <p>Simplifica a distribuição para um bootstrap e um bundle verificado contendo os pacotes suportados.</p>
+      </description>
+    </release>
     <release version="0.3.4" date="2026-07-28">
       <description>
         <p>Corrige a entrada interativa do autoinstaller quando executado pelo comando curl pipe bash.</p>

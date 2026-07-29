@@ -51,8 +51,8 @@ curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/downl
 ```
 
 The complete log is written to `~/.local/state/rdp-session-manager/install.log`.
-The published installer bundles the Rich terminal interface inside
-`installer.pyz`; no separate `pip install` is required for end users.
+The release publishes one verified ZIP containing the Rich terminal installer
+and both native packages; no separate `pip install` is required for end users.
 
 On Arch, xrdp and xorgxrdp come from the AUR. The installer uses `yay` or
 `paru` when available; otherwise it displays the AUR sources and asks for

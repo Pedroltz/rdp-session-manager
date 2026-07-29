@@ -10,9 +10,10 @@
 set -Eeuo pipefail
 
 readonly REPOSITORY="Pedroltz/rdp-session-manager"
-readonly RELEASE_BASE="https://github.com/${REPOSITORY}/releases"
 readonly API_BASE="https://api.github.com/repos/${REPOSITORY}"
-readonly TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rdpsm-installer.XXXXXX")"
+readonly BUNDLE_NAME="rdp-session-manager-installer.zip"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rdpsm-installer.XXXXXX")"
+readonly TMP_DIR
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 log() { printf '[rdp-session-manager] %s\n' "$*"; }
@@ -66,12 +67,21 @@ for ((index = 0; index < ${#bootstrap_args[@]}; index++)); do
     fi
 done
 
+release_file="$TMP_DIR/release.json"
 if [ -z "$release_tag" ]; then
-    release_file="$TMP_DIR/release.json"
     log "Consultando a release estável mais recente..."
     download "${API_BASE}/releases/latest" "$release_file"
-    release_tag="$(python3 - "$release_file" <<'PY'
+    require_stable="true"
+else
+    [[ "$release_tag" == v* ]] || release_tag="v${release_tag}"
+    log "Consultando a release ${release_tag}..."
+    download "${API_BASE}/releases/tags/${release_tag}" "$release_file"
+    require_stable="false"
+fi
+
+mapfile -t release_fields < <(python3 - "$release_file" "$BUNDLE_NAME" "$require_stable" <<'PY'
 import json
+import re
 import sys
 
 try:
@@ -82,40 +92,127 @@ except (OSError, json.JSONDecodeError) as exc:
 if (
     not isinstance(release, dict)
     or release.get("draft")
-    or release.get("prerelease")
     or not release.get("tag_name")
 ):
+    raise SystemExit("A release selecionada é inválida ou ainda não foi publicada.")
+if sys.argv[3] == "true" and release.get("prerelease"):
     raise SystemExit("Nenhuma release estável foi encontrada no GitHub.")
 
+assets = release.get("assets")
+if not isinstance(assets, list):
+    raise SystemExit("A release não contém uma lista válida de assets.")
+
 print(release["tag_name"])
+bundle = next(
+    (asset for asset in assets if isinstance(asset, dict) and asset.get("name") == sys.argv[2]),
+    None,
+)
+if bundle is not None:
+    url = bundle.get("browser_download_url")
+    digest = bundle.get("digest")
+    if not isinstance(url, str) or not url:
+        raise SystemExit("O bundle da release não possui uma URL válida.")
+    if not isinstance(digest, str) or not re.fullmatch(r"sha256:[0-9a-fA-F]{64}", digest):
+        raise SystemExit("O bundle da release não possui um digest SHA-256 válido.")
+    print("bundle")
+    print(url)
+    print(digest.removeprefix("sha256:").lower())
+else:
+    by_name = {
+        asset.get("name"): asset
+        for asset in assets
+        if isinstance(asset, dict) and isinstance(asset.get("name"), str)
+    }
+    missing = [name for name in ("installer.pyz", "SHA256SUMS") if name not in by_name]
+    if missing:
+        raise SystemExit(
+            "A release não contém o bundle nem os assets legados necessários: "
+            + ", ".join(missing)
+        )
+    urls = [by_name[name].get("browser_download_url") for name in ("installer.pyz", "SHA256SUMS")]
+    if not all(isinstance(url, str) and url for url in urls):
+        raise SystemExit("Os assets legados da release não possuem URLs válidas.")
+    print("legacy")
+    print(*urls, sep="\n")
 PY
-)" || fail "Não foi possível determinar a release mais recente."
+)
+[ "${#release_fields[@]}" -ge 4 ] || fail "Não foi possível resolver os assets da release."
+
+release_tag="${release_fields[0]}"
+release_mode="${release_fields[1]}"
+installer_args=("$@")
+
+if [ "$release_mode" = "bundle" ]; then
+    bundle_path="$TMP_DIR/$BUNDLE_NAME"
+    bundle_dir="$TMP_DIR/bundle"
+    log "Baixando bundle da release ${release_tag}..."
+    download "${release_fields[2]}" "$bundle_path"
+    actual="$(sha256sum "$bundle_path" | awk '{print $1}')"
+    [ "$actual" = "${release_fields[3]}" ] || fail "Digest inválido para $BUNDLE_NAME."
+
+    mkdir -p "$bundle_dir"
+    python3 - "$bundle_path" "$bundle_dir" <<'PY' || fail "Não foi possível extrair o bundle."
+import stat
+import sys
+import zipfile
+from pathlib import Path, PurePosixPath
+
+archive_path, destination = Path(sys.argv[1]), Path(sys.argv[2])
+expected = {
+    "installer.pyz",
+    "rdp-session-manager.deb",
+    "rdp-session-manager.pkg.tar.zst",
+    "SHA256SUMS",
+}
+with zipfile.ZipFile(archive_path) as archive:
+    members = archive.infolist()
+    names = {member.filename for member in members}
+    if names != expected:
+        missing = sorted(expected - names)
+        extra = sorted(names - expected)
+        raise SystemExit(f"Conteúdo inesperado no bundle; ausentes={missing}, extras={extra}")
+    for member in members:
+        path = PurePosixPath(member.filename)
+        mode = member.external_attr >> 16
+        if path.is_absolute() or ".." in path.parts or stat.S_ISLNK(mode):
+            raise SystemExit(f"Entrada insegura no bundle: {member.filename}")
+    archive.extractall(destination)
+PY
+    (cd "$bundle_dir" && sha256sum --check --strict SHA256SUMS >/dev/null) \
+        || fail "Checksum interno inválido no bundle."
+    installer_path="$bundle_dir/installer.pyz"
+    installer_args=(
+        --bundle-dir "$bundle_dir"
+        --resolved-release "$release_tag"
+        "$@"
+    )
+else
+    log "Baixando instalador visual legado da release ${release_tag}..."
+    download "${release_fields[2]}" "$TMP_DIR/installer.pyz"
+    download "${release_fields[3]}" "$TMP_DIR/SHA256SUMS"
+    expected="$(awk '$2 == "installer.pyz" || $2 == "*installer.pyz" {print $1; exit}' "$TMP_DIR/SHA256SUMS")"
+    [ -n "$expected" ] || fail "SHA256SUMS não contém o checksum de installer.pyz."
+    actual="$(sha256sum "$TMP_DIR/installer.pyz" | awk '{print $1}')"
+    [ "$expected" = "$actual" ] || fail "Checksum inválido para installer.pyz."
+    installer_path="$TMP_DIR/installer.pyz"
 fi
 
-release_url="${RELEASE_BASE}/download/${release_tag}"
-
-log "Baixando instalador visual da release ${release_tag}..."
-download "${release_url}/installer.pyz" "$TMP_DIR/installer.pyz"
-download "${release_url}/SHA256SUMS" "$TMP_DIR/SHA256SUMS"
-
-expected="$(awk '$2 == "installer.pyz" || $2 == "*installer.pyz" {print $1; exit}' "$TMP_DIR/SHA256SUMS")"
-[ -n "$expected" ] || fail "SHA256SUMS não contém o checksum de installer.pyz."
-actual="$(sha256sum "$TMP_DIR/installer.pyz" | awk '{print $1}')"
-[ "$expected" = "$actual" ] || fail "Checksum inválido para installer.pyz."
-
 if [ -t 0 ]; then
-    exec python3 "$TMP_DIR/installer.pyz" "$@"
+    python3 "$installer_path" "${installer_args[@]}"
+    exit $?
 fi
 
 # `curl ... | bash` uses stdin to deliver this script. Read interactive answers
 # from the controlling terminal instead of the already-consumed pipe.
 if (: </dev/tty) 2>/dev/null; then
-    exec python3 "$TMP_DIR/installer.pyz" "$@" </dev/tty
+    python3 "$installer_path" "${installer_args[@]}" </dev/tty
+    exit $?
 fi
 
 for arg in "$@"; do
     if [[ "$arg" == "--yes" ]]; then
-        exec python3 "$TMP_DIR/installer.pyz" "$@"
+        python3 "$installer_path" "${installer_args[@]}"
+        exit $?
     fi
 done
 
