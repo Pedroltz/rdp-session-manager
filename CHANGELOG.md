@@ -1,5 +1,11 @@
 # Changelog - RDP Session Manager
 
+## [0.3.4] - 2026-07-28
+
+### Fixed
+- O comando `curl | bash` agora lê confirmações interativas pelo terminal em vez do pipe já consumido
+- Execuções sem terminal recebem uma mensagem clara e ainda podem usar `--yes` para o modo não interativo
+
 ## [0.3.3] - 2026-07-28
 
 ### Changed
