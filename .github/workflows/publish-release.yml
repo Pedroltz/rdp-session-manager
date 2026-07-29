@@ -23,7 +23,7 @@ jobs:
       - name: Run release checks
         run: |
           python3 -m pip install -r installer/requirements.txt psutil
-          bash -n installer/*.sh helpers/*.sh tests/*.sh tests/ci/*.sh
+          bash -n installer/*.sh helpers/*.sh tests/*.sh tests/ci/*.sh tests/e2e/*.sh
           bash tests/test_installer_bootstrap.sh
           python3 -m unittest discover tests -v
           python3 -m installer --dry-run --yes --os-release /etc/os-release
@@ -93,6 +93,28 @@ jobs:
             "${{ matrix.with_wine }}" \
             true \
             "$GITHUB_WORKSPACE/release-assets/rdp-session-manager-installer.zip"
+      - name: Prepare real RDP desktop test
+        if: matrix.runner == 'ubuntu-24.04'
+        run: |
+          freerdp_package=freerdp3-x11
+          if ! apt-cache show "$freerdp_package" >/dev/null 2>&1; then
+            freerdp_package=freerdp2-x11
+          fi
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            xfce4 xfce4-terminal imagemagick x11-utils "$freerdp_package"
+      - name: Open a real XFCE desktop over RDP
+        if: matrix.runner == 'ubuntu-24.04'
+        env:
+          RDPSM_E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/rdp-e2e
+        run: sudo --preserve-env=RDPSM_E2E_ARTIFACTS_DIR ./tests/e2e/rdp_desktop.sh
+      - name: Upload RDP diagnostics
+        if: always() && matrix.runner == 'ubuntu-24.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-publish-rdp-e2e-diagnostics
+          path: artifacts/rdp-e2e/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload installation logs
         if: failure()
         uses: actions/upload-artifact@v4

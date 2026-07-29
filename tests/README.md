@@ -153,6 +153,29 @@ python3 -m unittest tests.test_validator.TestValidator.test_validate_username_va
 python3 tests/test_validator.py -v
 ```
 
+## Real RDP Desktop Test
+
+The end-to-end test complements the unit suite by authenticating through the
+local xrdp server with FreeRDP and capturing the rendered XFCE desktop.
+
+On Ubuntu, install the test-only tools with:
+
+```bash
+sudo apt-get install -y xfce4 xfce4-terminal xvfb imagemagick x11-utils freerdp3-x11
+```
+
+Use `freerdp2-x11` when `freerdp3-x11` is unavailable. With RDP Session Manager
+and xrdp already installed, run:
+
+```bash
+sudo ./tests/e2e/rdp_desktop.sh
+```
+
+The test requires active xrdp services, successful user creation through
+`rdpsm`, FreeRDP authentication, an XFCE process, an in-session marker, and a
+non-blank screenshot. It always removes its temporary user. Logs and the
+screenshot are written to `artifacts/rdp-e2e/`.
+
 ## Test Structure
 
 ```python
