@@ -1,0 +1,336 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-assets:
+    name: Build Release Bundle
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run release checks
+        run: |
+          python3 -m pip install -r installer/requirements.txt psutil
+          bash -n installer/*.sh helpers/*.sh tests/*.sh tests/ci/*.sh
+          bash tests/test_installer_bootstrap.sh
+          python3 -m unittest discover tests -v
+          python3 -m installer --dry-run --yes --os-release /etc/os-release
+      - name: Validate tag version
+        id: version
+        shell: bash
+        run: |
+          version="$(python3 -c "from src.version import __version__; print(__version__)")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          tag_version="${tag_version%%-*}"
+          if [[ "$version" != "$tag_version" ]]; then
+            printf 'Tag %s does not match src/version.py version %s\n' \
+              "$tag_version" "$version" >&2
+            exit 1
+          fi
+          printf 'value=%s\n' "$version" >>"$GITHUB_OUTPUT"
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential zstd libarchive-tools
+          sudo gem install --no-document fpm
+      - name: Build and validate release assets
+        run: |
+          bash installer/build_release_assets.sh \
+            "$RUNNER_TEMP/release-assets" \
+            "$RUNNER_TEMP/release-work"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          retention-days: 7
+
+  install-bundle-ubuntu:
+    name: Pre-publish install on ${{ matrix.name }}
+    needs: build-assets
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 22.04
+            runner: ubuntu-22.04
+            with_wine: 'false'
+          - name: Ubuntu 24.04
+            runner: ubuntu-24.04
+            with_wine: 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Prepare graphical test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates curl dbus-x11 iproute2 xvfb
+      - name: Install and verify the release bundle
+        run: |
+          bash tests/ci/run_installation.sh \
+            bundle \
+            "$GITHUB_REF_NAME" \
+            "${{ needs.build-assets.outputs.version }}" \
+            debian \
+            "${{ matrix.with_wine }}" \
+            true \
+            "$GITHUB_WORKSPACE/release-assets/rdp-session-manager-installer.zip"
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-publish-${{ matrix.runner }}-installation-logs
+          path: |
+            ~/.local/state/rdp-session-manager/install.log
+            ~/rdp-session-manager-gui.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  install-bundle-containers:
+    name: Pre-publish install on ${{ matrix.name }}
+    needs: build-assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12
+            image: debian:12
+            family: debian
+            with_wine: 'false'
+          - name: Debian 13
+            image: debian:13
+            family: debian
+            with_wine: 'false'
+          - name: Arch Linux
+            image: archlinux:latest
+            family: arch
+            with_wine: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Install and verify the release bundle
+        run: |
+          bash tests/ci/run_container_installation.sh \
+            "${{ matrix.image }}" \
+            "${{ matrix.family }}" \
+            bundle \
+            "$GITHUB_REF_NAME" \
+            "${{ needs.build-assets.outputs.version }}" \
+            "${{ matrix.with_wine }}" \
+            "$GITHUB_WORKSPACE/release-assets/rdp-session-manager-installer.zip"
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-publish-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
+          path: ci-logs/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish-candidate:
+    name: Publish Candidate
+    needs:
+      - build-assets
+      - install-bundle-ubuntu
+      - install-bundle-containers
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Create or verify prerelease candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            is_prerelease="$(
+              gh release view "$GITHUB_REF_NAME" --json isPrerelease --jq .isPrerelease
+            )"
+            if [[ "$GITHUB_REF_NAME" == *-* && "$is_prerelease" != "true" ]]; then
+              printf 'Prerelease tag %s already exists as a stable release.\n' \
+                "$GITHUB_REF_NAME" >&2
+              exit 1
+            fi
+            mapfile -t remote_assets < <(
+              gh release view "$GITHUB_REF_NAME" \
+                --json assets \
+                --jq '.assets[].name' |
+                sort
+            )
+            mapfile -t expected_assets < <(
+              printf '%s\n' install.sh rdp-session-manager-installer.zip | sort
+            )
+            if [[ "${remote_assets[*]}" != "${expected_assets[*]}" ]]; then
+              printf 'Existing release has unexpected assets: %s\n' \
+                "${remote_assets[*]}" >&2
+              exit 1
+            fi
+            verify_dir="$RUNNER_TEMP/existing-release"
+            mkdir -p "$verify_dir"
+            gh release download "$GITHUB_REF_NAME" \
+              --dir "$verify_dir" \
+              --pattern install.sh \
+              --pattern rdp-session-manager-installer.zip
+            for asset in install.sh rdp-session-manager-installer.zip; do
+              cmp "release-assets/$asset" "$verify_dir/$asset" || {
+                printf 'Existing candidate asset differs: %s\n' "$asset" >&2
+                exit 1
+              }
+            done
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* \
+              --title "RDP Session Manager $GITHUB_REF_NAME" \
+              --generate-notes \
+              --prerelease \
+              --latest=false \
+              --verify-tag
+          fi
+
+  install-release-ubuntu:
+    name: Public curl install on ${{ matrix.name }}
+    needs:
+      - build-assets
+      - publish-candidate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 22.04
+            runner: ubuntu-22.04
+            with_wine: 'false'
+          - name: Ubuntu 24.04
+            runner: ubuntu-24.04
+            with_wine: 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare graphical test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates curl dbus-x11 iproute2 xvfb
+      - name: Install and verify through the public bootstrap
+        env:
+          RDPSM_REPOSITORY: ${{ github.repository }}
+        run: |
+          bash tests/ci/run_installation.sh \
+            release \
+            "$GITHUB_REF_NAME" \
+            "${{ needs.build-assets.outputs.version }}" \
+            debian \
+            "${{ matrix.with_wine }}" \
+            true
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-${{ matrix.runner }}-installation-logs
+          path: |
+            ~/.local/state/rdp-session-manager/install.log
+            ~/rdp-session-manager-gui.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  install-release-containers:
+    name: Public curl install on ${{ matrix.name }}
+    needs:
+      - build-assets
+      - publish-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12
+            image: debian:12
+            family: debian
+            with_wine: 'false'
+          - name: Debian 13
+            image: debian:13
+            family: debian
+            with_wine: 'false'
+          - name: Arch Linux
+            image: archlinux:latest
+            family: arch
+            with_wine: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and verify through the public bootstrap
+        env:
+          RDPSM_REPOSITORY: ${{ github.repository }}
+        run: |
+          bash tests/ci/run_container_installation.sh \
+            "${{ matrix.image }}" \
+            "${{ matrix.family }}" \
+            release \
+            "$GITHUB_REF_NAME" \
+            "${{ needs.build-assets.outputs.version }}" \
+            "${{ matrix.with_wine }}"
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
+          path: ci-logs/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  promote-release:
+    name: Promote Release
+    needs:
+      - install-release-ubuntu
+      - install-release-containers
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Promote stable tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            printf '%s remains a prerelease after successful installation tests.\n' \
+              "$GITHUB_REF_NAME"
+            exit 0
+          fi
+          gh release edit "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease=false \
+            --latest
+      - name: Verify the latest installer route
+        if: ${{ !contains(github.ref_name, '-') }}
+        shell: bash
+        run: |
+          exact_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/install.sh"
+          latest_url="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.sh"
+          curl -fsSL "$exact_url" --output "$RUNNER_TEMP/exact-install.sh"
+          curl -fsSL "$latest_url" --output "$RUNNER_TEMP/latest-install.sh"
+          cmp "$RUNNER_TEMP/exact-install.sh" "$RUNNER_TEMP/latest-install.sh"
+          bash "$RUNNER_TEMP/latest-install.sh" --dry-run --yes

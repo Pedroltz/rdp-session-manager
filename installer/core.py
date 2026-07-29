@@ -728,6 +728,18 @@ class Installer:
     def install_debian(self, app_path: Path) -> None:
         prefix = self.privilege()
         self.ui.stage(3, 5, "Updating indexes and installing Debian/Ubuntu dependencies")
+        if self.args.with_wine and platform.machine().lower() in {"x86_64", "amd64"}:
+            architectures = self.runner.run(
+                ["dpkg", "--print-foreign-architectures"],
+                timeout=30,
+                check=False,
+            )
+            if "i386" not in architectures.stdout.split():
+                self.ui.info("Enabling the i386 architecture required by Wine.")
+                self.runner.run(
+                    prefix + ["dpkg", "--add-architecture", "i386"],
+                    timeout=30,
+                )
         self.runner.run(prefix + ["apt-get", "update"], timeout=900)
         self.runner.run(prefix + ["apt-get", "install", "-y", "--no-install-recommends", *self.package_names(), str(app_path)], timeout=1800)
         if not self.args.without_xrdp:

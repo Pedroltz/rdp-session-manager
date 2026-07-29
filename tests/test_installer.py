@@ -4,7 +4,8 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from installer import core as installer
 
@@ -27,18 +28,28 @@ class InstallerHelpersTest(unittest.TestCase):
 
     def test_supported_distribution_families(self):
         samples = {
-            "ubuntu": "ID=ubuntu\nVERSION_ID=24.04\n",
-            "debian": "ID=debian\nVERSION_ID=12\n",
-            "pop": "ID=pop\nID_LIKE=ubuntu\nVERSION_ID=22.04\n",
-            "manjaro": "ID=manjaro\nID_LIKE=arch\n",
-            "endeavouros": "ID=endeavouros\nID_LIKE=arch\n",
+            "ubuntu": ("debian", "ID=ubuntu\nVERSION_ID=24.04\n"),
+            "debian": ("debian", "ID=debian\nVERSION_ID=13\n"),
+            "linuxmint": ("debian", 'ID=linuxmint\nID_LIKE="ubuntu debian"\nVERSION_ID=22\n'),
+            "pop": ("debian", 'ID=pop\nID_LIKE="ubuntu debian"\nVERSION_ID=22.04\n'),
+            "arch": ("arch", "ID=arch\n"),
+            "manjaro": ("arch", "ID=manjaro\nID_LIKE=arch\n"),
+            "endeavouros": ("arch", "ID=endeavouros\nID_LIKE=arch\n"),
+            "cachyos": ("arch", "ID=cachyos\nID_LIKE=arch\n"),
         }
-        for identifier, content in samples.items():
+        for identifier, (expected_family, content) in samples.items():
             with self.subTest(identifier=identifier), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "os-release"
                 path.write_text(content, encoding="utf-8")
                 distro = installer.detect_distro(path)
-                self.assertIn(distro.family, {"debian", "arch"})
+                self.assertEqual(distro.family, expected_family)
+
+                instance = object.__new__(installer.Installer)
+                instance.distro = distro
+                instance.args = SimpleNamespace(without_xrdp=False, with_wine=False)
+                packages = instance.package_names()
+                expected_package = "xrdp" if expected_family == "debian" else "xorg-server"
+                self.assertIn(expected_package, packages)
 
     def test_rejects_unknown_distribution(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -240,6 +251,39 @@ class InstallerHelpersTest(unittest.TestCase):
             self.assertIn("7zip", packages)
             self.assertIn("lib32-vulkan-icd-loader", packages)
             self.assertNotIn("p7zip", packages)
+        finally:
+            instance.close()
+
+    def test_debian_wine_enables_i386_before_apt_update(self):
+        args = installer.parser().parse_args(
+            ["--dry-run", "--yes", "--with-wine", "--os-release", "/etc/os-release"]
+        )
+        instance = installer.Installer(args)
+        instance.distro = installer.Distro(
+            family="debian",
+            identifier="ubuntu",
+            version="24.04",
+            name="Ubuntu 24.04",
+            id_like=("debian",),
+        )
+        instance.args.without_xrdp = True
+        app_path = Path("/tmp/rdp-session-manager.deb")
+        try:
+            with (
+                patch("platform.machine", return_value="x86_64"),
+                patch.object(instance.runner, "run") as run,
+            ):
+                run.side_effect = [
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                ]
+                instance.install_debian(app_path)
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(commands[0], ["dpkg", "--print-foreign-architectures"])
+            self.assertEqual(commands[1][-3:], ["dpkg", "--add-architecture", "i386"])
+            self.assertEqual(commands[2][-2:], ["apt-get", "update"])
         finally:
             instance.close()
 

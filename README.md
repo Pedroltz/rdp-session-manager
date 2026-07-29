@@ -71,6 +71,7 @@ Command-line usage and available commands are documented in the [CLI reference](
 - [WineGE RemoteApp guide](docs/WINEGE_REMOTEAPP.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](docs/DEVELOPMENT.md)
+- [Continuous integration and release checks](docs/CI.md)
 - [Changelog](CHANGELOG.md)
 
 ## Contributing

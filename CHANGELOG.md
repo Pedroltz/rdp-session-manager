@@ -1,5 +1,15 @@
 # Changelog - RDP Session Manager
 
+## [0.4.1] - 2026-07-29
+
+### Changed
+- Renamed the continuous integration workflows to `Quality Checks` and `Publish Release`
+- Replaced installer smoke tests with real package installations across Ubuntu, Debian, and Arch Linux
+- Added prerelease validation through the public GitHub installer before stable release promotion
+
+### Fixed
+- Enabled the i386 architecture before installing Wine dependencies on Debian-based x86_64 systems
+
 ## [0.4.0] - 2026-07-29
 
 ### Changed
