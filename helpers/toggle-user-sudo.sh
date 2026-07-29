@@ -9,45 +9,45 @@ ACTION="$2"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$ACTION" ]; then
-    echo "Erro: Parâmetros insuficientes"
-    echo "Uso: $0 USERNAME grant|revoke"
+    echo "Error: Not enough arguments"
+    echo "Usage: $0 USERNAME grant|revoke"
     exit 1
 fi
 
 # Validar ação
 if [ "$ACTION" != "grant" ] && [ "$ACTION" != "revoke" ]; then
-    echo "Erro: Ação inválida. Use 'grant' ou 'revoke'"
+    echo "Error: Invalid action. Use 'grant' or 'revoke'"
     exit 1
 fi
 
 # Verificar se usuário existe
 if ! /usr/bin/id "$USERNAME" &> /dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
 if [ "$ACTION" = "grant" ]; then
-    echo "Concedendo privilégios de superusuário para $USERNAME..."
+    echo "Granting superuser privileges to $USERNAME..."
 
     # Adicionar usuário ao grupo sudo
     /usr/sbin/usermod -aG sudo "$USERNAME"
 
-    echo "OK Privilégios de superusuário concedidos para $USERNAME"
-    echo "  O usuário agora pode executar comandos com sudo"
+    echo "OK Superuser privileges granted to $USERNAME"
+    echo "  The user can now run commands with sudo"
 else
-    echo "Revogando privilégios de superusuário de $USERNAME..."
+    echo "Revoking superuser privileges from $USERNAME..."
 
     # Remover usuário do grupo sudo usando gpasswd (mais confiável)
     if /usr/bin/gpasswd -d "$USERNAME" sudo 2>/dev/null; then
-        echo "OK Privilégios de superusuário revogados de $USERNAME"
-        echo "  O usuário não pode mais executar comandos com sudo"
+        echo "OK Superuser privileges revoked from $USERNAME"
+        echo "  The user can no longer run commands with sudo"
     else
         # Fallback para deluser se gpasswd falhar
         if /usr/sbin/deluser "$USERNAME" sudo 2>/dev/null; then
-            echo "OK Privilégios de superusuário revogados de $USERNAME"
-            echo "  O usuário não pode mais executar comandos com sudo"
+        echo "OK Superuser privileges revoked from $USERNAME"
+        echo "  The user can no longer run commands with sudo"
         else
-            echo "! Aviso: Comando completado mas verifique os grupos do usuário"
+        echo "! Warning: Command completed, but check the user's groups"
         fi
     fi
 fi

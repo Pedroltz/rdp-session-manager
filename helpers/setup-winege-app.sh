@@ -7,24 +7,24 @@ EXE_PATH="$3"
 WINE_PREFIX="${4:-$HOME_DIR/.wine}"
 
 [ -z "$USERNAME" ] || [ -z "$HOME_DIR" ] || [ -z "$EXE_PATH" ] && {
-    echo "Uso: $0 USERNAME HOME_DIR EXE_PATH [WINE_PREFIX]"
+    echo "Usage: $0 USERNAME HOME_DIR EXE_PATH [WINE_PREFIX]"
     exit 1
 }
 
 [ ! -f "$EXE_PATH" ] && {
-    echo "Erro: Arquivo não encontrado: $EXE_PATH"
+    echo "Error: File not found: $EXE_PATH"
     exit 1
 }
 
 for cmd in wget tar; do
     command -v $cmd &>/dev/null || {
-        echo "Erro: $cmd não instalado"
+        echo "Error: $cmd is not installed"
         exit 1
     }
 done
 
-echo "Configurando WineGE RemoteApp para: $USERNAME"
-echo "  Executável: $EXE_PATH"
+echo "Configuring WineGE RemoteApp for: $USERNAME"
+echo "  Executable: $EXE_PATH"
 
 WINEGE_DIR="$HOME_DIR/.local/share/winege"
 WINEGE_VERSION="GE-Proton8-26"
@@ -35,26 +35,26 @@ WINE_BIN="$WINEGE_DIR/lutris-$WINEGE_VERSION-x86_64/bin/wine"
 # Download WineGE
 mkdir -p "$WINEGE_DIR"
 if [ ! -d "$WINEGE_DIR/lutris-$WINEGE_VERSION-x86_64" ]; then
-    echo "→ Baixando WineGE $WINEGE_VERSION (~750MB)..."
+    echo "→ Downloading WineGE $WINEGE_VERSION (~750 MB)..."
     cd /tmp
     wget --timeout=300 --tries=3 --show-progress "$WINEGE_URL" -O "winege-$USERNAME.tar.xz" || {
-        echo "Erro ao baixar WineGE"
+        echo "Error downloading WineGE"
         exit 1
     }
-    echo "→ Extraindo..."
+    echo "→ Extracting..."
     tar -xf "winege-$USERNAME.tar.xz" -C "$WINEGE_DIR" || {
         rm -f "winege-$USERNAME.tar.xz"
         exit 1
     }
     rm "winege-$USERNAME.tar.xz"
-    echo "  OK WineGE instalado"
+    echo "  OK WineGE installed"
 fi
 
 chown -R "$USERNAME:rdp-users" "$WINEGE_DIR"
 
 # Criar Wine Prefix
 if [ ! -d "$WINE_PREFIX" ]; then
-    echo "→ Criando Wine Prefix..."
+echo "→ Creating Wine prefix..."
     su - "$USERNAME" -c "WINEPREFIX='$WINE_PREFIX' WINEARCH=win64 WINEDLLOVERRIDES='mscoree,mshtml=' '$WINE_BIN' wineboot -u" 2>/dev/null
 
     cat >> "$WINE_PREFIX/user.reg" <<EOFWINE
@@ -63,11 +63,11 @@ if [ ! -d "$WINE_PREFIX" ]; then
 "ThreadStackSize"="2097152"
 EOFWINE
     chown "$USERNAME:rdp-users" "$WINE_PREFIX/user.reg"
-    echo "  OK Wine Prefix criado"
+    echo "  OK Wine prefix created"
 fi
 
 # Copiar executável para WindowsApps
-echo "→ Copiando executável para WindowsApps..."
+echo "→ Copying executable to WindowsApps..."
 EXE_BASENAME=$(basename "$EXE_PATH")
 EXE_DIR=$(dirname "$EXE_PATH")
 APPS_DIR="$HOME_DIR/WindowsApps"
@@ -87,7 +87,7 @@ done
 # Ajustar permissões
 chown -R "$USERNAME:rdp-users" "$APPS_DIR"
 
-echo "  OK Executável copiado para $TARGET_EXE"
+echo "  OK Executable copied to $TARGET_EXE"
 
 # Salvar caminho do executável na WindowsApps
 echo "$TARGET_EXE" > "$HOME_DIR/.winege_app_path"
@@ -143,6 +143,6 @@ WRAPPER_SCRIPT=$WRAPPER_SCRIPT
 EOF
 chown "$USERNAME:rdp-users" "$HOME_DIR/.winege_config"
 
-echo "OK WineGE configurado com sucesso!"
-echo "Executável será executado de: $EXE_PATH"
+echo "OK WineGE configured successfully!"
+echo "Executable will run from: $EXE_PATH"
 exit 0

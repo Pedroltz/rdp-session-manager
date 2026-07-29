@@ -27,7 +27,7 @@ def set_cli_mode(enabled: bool = True) -> None:
     global _force_cli_mode
     _force_cli_mode = enabled
     if enabled:
-        logger.debug("Modo CLI ativado - forçando uso de sudo")
+        logger.debug("CLI mode enabled—forcing sudo")
 
 
 def is_cli_mode() -> bool:
@@ -105,22 +105,22 @@ def has_polkit_agent() -> bool:
     """
     # Modo CLI forçado - sempre usar sudo
     if is_cli_mode():
-        logger.debug("Modo CLI ativo - usando sudo")
+        logger.debug("CLI mode active—using sudo")
         return False
 
     # Verificar se pkexec está disponível
     if not shutil.which('pkexec'):
-        logger.debug("pkexec não encontrado no PATH")
+        logger.debug("pkexec not found in PATH")
         return False
 
     # WSL não suporta PolicyKit corretamente (não há agente de autenticação)
     if is_wsl():
-        logger.debug("WSL detectado - PolicyKit não funciona, usando sudo")
+        logger.debug("WSL detected—PolicyKit is unavailable; using sudo")
         return False
 
     # Se não há display, não há agente gráfico
     if not has_display():
-        logger.debug("Sem display - assumindo que não há agente PolicyKit")
+        logger.debug("No display—assuming no PolicyKit agent is available")
         return False
 
     return True
@@ -139,10 +139,10 @@ def get_privilege_command() -> Tuple[str, List[str]]:
         Ex: ('sudo', ['sudo'])
     """
     if has_polkit_agent():
-        logger.debug("Usando pkexec para elevação de privilégios")
+        logger.debug("Using pkexec for privilege elevation")
         return ('pkexec', ['pkexec', '--user', 'root'])
     else:
-        logger.debug("Usando sudo para elevação de privilégios (ambiente headless)")
+        logger.debug("Using sudo for privilege elevation (headless environment)")
         return ('sudo', ['sudo'])
 
 
@@ -173,7 +173,7 @@ class PolicyKitHelper:
             return result.returncode == 0
 
         except Exception as e:
-            logger.error(f"Erro ao verificar autorização: {e}")
+            logger.error(f"Error checking authorization: {e}")
             return False
 
     @staticmethod
@@ -206,12 +206,12 @@ class PolicyKitHelper:
             return success, result.stdout, result.stderr
 
         except subprocess.TimeoutExpired:
-            error_msg = "Comando expirou (timeout)"
+            error_msg = "Command timed out"
             logger.error(error_msg)
             return False, "", error_msg
 
         except Exception as e:
-            error_msg = f"Erro ao executar comando: {e}"
+            error_msg = f"Error running command: {e}"
             logger.error(error_msg)
             return False, "", error_msg
 
@@ -252,5 +252,5 @@ class PolicyKitHelper:
                 return False, {'error': error}
 
         except Exception as e:
-            logger.error(f"Erro ao chamar helper: {e}")
+            logger.error(f"Error calling helper: {e}")
             return False, {'error': str(e)}

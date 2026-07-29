@@ -168,7 +168,7 @@ class DEInstaller:
             }
 
         except Exception as e:
-            logger.error(f"Erro ao detectar distribuição: {e}")
+            logger.error(f"Error detecting distribution: {e}")
             return {'id': 'unknown', 'version': 'unknown', 'name': 'Unknown'}
 
     def get_available_des(self) -> List[Dict]:
@@ -211,7 +211,7 @@ class DEInstaller:
             return result.returncode == 0 and 'ii' in result.stdout
 
         except Exception as e:
-            logger.error(f"Erro ao verificar instalação de {de_id}: {e}")
+            logger.error(f"Error checking installation of {de_id}: {e}")
             return False
 
     def install_de(self, de_id: str, progress_callback=None) -> Tuple[bool, str]:
@@ -231,10 +231,10 @@ class DEInstaller:
             logger.info(message)
 
         if de_id not in self.DE_PACKAGES:
-            return False, f"Desktop environment '{de_id}' não suportado"
+            return False, f"Desktop environment '{de_id}' is not supported"
 
         if self.is_de_installed(de_id):
-            msg = f"{self.DE_PACKAGES[de_id]['name']} já está instalado"
+            msg = f"{self.DE_PACKAGES[de_id]['name']} is already installed"
             logger.info(msg)
             log(100, f"OK {msg}")
             return True, msg
@@ -243,28 +243,28 @@ class DEInstaller:
         packages = de_info['packages']
 
         if not packages:
-            return False, f"Nenhum pacote definido para {de_id}"
+            return False, f"No package defined for {de_id}"
 
         try:
-            log(5, f"→ Verificando espaço em disco...")
+            log(5, "→ Checking disk space...")
 
             # Verificar espaço em disco
             has_space, required, available = self.check_disk_space(de_id)
             if not has_space:
-                error_msg = f"Espaço insuficiente. Necessário: {required}MB, Disponível: {available}MB"
+                error_msg = f"Not enough disk space. Required: {required} MB, available: {available} MB"
                 log(0, f"X {error_msg}")
                 return False, error_msg
 
-            log(5, f"  OK Espaço disponível: {available}MB (necessário: {required}MB)")
+            log(5, f"  OK Available disk space: {available} MB (required: {required} MB)")
             log(5, "")
 
             # Atualizar cache do gerenciador de pacotes
-            log(10, "→ Atualizando cache de pacotes...")
+            log(10, "→ Updating package cache...")
 
             # Obter comando de elevação apropriado (pkexec ou sudo)
             priv_method, priv_cmd = get_privilege_command()
             auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
-            log(10, f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+            log(10, f"  WARNING You will be asked to authenticate ({auth_msg})")
 
             log(10, f"  $ {auth_msg} apt-get update")
             update_result = subprocess.run(
@@ -275,27 +275,27 @@ class DEInstaller:
             )
 
             if update_result.returncode != 0:
-                logger.warning(f"Update retornou código {update_result.returncode}")
-                log(10, f"  AVISO Aviso: Update retornou código {update_result.returncode}")
+                logger.warning(f"Update returned exit code {update_result.returncode}")
+                log(10, f"  WARNING Update returned exit code {update_result.returncode}")
             else:
-                log(15, "  OK Cache atualizado com sucesso")
+                log(15, "  OK Cache updated successfully")
 
             log(15, "")
 
             # Instalar pacotes
-            log(20, f"→ Instalando {de_info['name']}...")
-            log(20, f"  Pacotes: {', '.join(packages)}")
+            log(20, f"→ Installing {de_info['name']}...")
+            log(20, f"  Packages: {', '.join(packages)}")
             log(20, "")
 
             # Se estamos usando sudo e já autenticamos, não precisa autenticar novamente
             if priv_method == "pkexec":
-                log(20, "  AVISO Você será solicitado a autenticar novamente")
+                log(20, "  WARNING You will be asked to authenticate again")
 
             log(20, f"  $ {auth_msg} apt-get install -y {' '.join(packages)}")
             log(20, "")
-            log(30, "→ Baixando e instalando pacotes...")
+            log(30, "→ Downloading and installing packages...")
             if priv_method == "pkexec":
-                log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
+                log(30, "  (pkexec blocks output—monitoring /var/log/apt/term.log)")
             log(30, "")
 
             # Monitorar arquivos de log em tempo real
@@ -328,7 +328,7 @@ class DEInstaller:
 
                     # A cada 5 segundos, mostrar que está vivo
                     if time.time() - last_log_time > 5:
-                        log(progress, "  ... instalando (processo rodando)...")
+                        log(progress, "  ... installing (process running)...")
                         last_log_time = time.time()
 
                     try:
@@ -354,19 +354,19 @@ class DEInstaller:
                                         log(progress, f"  X {line[:150]}")
                                         last_log_time = time.time()
                     except Exception as e:
-                        logger.debug(f"Erro lendo log: {e}")
+                        logger.debug(f"Error reading log: {e}")
 
                 # Processo terminou, pegar código de retorno
                 returncode = process.wait()
 
                 if returncode != 0:
-                    error_msg = f"Falha na instalação (código: {returncode})"
+                    error_msg = f"Installation failed (exit code: {returncode})"
                     logger.error(error_msg)
                     log(progress, f"X {error_msg}")
                     return False, error_msg
 
             except Exception as e:
-                logger.error(f"Erro durante instalação: {e}")
+                logger.error(f"Error during installation: {e}")
                 try:
                     process.kill()
                 except:
@@ -374,21 +374,21 @@ class DEInstaller:
                 raise
 
             log(90, "")
-            log(90, "  OK Pacotes instalados com sucesso")
-            log(95, f"  OK {de_info['name']} configurado")
+            log(90, "  OK Packages installed successfully")
+            log(95, f"  OK {de_info['name']} configured")
             log(100, "")
-            log(100, f"OK {de_info['name']} instalado com sucesso!")
+            log(100, f"OK {de_info['name']} installed successfully!")
 
-            logger.info(f"{de_info['name']} instalado com sucesso")
-            return True, f"{de_info['name']} instalado com sucesso"
+            logger.info(f"{de_info['name']} installed successfully")
+            return True, f"{de_info['name']} installed successfully"
 
         except subprocess.TimeoutExpired:
-            error_msg = f"Timeout na instalação de {de_info['name']} (30 minutos)"
+            error_msg = f"Installation of {de_info['name']} timed out (30 minutes)"
             logger.error(error_msg)
             log(0, f"X {error_msg}")
             return False, error_msg
         except Exception as e:
-            error_msg = f"Erro ao instalar {de_info['name']}: {e}"
+            error_msg = f"Error installing {de_info['name']}: {e}"
             logger.error(error_msg)
             log(0, f"X {error_msg}")
             return False, error_msg
@@ -434,5 +434,5 @@ class DEInstaller:
             return available_mb >= required_with_margin, required_with_margin, available_mb
 
         except Exception as e:
-            logger.error(f"Erro ao verificar espaço em disco: {e}")
+            logger.error(f"Error checking disk space: {e}")
             return False, required_mb, 0

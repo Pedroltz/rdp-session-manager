@@ -18,35 +18,35 @@ DISTRO=$(detect_distro)
 
 # Verificar se há pacotes para instalar
 if [ $# -eq 0 ]; then
-    echo "Erro: Nenhum pacote especificado"
+    echo "Error: No package specified"
     exit 1
 fi
 
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         # Atualizar cache de pacotes
-        echo "Atualizando cache de pacotes..."
+        echo "Updating package cache..."
         # Avoid partial upgrades: Arch requires a full sync before installing.
         /usr/bin/pacman -Syu --needed --noconfirm
 
         # Instalar pacotes
-        echo "Instalando pacotes: $@"
+        echo "Installing packages: $@"
         /usr/bin/pacman -S --noconfirm "$@"
         ;;
     debian|ubuntu|linuxmint|pop)
         # Atualizar cache de pacotes
-        echo "Atualizando cache de pacotes..."
+        echo "Updating package cache..."
         /usr/bin/apt-get update
 
         # Instalar pacotes
-        echo "Instalando pacotes: $@"
+        echo "Installing packages: $@"
         DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y "$@"
         ;;
     *)
-        echo "Erro: Distribuição não suportada: $DISTRO"
+        echo "Error: Unsupported distribution: $DISTRO"
         exit 1
         ;;
 esac
 
-echo "Instalação concluída com sucesso!"
+echo "Installation completed successfully!"
 exit 0

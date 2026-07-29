@@ -4,21 +4,21 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>RDP Session Manager</name>
-  <summary>Gerenciador de sessões RDP para GNOME</summary>
+  <summary>RDP session manager for GNOME</summary>
 
   <description>
     <p>
-      RDP Session Manager é uma aplicação GTK4 para GNOME que permite criar,
-      gerenciar e monitorar sessões RDP de forma fácil e intuitiva.
+      RDP Session Manager is a GTK4 application for GNOME that makes it easy
+      to create, manage, and monitor RDP sessions.
     </p>
-    <p>Recursos principais:</p>
+    <p>Main features:</p>
     <ul>
-      <li>Interface gráfica moderna usando GTK4</li>
-      <li>Criação automatizada de usuários RDP</li>
-      <li>Suporte para múltiplos ambientes gráficos (GNOME, XFCE, KDE)</li>
-      <li>Gerenciamento centralizado de sessões</li>
-      <li>Monitoramento de status em tempo real</li>
-      <li>Integração com PolicyKit para segurança</li>
+      <li>Modern graphical interface built with GTK4</li>
+      <li>Automated RDP user creation</li>
+      <li>Support for multiple desktop environments (GNOME, XFCE, KDE)</li>
+      <li>Centralized session management</li>
+      <li>Real-time status monitoring</li>
+      <li>PolicyKit integration for security</li>
     </ul>
   </description>
 
@@ -26,7 +26,7 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>Janela principal do gerenciador</caption>
+      <caption>Session Manager main window</caption>
     </screenshot>
   </screenshots>
 
@@ -38,29 +38,34 @@
   </provides>
 
   <releases>
+    <release version="0.4.0" date="2026-07-29">
+      <description>
+        <p>Moves the installer and application interface to English throughout.</p>
+      </description>
+    </release>
     <release version="0.3.5" date="2026-07-28">
       <description>
-        <p>Simplifica a distribuição para um bootstrap e um bundle verificado contendo os pacotes suportados.</p>
+        <p>Simplifies distribution into a bootstrap and a verified bundle containing the supported packages.</p>
       </description>
     </release>
     <release version="0.3.4" date="2026-07-28">
       <description>
-        <p>Corrige a entrada interativa do autoinstaller quando executado pelo comando curl pipe bash.</p>
+        <p>Fixes interactive autoinstaller input when run through the curl pipe bash command.</p>
       </description>
     </release>
     <release version="0.3.3" date="2026-07-28">
       <description>
-        <p>Corrige a validação de checksum do autoinstaller e reforça os testes dos artefatos de release.</p>
+        <p>Fixes autoinstaller checksum validation and strengthens release artifact tests.</p>
       </description>
     </release>
     <release version="0.3.2" date="2026-07-28">
       <description>
-        <p>Instalador multiplataforma renovado, com progresso, logs e suporte aprimorado a Arch e Ubuntu/Debian.</p>
+        <p>Introduces a renewed cross-platform installer with progress, logs, and improved Arch and Ubuntu/Debian support.</p>
       </description>
     </release>
     <release version="0.3.1" date="2026-03-19">
       <description>
-        <p>Versão inicial do RDP Session Manager</p>
+        <p>Initial release of RDP Session Manager</p>
       </description>
     </release>
   </releases>

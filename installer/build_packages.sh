@@ -8,7 +8,7 @@ set -e
 APP_NAME="rdp-session-manager"
 APP_VERSION="$(sed -n 's/^__version__ = \"\(.*\)\"/\1/p' src/version.py)"
 [ -n "${APP_VERSION}" ] || { echo "ERROR: could not determine application version" >&2; exit 1; }
-APP_DESCRIPTION="Gerenciador de Sessões RDP com Interface GTK4"
+APP_DESCRIPTION="RDP Session Manager with a GTK4 Interface"
 APP_MAINTAINER="Your Name <your.email@example.com>"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -134,24 +134,24 @@ chmod +x "${BUILD_DIR}/usr/bin/rdpsm"
 # Create post-install script inline
 cat > "${BUILD_DIR}/DEBIAN_postinst" << 'POSTINSTALL'
 #!/bin/bash
-echo "Configurando RDP Session Manager..."
+echo "Configuring RDP Session Manager..."
 command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications 2>/dev/null || true
 command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
 command -v appstreamcli >/dev/null 2>&1 && appstreamcli refresh-cache --force 2>/dev/null || true
-echo "✓ RDP Session Manager instalado com sucesso!"
-echo "Execute 'rdp-session-manager' para abrir a interface gráfica"
+echo "✓ RDP Session Manager installed successfully!"
+echo "Run 'rdp-session-manager' to open the graphical interface"
 POSTINSTALL
 chmod +x "${BUILD_DIR}/DEBIAN_postinst"
 
 # Create post-remove script inline
 cat > "${BUILD_DIR}/DEBIAN_postrm" << 'POSTREMOVE'
 #!/bin/bash
-echo "Removendo configurações do RDP Session Manager..."
+echo "Removing RDP Session Manager settings..."
 command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications 2>/dev/null || true
 command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
-echo "✓ RDP Session Manager removido"
+echo "✓ RDP Session Manager removed"
 POSTREMOVE
 chmod +x "${BUILD_DIR}/DEBIAN_postrm"
 

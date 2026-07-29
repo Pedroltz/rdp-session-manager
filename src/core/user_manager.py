@@ -83,14 +83,14 @@ class UserManager:
         try:
             # Criar diretório base se não existir
             if not self.rdp_users_home.exists():
-                logger.info(f"Criando diretório base: {self.rdp_users_home}")
+                logger.info(f"Creating base directory: {self.rdp_users_home}")
                 # Será criado via PolicyKit helper
 
             # Garantir que o grupo rdp-users existe
             self._ensure_rdp_group()
 
         except Exception as e:
-            logger.error(f"Erro ao configurar estrutura base: {e}")
+            logger.error(f"Error configuring base structure: {e}")
 
     def _ensure_rdp_group(self) -> int:
         """Garante que o grupo rdp-users existe"""
@@ -99,7 +99,7 @@ class UserManager:
             return group.gr_gid
         except KeyError:
             # Grupo não existe, precisa ser criado via PolicyKit
-            logger.warning(f"Grupo {self.RDP_GID_NAME} não existe")
+            logger.warning(f"Group {self.RDP_GID_NAME} does not exist")
             return -1
 
     def _load_states_cache(self):
@@ -112,7 +112,7 @@ class UserManager:
                     UserManager._user_states_cache.update(cached_states)
                     logger.debug(f"Cache de estados carregado: {cached_states}")
         except Exception as e:
-            logger.warning(f"Erro ao carregar cache de estados: {e}")
+            logger.warning(f"Error loading state cache: {e}")
 
     def _save_states_cache(self):
         """Salva o cache de estados dos usuários em arquivo"""
@@ -124,7 +124,7 @@ class UserManager:
                 json.dump(UserManager._user_states_cache, f, indent=2)
                 logger.debug(f"Cache de estados salvo: {UserManager._user_states_cache}")
         except Exception as e:
-            logger.error(f"Erro ao salvar cache de estados: {e}")
+            logger.error(f"Error saving state cache: {e}")
 
     def _get_next_uid(self) -> int:
         """Obtém o próximo UID disponível para usuários RDP"""
@@ -155,7 +155,7 @@ class UserManager:
             RDPUser se sucesso, None se falha
         """
         logger.info("=" * 70)
-        logger.info("USER_MANAGER: Método create_user() CHAMADO")
+        logger.info("USER_MANAGER: create_user() called")
         logger.info(f"  - Username: {username}")
         logger.info(f"  - Session Type: {session_type}")
         if session_type == 'desktop':
@@ -173,18 +173,18 @@ class UserManager:
                     log_callback(msg)
 
             # Validar nome de usuário
-            log("→ Validando nome de usuário...")
+            log("→ Validating username...")
             if not self._validate_username(username):
-                logger.error(f"Nome de usuário inválido: {username}")
-                raise ValueError(f"Nome de usuário inválido: {username}")
-            log("  OK Nome de usuário válido")
+                logger.error(f"Invalid username: {username}")
+                raise ValueError(f"Invalid username: {username}")
+            log("  OK Valid username")
 
             # Verificar se usuário já existe
-            log("→ Verificando se usuário já existe...")
+            log("→ Checking whether the user already exists...")
             if self.user_exists(username):
-                logger.error(f"Usuário já existe: {username}")
-                raise ValueError(f"Usuário já existe: {username}")
-            log("  OK Usuário disponível")
+                logger.error(f"User already exists: {username}")
+                raise ValueError(f"User already exists: {username}")
+            log("  OK Username is available")
 
             # Obter UID e porta global
             log("→ Alocando UID...")
@@ -195,28 +195,28 @@ class UserManager:
             rdp_port = self.app_config.get_default_rdp_port() if self.app_config else 3389
 
             log(f"  UID: {uid}")
-            log(f"  Porta RDP: {rdp_port} (porta global)")
+            log(f"  RDP port: {rdp_port} (global port)")
             log(f"  Home: {home_dir}")
 
             # Criar grupo rdp-users se não existir
             log("")
-            log("→ Verificando grupo rdp-users...")
+            log("→ Checking the rdp-users group...")
             self._ensure_rdp_group_exists(log_callback=log)
 
             # Criar diretório base se não existir
             log("")
-            log("→ Verificando diretório base...")
+            log("→ Checking the base directory...")
             self._create_base_directory(log_callback=log)
 
             # Criar usuário via pkexec
             log("")
-            log("→ Criando usuário no sistema...")
-            log("  AVISO Você será solicitado a autenticar (pkexec)")
+            log("→ Creating the system user...")
+            log("  WARNING You will be asked to authenticate (pkexec)")
             success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
                                                session_type, app_command, app_args, log_callback=log)
 
             if not success:
-                raise Exception("Falha ao criar usuário no sistema")
+                raise Exception("Failed to create system user")
 
             rdp_user = RDPUser(
                 username=username,
@@ -232,12 +232,12 @@ class UserManager:
             )
 
             log("")
-            log("OK Usuário criado no sistema com sucesso!")
+            log("OK System user created successfully!")
             logger.info("=" * 70)
-            logger.info(f"USER_MANAGER: SUCESSO - Usuário RDP criado!")
+            logger.info("USER_MANAGER: SUCCESS - RDP user created!")
             logger.info(f"  - Username: {username}")
             logger.info(f"  - UID: {uid}")
-            logger.info(f"  - Porta RDP: {rdp_port}")
+            logger.info(f"  - RDP port: {rdp_port}")
             logger.info(f"  - Home: {home_dir}")
             logger.info(f"  - Desktop ENV: {desktop_env}")
             logger.info("=" * 70)
@@ -250,32 +250,32 @@ class UserManager:
 
         except Exception as e:
             logger.error("=" * 70)
-            logger.error(f"USER_MANAGER: ERRO ao criar usuário {username}")
-            logger.error(f"  - Exceção: {type(e).__name__}")
-            logger.error(f"  - Mensagem: {e}")
+            logger.error(f"USER_MANAGER: ERROR creating user {username}")
+            logger.error(f"  - Exception: {type(e).__name__}")
+            logger.error(f"  - Message: {e}")
             logger.error("=" * 70)
             if log_callback:
-                log_callback(f"X ERRO: {e}")
+                log_callback(f"X ERROR: {e}")
             raise
 
     def _ensure_rdp_group_exists(self, log_callback=None):
         """Garante que o grupo rdp-users existe"""
         try:
             grp.getgrnam(self.RDP_GID_NAME)
-            logger.info(f"Grupo {self.RDP_GID_NAME} já existe")
+            logger.info(f"Group {self.RDP_GID_NAME} already exists")
             if log_callback:
-                log_callback(f"  OK Grupo '{self.RDP_GID_NAME}' já existe")
+                log_callback(f"  OK Group '{self.RDP_GID_NAME}' already exists")
         except KeyError:
             # Criar grupo
-            logger.info(f"Criando grupo {self.RDP_GID_NAME}...")
+            logger.info(f"Creating group {self.RDP_GID_NAME}...")
 
             # Obter comando de elevação apropriado (pkexec ou sudo)
             priv_method, priv_cmd = get_privilege_command()
             auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
 
             if log_callback:
-                log_callback(f"  → Criando grupo '{self.RDP_GID_NAME}'...")
-                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+                log_callback(f"  → Creating group '{self.RDP_GID_NAME}'...")
+                log_callback(f"  WARNING You will be asked to authenticate ({auth_msg})")
                 log_callback(f"  $ {auth_msg} /usr/sbin/groupadd {self.RDP_GID_NAME}")
 
             result = subprocess.run(
@@ -288,30 +288,30 @@ class UserManager:
             if result.returncode != 0:
                 # Verificar se foi cancelado pelo usuário
                 if result.returncode == 126:
-                    error_msg = "Autenticação cancelada pelo usuário"
+                    error_msg = "Authentication canceled by the user"
                 elif result.returncode == 127:
-                    error_msg = f"{auth_msg} não encontrado"
+                    error_msg = f"{auth_msg} not found"
                 else:
-                    error_msg = f"Código: {result.returncode}, stderr: {result.stderr}"
+                    error_msg = f"Exit code: {result.returncode}, stderr: {result.stderr}"
 
-                logger.error(f"Falha ao criar grupo rdp-users: {error_msg}")
-                raise Exception(f"Falha ao criar grupo rdp-users: {error_msg}")
+                logger.error(f"Failed to create rdp-users group: {error_msg}")
+                raise Exception(f"Failed to create rdp-users group: {error_msg}")
 
             if log_callback:
-                log_callback(f"  OK Grupo '{self.RDP_GID_NAME}' criado com sucesso")
+                log_callback(f"  OK Group '{self.RDP_GID_NAME}' created successfully")
 
     def _create_base_directory(self, log_callback=None):
         """Cria diretório base /opt/rdp-users"""
         if not self.rdp_users_home.exists():
-            logger.info(f"Criando diretório base {self.rdp_users_home}...")
+            logger.info(f"Creating base directory {self.rdp_users_home}...")
 
             # Obter comando de elevação apropriado (pkexec ou sudo)
             priv_method, priv_cmd = get_privilege_command()
             auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
 
             if log_callback:
-                log_callback(f"  → Criando diretório {self.rdp_users_home}...")
-                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+                log_callback(f"  → Creating directory {self.rdp_users_home}...")
+                log_callback(f"  WARNING You will be asked to authenticate ({auth_msg})")
                 log_callback(f"  $ {auth_msg} mkdir -p {self.rdp_users_home}")
 
             result = subprocess.run(
@@ -323,14 +323,14 @@ class UserManager:
 
             if result.returncode != 0:
                 if result.returncode == 126:
-                    error_msg = "Autenticação cancelada pelo usuário"
+                    error_msg = "Authentication canceled by the user"
                 elif result.returncode == 127:
-                    error_msg = f"{auth_msg} não encontrado"
+                    error_msg = f"{auth_msg} not found"
                 else:
-                    error_msg = f"Código: {result.returncode}, stderr: {result.stderr}"
+                    error_msg = f"Exit code: {result.returncode}, stderr: {result.stderr}"
 
-                logger.error(f"Falha ao criar diretório: {error_msg}")
-                raise Exception(f"Falha ao criar diretório /opt/rdp-users: {error_msg}")
+                logger.error(f"Failed to create directory: {error_msg}")
+                raise Exception(f"Failed to create /opt/rdp-users directory: {error_msg}")
 
             # Definir permissões
             if log_callback:
@@ -344,13 +344,13 @@ class UserManager:
             )
 
             if chmod_result.returncode != 0:
-                logger.warning(f"Aviso ao definir permissões: {chmod_result.stderr}")
+                logger.warning(f"Warning while setting permissions: {chmod_result.stderr}")
 
             if log_callback:
-                log_callback(f"  OK Diretório criado com sucesso")
+                log_callback("  OK Directory created successfully")
         else:
             if log_callback:
-                log_callback(f"  OK Diretório {self.rdp_users_home} já existe")
+                log_callback(f"  OK Directory {self.rdp_users_home} already exists")
 
     def _create_system_user(self, username: str, password: str, uid: int,
                            home_dir: str, full_name: str, desktop_env: str,
@@ -382,8 +382,8 @@ class UserManager:
             de_command = de_commands.get(desktop_env.lower(), 'startxfce4')
 
             if log_callback:
-                log_callback(f"  → Criando usuário e configurando sistema...")
-                log_callback(f"  AVISO Você será solicitado a autenticar ({auth_msg})")
+                log_callback("  → Creating user and configuring the system...")
+                log_callback(f"  WARNING You will be asked to authenticate ({auth_msg})")
 
             # Executar script de criação de usuário
             # Passar: username, uid, home_dir, full_name, session_type, de_command_or_app, app_args
@@ -410,22 +410,22 @@ class UserManager:
             # Para WineGE, precisamos de timeout maior (download + setup = ~15min)
             timeout_seconds = 1200 if session_type == 'winege-remoteapp' else 30
             if session_type == 'winege-remoteapp':
-                logger.info(f"  AVISO WineGE pode levar 10-15 minutos para download e instalação")
+                logger.info("  WARNING WineGE may take 10–15 minutes to download and install")
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
 
             if result.returncode != 0:
                 # Verificar código de erro
                 if result.returncode == 126:
-                    error_msg = "Autenticação cancelada pelo usuário"
+                    error_msg = "Authentication canceled by the user"
                 elif result.returncode == 127:
-                    error_msg = "Script helper não encontrado"
+                    error_msg = "Helper script not found"
                 else:
-                    error_msg = f"Código: {result.returncode}, Erro: {result.stderr.strip()}"
+                    error_msg = f"Exit code: {result.returncode}, Error: {result.stderr.strip()}"
 
-                logger.error(f"Criação de usuário falhou: {error_msg}")
+                logger.error(f"User creation failed: {error_msg}")
                 if log_callback:
-                    log_callback(f"  X Erro na criação: {error_msg}")
+                    log_callback(f"  X Creation error: {error_msg}")
                 return False
 
             # Exibir output do script
@@ -437,10 +437,10 @@ class UserManager:
 
             # Definir senha
             if log_callback:
-                log_callback(f"  → Definindo senha...")
+                log_callback("  → Setting password...")
                 # Só avisa sobre autenticação novamente se for pkexec
                 if priv_method == "pkexec":
-                    log_callback(f"  AVISO Você será solicitado a autenticar novamente")
+                    log_callback("  WARNING You will be asked to authenticate again")
 
             echo_proc = subprocess.Popen(
                 ['echo', f'{username}:{password}'],
@@ -460,25 +460,25 @@ class UserManager:
             if passwd_proc.returncode != 0:
                 # Verificar código de erro
                 if passwd_proc.returncode == 126:
-                    error_msg = "Autenticação cancelada pelo usuário"
+                    error_msg = "Authentication canceled by the user"
                 else:
-                    error_msg = f"Código: {passwd_proc.returncode}, stderr: {stderr.decode().strip()}"
+                    error_msg = f"Exit code: {passwd_proc.returncode}, stderr: {stderr.decode().strip()}"
 
-                logger.error(f"Definição de senha falhou: {error_msg}")
+                logger.error(f"Password setup failed: {error_msg}")
                 if log_callback:
-                    log_callback(f"  X Erro ao definir senha: {error_msg}")
+                    log_callback(f"  X Error setting password: {error_msg}")
                 return False
 
             if log_callback:
-                log_callback(f"  OK Senha definida com sucesso")
+                log_callback("  OK Password set successfully")
 
-            logger.info(f"Usuário {username} criado no sistema com sucesso")
+            logger.info(f"User {username} created successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao criar usuário no sistema: {e}")
+            logger.error(f"Error creating system user: {e}")
             if log_callback:
-                log_callback(f"  X Erro: {e}")
+                log_callback(f"  X Error: {e}")
             return False
 
     def get_user_processes(self, username: str) -> List[int]:
@@ -507,7 +507,7 @@ class UserManager:
             return []
 
         except Exception as e:
-            logger.error(f"Erro ao verificar processos do usuário {username}: {e}")
+            logger.error(f"Error checking processes for user {username}: {e}")
             return []
 
     def kill_user_processes(self, username: str, force: bool = False) -> bool:
@@ -524,7 +524,7 @@ class UserManager:
         try:
             signal = '-9' if force else '-15'
 
-            logger.info(f"Terminando processos do usuário {username} (signal: {signal})...")
+            logger.info(f"Terminating processes for user {username} (signal: {signal})...")
 
             # Obter comando de elevação apropriado (pkexec ou sudo)
             _, priv_cmd = get_privilege_command()
@@ -540,14 +540,14 @@ class UserManager:
             # pkill retorna 0 se encontrou processos, 1 se não encontrou
             # Ambos são ok
             if result.returncode in [0, 1]:
-                logger.info(f"Processos do usuário {username} terminados")
+                logger.info(f"Processes for user {username} terminated")
                 return True
             else:
-                logger.warning(f"pkill retornou código {result.returncode}: {result.stderr}")
+                logger.warning(f"pkill returned exit code {result.returncode}: {result.stderr}")
                 return False
 
         except Exception as e:
-            logger.error(f"Erro ao terminar processos do usuário {username}: {e}")
+            logger.error(f"Error terminating processes for user {username}: {e}")
             return False
 
     def delete_user(self, username: str, remove_home: bool = True, kill_processes: bool = True) -> bool:
@@ -564,15 +564,15 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
-                raise ValueError(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
+                raise ValueError(f"User does not exist: {username}")
 
-            logger.info(f"Removendo usuário RDP: {username}")
+            logger.info(f"Removing RDP user: {username}")
 
             # Verificar se há processos ativos (apenas para log)
             active_pids = self.get_user_processes(username)
             if active_pids:
-                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos")
+                logger.info(f"User {username} has {len(active_pids)} active processes")
 
             # Usar script helper que agrupa: pkill + userdel em uma única autenticação
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -594,16 +594,16 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Deleção falhou: {result.stderr}")
-                raise Exception(f"Falha ao remover usuário: {result.stderr}")
+                logger.error(f"Deletion failed: {result.stderr}")
+                raise Exception(f"Failed to remove user: {result.stderr}")
 
             # Exibir output do script
             if result.stdout:
                 for line in result.stdout.strip().split('\n'):
                     logger.info(f"  {line}")
 
-            logger.info(f"OK Usuário {username} removido com sucesso")
-            logger.info(f"  - Diretório home removido: {remove_home}")
+            logger.info(f"OK User {username} removed successfully")
+            logger.info(f"  - Home directory removed: {remove_home}")
             logger.info(f"  - Processos terminados: {kill_processes}")
 
             # Remover do cache e persistir
@@ -614,7 +614,7 @@ class UserManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao remover usuário {username}: {e}")
+            logger.error(f"Error removing user {username}: {e}")
             raise
 
     def lock_user(self, username: str) -> bool:
@@ -629,10 +629,10 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Desabilitando usuário: {username}")
+            logger.info(f"Disabling user: {username}")
 
             # Usar script helper para lock
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -646,10 +646,10 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao desabilitar usuário: {result.stderr}")
+                logger.error(f"Failed to disable user: {result.stderr}")
                 return False
 
-            logger.info(f"OK Usuário {username} desabilitado com sucesso")
+            logger.info(f"OK User {username} disabled successfully")
 
             # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = False
@@ -658,7 +658,7 @@ class UserManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao desabilitar usuário {username}: {e}")
+            logger.error(f"Error disabling user {username}: {e}")
             return False
 
     def unlock_user(self, username: str) -> bool:
@@ -673,10 +673,10 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Habilitando usuário: {username}")
+            logger.info(f"Enabling user: {username}")
 
             # Usar script helper para unlock
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -690,10 +690,10 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao habilitar usuário: {result.stderr}")
+                logger.error(f"Failed to enable user: {result.stderr}")
                 return False
 
-            logger.info(f"OK Usuário {username} habilitado com sucesso")
+            logger.info(f"OK User {username} enabled successfully")
 
             # Atualizar cache em memória e persistir em arquivo
             UserManager._user_states_cache[username] = True
@@ -702,7 +702,7 @@ class UserManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao habilitar usuário {username}: {e}")
+            logger.error(f"Error enabling user {username}: {e}")
             return False
 
     def grant_sudo(self, username: str, kill_sessions: bool = True) -> bool:
@@ -718,16 +718,16 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Concedendo privilégios sudo para: {username}")
+            logger.info(f"Granting sudo privileges to: {username}")
 
             # Verificar se usuário tem processos ativos
             active_pids = self.get_user_processes(username)
             if active_pids and kill_sessions:
-                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
-                logger.info("IMPORTANTE: Mudanças de grupo só têm efeito após logout/login")
+                logger.info(f"User {username} has {len(active_pids)} active processes—they will be terminated")
+                logger.info("IMPORTANT: Group changes only take effect after logout/login")
 
             # Usar script helper para conceder sudo
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -741,20 +741,20 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao conceder privilégios sudo: {result.stderr}")
+                logger.error(f"Failed to grant sudo privileges: {result.stderr}")
                 return False
 
-            logger.info(f"OK Privilégios sudo concedidos para {username}")
+            logger.info(f"OK Sudo privileges granted to {username}")
 
             # Encerrar sessões ativas para forçar reconexão
             if active_pids and kill_sessions:
-                logger.info(f"Encerrando sessões de {username} para aplicar mudanças...")
+                logger.info(f"Terminating sessions for {username} to apply changes...")
                 self.kill_user_processes(username, force=False)
 
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao conceder privilégios sudo para {username}: {e}")
+            logger.error(f"Error granting sudo privileges to {username}: {e}")
             return False
 
     def revoke_sudo(self, username: str, kill_sessions: bool = True) -> bool:
@@ -770,16 +770,16 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Revogando privilégios sudo de: {username}")
+            logger.info(f"Revoking sudo privileges from: {username}")
 
             # Verificar se usuário tem processos ativos
             active_pids = self.get_user_processes(username)
             if active_pids and kill_sessions:
-                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
-                logger.info("IMPORTANTE: Mudanças de grupo só têm efeito após logout/login")
+                logger.info(f"User {username} has {len(active_pids)} active processes—they will be terminated")
+                logger.info("IMPORTANT: Group changes only take effect after logout/login")
 
             # Usar script helper para revogar sudo
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -793,20 +793,20 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao revogar privilégios sudo: {result.stderr}")
+                logger.error(f"Failed to revoke sudo privileges: {result.stderr}")
                 return False
 
-            logger.info(f"OK Privilégios sudo revogados de {username}")
+            logger.info(f"OK Sudo privileges revoked from {username}")
 
             # Encerrar sessões ativas para forçar reconexão
             if active_pids and kill_sessions:
-                logger.info(f"Encerrando sessões de {username} para aplicar mudanças...")
+                logger.info(f"Terminating sessions for {username} to apply changes...")
                 self.kill_user_processes(username, force=False)
 
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao revogar privilégios sudo de {username}: {e}")
+            logger.error(f"Error revoking sudo privileges from {username}: {e}")
             return False
 
     def is_superuser(self, username: str) -> bool:
@@ -846,10 +846,10 @@ class UserManager:
 
         except KeyError:
             # Grupo sudo não existe
-            logger.warning("Grupo 'sudo' não encontrado no sistema")
+            logger.warning("Group 'sudo' not found on the system")
             return False
         except Exception as e:
-            logger.error(f"Erro ao verificar privilégios sudo de {username}: {e}")
+            logger.error(f"Error checking sudo privileges for {username}: {e}")
             return False
 
     def user_exists(self, username: str) -> bool:
@@ -870,7 +870,7 @@ class UserManager:
             # Grupo não existe ainda
             return False
         except Exception as e:
-            logger.error(f"Erro ao verificar grupo do usuário {username}: {e}")
+            logger.error(f"Error checking the group for user {username}: {e}")
             return False
 
     def _is_user_enabled(self, username: str) -> bool:
@@ -907,7 +907,7 @@ class UserManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao verificar status de {username}: {e}")
+            logger.error(f"Error checking the status of {username}: {e}")
             return True  # Por padrão, assumir habilitado
 
     def _check_user_enabled_from_shadow(self, username: str) -> bool:
@@ -951,11 +951,11 @@ class UserManager:
 
             # Se não tem no cache, assumir habilitado
             # (novos usuários são criados habilitados por padrão)
-            logger.debug(f"Sem cache para {username}, assumindo habilitado")
+            logger.debug(f"No cache entry for {username}; assuming enabled")
             return True
 
         except Exception as e:
-            logger.debug(f"Não foi possível verificar status de {username}: {e}")
+            logger.debug(f"Could not check the status of {username}: {e}")
             # Tentar usar cache
             if username in UserManager._user_states_cache:
                 return UserManager._user_states_cache[username]
@@ -972,7 +972,7 @@ class UserManager:
             xsession_file = Path(home_dir) / '.xsession'
 
             if not xsession_file.exists():
-                logger.warning(f"Arquivo .xsession não encontrado em {home_dir}")
+                logger.warning(f".xsession file not found in {home_dir}")
                 return ('desktop', 'unknown', '')
 
             # Ler arquivo .xsession
@@ -1021,11 +1021,11 @@ class UserManager:
                         logger.debug(f"Detected DE for {home_dir}: {de_id} (command: {command})")
                         return ('desktop', de_id, '')
 
-                logger.warning(f"Comando DE não reconhecido em {xsession_file}")
+                logger.warning(f"Unrecognized DE command in {xsession_file}")
                 return ('desktop', 'unknown', '')
 
         except Exception as e:
-            logger.error(f"Erro ao detectar sessão de {home_dir}: {e}")
+            logger.error(f"Error detecting session in {home_dir}: {e}")
             return ('desktop', 'unknown', '')
 
     def _detect_desktop_env(self, home_dir: str) -> str:
@@ -1097,7 +1097,7 @@ class UserManager:
                     users.append(rdp_user)
 
         except Exception as e:
-            logger.error(f"Erro ao listar usuários: {e}")
+            logger.error(f"Error listing users: {e}")
 
         return users
 
@@ -1126,7 +1126,7 @@ class UserManager:
 
         # Verificar se é nome reservado
         if username.lower() in RESERVED_USERNAMES:
-            logger.error(f"Nome de usuário '{username}' é reservado do sistema")
+            logger.error(f"Username '{username}' is reserved by the system")
             return False
 
         # Nome deve começar com letra, conter apenas letras, números, - e _
@@ -1147,10 +1147,10 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Alterando senha do usuário: {username}")
+            logger.info(f"Changing password for user: {username}")
 
             # Usar script helper para alterar senha
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -1177,14 +1177,14 @@ class UserManager:
 
             if passwd_proc.returncode != 0:
                 error_msg = stderr.decode().strip()
-                logger.error(f"Falha ao alterar senha: {error_msg}")
+                logger.error(f"Failed to change password: {error_msg}")
                 return False
 
-            logger.info(f"OK Senha de {username} alterada com sucesso")
+            logger.info(f"OK Password for {username} changed successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao alterar senha de {username}: {e}")
+            logger.error(f"Error changing password for {username}: {e}")
             return False
 
     def rename_user(self, old_username: str, new_username: str) -> bool:
@@ -1200,19 +1200,19 @@ class UserManager:
         """
         try:
             if not self.user_exists(old_username):
-                logger.error(f"Usuário não existe: {old_username}")
+                logger.error(f"User does not exist: {old_username}")
                 return False
 
             if self.user_exists(new_username):
-                logger.error(f"Usuário já existe: {new_username}")
+                logger.error(f"User already exists: {new_username}")
                 return False
 
             # Validar novo nome
             if not self._validate_username(new_username):
-                logger.error(f"Nome de usuário inválido: {new_username}")
+                logger.error(f"Invalid username: {new_username}")
                 return False
 
-            logger.info(f"Renomeando usuário: {old_username} -> {new_username}")
+            logger.info(f"Renaming user: {old_username} -> {new_username}")
 
             # Usar script helper para renomear usuário
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -1226,10 +1226,10 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao renomear usuário: {result.stderr}")
+                logger.error(f"Failed to rename user: {result.stderr}")
                 return False
 
-            logger.info(f"OK Usuário renomeado: {old_username} -> {new_username}")
+            logger.info(f"OK User renamed: {old_username} -> {new_username}")
 
             # Atualizar cache de estados
             if old_username in UserManager._user_states_cache:
@@ -1239,7 +1239,7 @@ class UserManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao renomear usuário {old_username}: {e}")
+            logger.error(f"Error renaming user {old_username}: {e}")
             return False
 
     def change_user_fullname(self, username: str, new_fullname: str) -> bool:
@@ -1255,10 +1255,10 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Alterando nome completo de {username} para: {new_fullname}")
+            logger.info(f"Changing full name for {username} to: {new_fullname}")
 
             # Usar script helper para alterar GECOS
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -1272,14 +1272,14 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao alterar nome completo: {result.stderr}")
+                logger.error(f"Failed to change full name: {result.stderr}")
                 return False
 
-            logger.info(f"OK Nome completo de {username} alterado com sucesso")
+            logger.info(f"OK Full name for {username} changed successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao alterar nome completo de {username}: {e}")
+            logger.error(f"Error changing full name for {username}: {e}")
             return False
 
     def list_user_executables(self, username: str) -> list:
@@ -1328,7 +1328,7 @@ class UserManager:
             return executables
 
         except Exception as e:
-            logger.error(f"Erro ao listar executáveis de {username}: {e}")
+            logger.error(f"Error listing executables for {username}: {e}")
             return []
 
     def update_winege_executable(self, username: str, new_exe_path: str) -> bool:
@@ -1344,10 +1344,10 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
-            logger.info(f"Atualizando executável WineGE de {username} para: {new_exe_path}")
+            logger.info(f"Updating WineGE executable for {username} to: {new_exe_path}")
 
             # Usar script helper para atualizar .exe
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -1361,14 +1361,14 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao atualizar executável: {result.stderr}")
+                logger.error(f"Failed to update executable: {result.stderr}")
                 return False
 
-            logger.info(f"OK Executável WineGE de {username} atualizado com sucesso")
+            logger.info(f"OK WineGE executable for {username} updated successfully")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao atualizar executável de {username}: {e}")
+            logger.error(f"Error updating executable for {username}: {e}")
             return False
 
     def change_user_session_type(self, username: str, session_type: str,
@@ -1387,19 +1387,19 @@ class UserManager:
         """
         try:
             if not self.user_exists(username):
-                logger.error(f"Usuário não existe: {username}")
+                logger.error(f"User does not exist: {username}")
                 return False
 
             if session_type not in ['desktop', 'remoteapp', 'winege-remoteapp']:
-                logger.error(f"Tipo de sessão inválido: {session_type}")
+                logger.error(f"Invalid session type: {session_type}")
                 return False
 
-            logger.info(f"Alterando tipo de sessão de {username} para: {session_type}")
+            logger.info(f"Changing session type for {username} to: {session_type}")
 
             # Verificar se usuário tem processos ativos
             active_pids = self.get_user_processes(username)
             if active_pids:
-                logger.info(f"Usuário {username} tem {len(active_pids)} processos ativos - serão encerrados")
+                logger.info(f"User {username} has {len(active_pids)} active processes—they will be terminated")
 
             # Usar script helper para alterar .xsession
             script_dir = Path(__file__).parent.parent.parent / "helpers"
@@ -1413,12 +1413,12 @@ class UserManager:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
-                logger.error(f"Falha ao alterar tipo de sessão: {result.stderr}")
+                logger.error(f"Failed to change session type: {result.stderr}")
                 return False
 
-            logger.info(f"OK Tipo de sessão de {username} alterado para {session_type}")
+            logger.info(f"OK Session type for {username} changed to {session_type}")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao alterar tipo de sessão de {username}: {e}")
+            logger.error(f"Error changing session type for {username}: {e}")
             return False

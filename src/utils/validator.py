@@ -28,21 +28,21 @@ class Validator:
             Tuple (válido, mensagem_erro)
         """
         if not username:
-            return False, "Nome de usuário não pode ser vazio"
+            return False, "Username cannot be empty"
 
         if len(username) < 3:
-            return False, "Nome de usuário muito curto (mínimo 3 caracteres)"
+            return False, "Username is too short (minimum 3 characters)"
 
         if len(username) > 32:
-            return False, "Nome de usuário muito longo (máximo 32 caracteres)"
+            return False, "Username is too long (maximum 32 characters)"
 
         if not re.match(Validator.USERNAME_PATTERN, username):
-            return False, "Nome de usuário inválido. Deve começar com letra minúscula e conter apenas letras, números, - e _"
+            return False, "Invalid username. It must start with a lowercase letter and contain only letters, numbers, hyphens, and underscores"
 
         # Verificar nomes reservados
         reserved = ['root', 'admin', 'administrator', 'sudo', 'system', 'daemon']
         if username.lower() in reserved:
-            return False, f"Nome '{username}' é reservado pelo sistema"
+            return False, f"The name '{username}' is reserved by the system"
 
         return True, ""
 
@@ -55,10 +55,10 @@ class Validator:
             Tuple (válido, mensagem_erro)
         """
         if not password:
-            return False, "Senha não pode ser vazia"
+            return False, "Password cannot be empty"
 
         if len(password) < Validator.PASSWORD_MIN_LENGTH:
-            return False, f"Senha muito curta (mínimo {Validator.PASSWORD_MIN_LENGTH} caracteres)"
+            return False, f"Password is too short (minimum {Validator.PASSWORD_MIN_LENGTH} characters)"
 
         # Verificar complexidade
         has_upper = any(c.isupper() for c in password)
@@ -66,11 +66,11 @@ class Validator:
         has_digit = any(c.isdigit() for c in password)
 
         if not (has_upper and has_lower and has_digit):
-            return False, "Senha deve conter letras maiúsculas, minúsculas e números"
+            return False, "Password must contain uppercase letters, lowercase letters, and numbers"
 
         # Verificar confirmação
         if confirm_password is not None and password != confirm_password:
-            return False, "Senhas não coincidem"
+            return False, "Passwords do not match"
 
         return True, ""
 
@@ -86,13 +86,13 @@ class Validator:
             try:
                 port = int(port)
             except (ValueError, TypeError):
-                return False, "Porta deve ser um número inteiro"
+                return False, "Port must be an integer"
 
         if port < Validator.PORT_MIN:
-            return False, f"Porta muito baixa (mínimo {Validator.PORT_MIN})"
+            return False, f"Port is too low (minimum {Validator.PORT_MIN})"
 
         if port > Validator.PORT_MAX:
-            return False, f"Porta muito alta (máximo {Validator.PORT_MAX})"
+            return False, f"Port is too high (maximum {Validator.PORT_MAX})"
 
         return True, ""
 
@@ -107,7 +107,7 @@ class Validator:
         valid_des = ['gnome', 'xfce', 'xfce4', 'kde', 'plasma', 'mate', 'cinnamon', 'lxde', 'lxqt']
 
         if de.lower() not in valid_des:
-            return False, f"Ambiente desktop '{de}' não suportado. Opções: {', '.join(valid_des)}"
+            return False, f"Unsupported desktop environment '{de}'. Options: {', '.join(valid_des)}"
 
         return True, ""
 
@@ -120,15 +120,15 @@ class Validator:
             Tuple (válido, mensagem_erro)
         """
         if not home_dir:
-            return False, "Diretório home não pode ser vazio"
+            return False, "Home directory cannot be empty"
 
         if not home_dir.startswith('/'):
-            return False, "Diretório home deve ser caminho absoluto"
+            return False, "Home directory must be an absolute path"
 
         # Evitar diretórios sensíveis
         forbidden = ['/root', '/bin', '/sbin', '/usr/bin', '/usr/sbin', '/etc', '/sys', '/proc']
         if home_dir in forbidden or any(home_dir.startswith(f) for f in forbidden):
-            return False, f"Diretório '{home_dir}' não é permitido"
+            return False, f"Directory '{home_dir}' is not allowed"
 
         return True, ""
 

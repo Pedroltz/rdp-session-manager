@@ -457,7 +457,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("WARNING: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation
@@ -506,7 +506,7 @@ class CLI:
 
             if processes or is_connected:
                 self.print_warning(f"User '{username}' has active session(s)")
-                self.print_warning("AVISO IMPORTANT: Group changes only take effect after logout/login")
+                self.print_warning("WARNING: Group changes only take effect after logout/login")
                 self.print_warning("Active sessions will be terminated to apply changes")
 
                 # Ask for confirmation

@@ -38,7 +38,7 @@ class AppConfig:
         if self.config_file.exists():
             try:
                 self.config.read(self.config_file)
-                logger.info(f"Configuração carregada de {self.config_file}")
+                logger.info(f"Settings loaded from {self.config_file}")
 
                 # Garantir que seções existam
                 for section, options in self.defaults.items():
@@ -52,10 +52,10 @@ class AppConfig:
                 self._save()
 
             except Exception as e:
-                logger.error(f"Erro ao carregar configuração: {e}")
+                logger.error(f"Error loading settings: {e}")
                 self._create_default()
         else:
-            logger.info("Arquivo de configuração não existe, criando com valores padrão")
+            logger.info("Settings file does not exist; creating it with default values")
             self._create_default()
 
     def _create_default(self):
@@ -66,16 +66,16 @@ class AppConfig:
                 self.config.set(section, key, value)
 
         self._save()
-        logger.info(f"Configuração padrão criada em {self.config_file}")
+        logger.info(f"Default settings created at {self.config_file}")
 
     def _save(self):
         """Salva configuração no arquivo"""
         try:
             with open(self.config_file, 'w') as f:
                 self.config.write(f)
-            logger.debug(f"Configuração salva em {self.config_file}")
+            logger.debug(f"Settings saved to {self.config_file}")
         except Exception as e:
-            logger.error(f"Erro ao salvar configuração: {e}")
+            logger.error(f"Error saving settings: {e}")
 
     def get_default_rdp_port(self) -> int:
         """Obtém a porta RDP padrão"""
@@ -85,12 +85,12 @@ class AppConfig:
 
             # Validar porta
             if port < 1 or port > 65535:
-                logger.warning(f"Porta inválida: {port}, usando 3389")
+                logger.warning(f"Invalid port: {port}; using 3389")
                 return 3389
 
             return port
         except Exception as e:
-            logger.error(f"Erro ao obter porta padrão: {e}")
+            logger.error(f"Error getting default port: {e}")
             return 3389
 
     def set_default_rdp_port(self, port: int) -> bool:
@@ -98,7 +98,7 @@ class AppConfig:
         try:
             # Validar porta
             if port < 1 or port > 65535:
-                logger.error(f"Porta inválida: {port}")
+                logger.error(f"Invalid port: {port}")
                 return False
 
             # Garantir que seção existe
@@ -111,11 +111,11 @@ class AppConfig:
             # Salvar
             self._save()
 
-            logger.info(f"Porta RDP padrão alterada para: {port}")
+            logger.info(f"Default RDP port changed to: {port}")
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao definir porta padrão: {e}")
+            logger.error(f"Error setting default port: {e}")
             return False
 
     def get(self, section: str, key: str, fallback: Optional[str] = None) -> Optional[str]:
@@ -123,7 +123,7 @@ class AppConfig:
         try:
             return self.config.get(section, key, fallback=fallback)
         except Exception as e:
-            logger.error(f"Erro ao obter configuração [{section}].{key}: {e}")
+            logger.error(f"Error getting setting [{section}].{key}: {e}")
             return fallback
 
     def set(self, section: str, key: str, value: str) -> bool:
@@ -137,5 +137,5 @@ class AppConfig:
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao definir configuração [{section}].{key}: {e}")
+            logger.error(f"Error setting [{section}].{key}: {e}")
             return False

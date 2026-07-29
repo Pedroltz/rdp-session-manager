@@ -1,5 +1,11 @@
 # Changelog - RDP Session Manager
 
+## [0.4.0] - 2026-07-29
+
+### Changed
+- Standardized the installer, application interface, command-line output, and package metadata in English
+- Kept the verified release bundle and interactive terminal behavior introduced in the 0.3.x series
+
 ## [0.3.5] - 2026-07-28
 
 ### Changed

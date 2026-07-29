@@ -5,7 +5,7 @@
 set -e
 
 if [ "$#" -ne 2 ]; then
-    echo "Uso: $0 USERNAME \"Full Name\""
+    echo "Usage: $0 USERNAME \"Full Name\""
     exit 1
 fi
 
@@ -14,14 +14,14 @@ FULLNAME="$2"
 
 # Verificar se usuário existe
 if ! id "$USERNAME" &>/dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
-echo "Alterando nome completo de $USERNAME para: $FULLNAME"
+echo "Changing full name for $USERNAME to: $FULLNAME"
 
 # Alterar GECOS (nome completo)
 /usr/sbin/usermod -c "$FULLNAME" "$USERNAME"
 
-echo "OK Nome completo alterado com sucesso"
+echo "OK Full name changed successfully"
 exit 0

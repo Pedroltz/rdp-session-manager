@@ -187,7 +187,7 @@ class TestValidator(unittest.TestCase):
         for name in reserved_names:
             valid, error = Validator.validate_username(name)
             self.assertFalse(valid, f"Reserved name '{name}' should be invalid")
-            self.assertIn('reservado', error.lower())
+            self.assertIn('reserved', error.lower())
 
     def test_validate_password_complexity(self):
         """Test password complexity requirements"""

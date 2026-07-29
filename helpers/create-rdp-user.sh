@@ -14,8 +14,8 @@ APP_ARGS="$7"            # Argumentos do app (apenas para remoteapp)
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$USER_UID" ] || [ -z "$HOME_DIR" ]; then
-    echo "Erro: Parâmetros insuficientes"
-    echo "Uso: $0 USERNAME USER_UID HOME_DIR [FULLNAME] [SESSION_TYPE] [SESSION_COMMAND] [APP_ARGS]"
+    echo "Error: Not enough arguments"
+    echo "Usage: $0 USERNAME USER_UID HOME_DIR [FULLNAME] [SESSION_TYPE] [SESSION_COMMAND] [APP_ARGS]"
     exit 1
 fi
 
@@ -23,7 +23,7 @@ fi
 SESSION_TYPE="${SESSION_TYPE:-desktop}"
 SESSION_COMMAND="${SESSION_COMMAND:-startxfce4}"
 
-echo "Criando usuário RDP: $USERNAME"
+echo "Creating RDP user: $USERNAME"
 
 # Detectar layout de teclado do sistema
 XKBLAYOUT="us"
@@ -32,7 +32,7 @@ XKBMODEL="pc105"
 
 if [ -f /etc/default/keyboard ]; then
     source /etc/default/keyboard
-    echo "→ Layout de teclado detectado: $XKBLAYOUT"
+    echo "→ Keyboard layout detected: $XKBLAYOUT"
 fi
 
 # Construir comando setxkbmap
@@ -46,19 +46,19 @@ fi
 
 # 1. Criar grupo rdp-users se não existir
 if ! getent group rdp-users > /dev/null 2>&1; then
-    echo "→ Criando grupo rdp-users..."
+    echo "→ Creating rdp-users group..."
     /usr/sbin/groupadd rdp-users
 fi
 
 # 2. Criar diretório base se não existir
 if [ ! -d "/opt/rdp-users" ]; then
-    echo "→ Criando diretório /opt/rdp-users..."
+    echo "→ Creating /opt/rdp-users directory..."
     /usr/bin/mkdir -p /opt/rdp-users
     /usr/bin/chmod 755 /opt/rdp-users
 fi
 
 # 3. Criar usuário
-echo "→ Criando usuário $USERNAME (UID: $USER_UID)..."
+echo "→ Creating user $USERNAME (UID: $USER_UID)..."
 if [ -n "$FULLNAME" ]; then
     /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash -c "$FULLNAME" "$USERNAME"
 else
@@ -66,11 +66,11 @@ else
 fi
 
 # 4. Ajustar permissões do home directory (751 para permitir leitura do .xsession)
-echo "→ Ajustando permissões do diretório home..."
+echo "→ Adjusting home directory permissions..."
 /usr/bin/chmod 751 "$HOME_DIR"
 
 # 5. Criar arquivo .xsession
-echo "→ Criando arquivo .xsession (mode: $SESSION_TYPE)..."
+echo "→ Creating .xsession file (mode: $SESSION_TYPE)..."
 XSESSION_FILE="$HOME_DIR/.xsession"
 
 if [ "$SESSION_TYPE" = "remoteapp" ]; then
@@ -195,19 +195,19 @@ fi
 
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
-echo "  OK Arquivo .xsession criado"
+echo "  OK .xsession file created"
 
 # 6. Se for WineGE RemoteApp, configurar WineGE
 if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
     echo ""
-    echo "→ Configurando WineGE RemoteApp..."
+    echo "→ Configuring WineGE RemoteApp..."
 
     # SESSION_COMMAND contém o caminho do .exe
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     WINEGE_SCRIPT="$SCRIPT_DIR/setup-winege-app.sh"
 
     if [ ! -f "$WINEGE_SCRIPT" ]; then
-        echo "  X Erro: Script setup-winege-app.sh não encontrado em $SCRIPT_DIR"
+        echo "  X Error: setup-winege-app.sh script not found in $SCRIPT_DIR"
         exit 1
     fi
 
@@ -215,13 +215,13 @@ if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
     bash "$WINEGE_SCRIPT" "$USERNAME" "$HOME_DIR" "$SESSION_COMMAND"
 
     if [ $? -ne 0 ]; then
-        echo "  X Erro ao configurar WineGE"
+        echo "  X Error configuring WineGE"
         exit 1
     fi
 
-    echo "  OK WineGE RemoteApp configurado com sucesso"
+    echo "  OK WineGE RemoteApp configured successfully"
 fi
 
-echo "OK Usuário $USERNAME criado com sucesso!"
-echo "  - Layout de teclado: $XKBLAYOUT"
+echo "OK User $USERNAME created successfully!"
+echo "  - Keyboard layout: $XKBLAYOUT"
 exit 0

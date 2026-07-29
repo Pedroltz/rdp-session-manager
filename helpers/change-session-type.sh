@@ -5,7 +5,7 @@
 set -e
 
 if [ "$#" -lt 3 ]; then
-    echo "Uso: $0 USERNAME SESSION_TYPE SESSION_COMMAND [APP_ARGS]"
+    echo "Usage: $0 USERNAME SESSION_TYPE SESSION_COMMAND [APP_ARGS]"
     exit 1
 fi
 
@@ -16,7 +16,7 @@ APP_ARGS="$4"            # Argumentos (opcional)
 
 # Verificar se usuário existe
 if ! id "$USERNAME" &>/dev/null; then
-    echo "Erro: Usuário $USERNAME não existe"
+    echo "Error: User $USERNAME does not exist"
     exit 1
 fi
 
@@ -24,11 +24,11 @@ fi
 HOME_DIR=$(getent passwd "$USERNAME" | cut -d: -f6)
 
 if [ ! -d "$HOME_DIR" ]; then
-    echo "Erro: Diretório home $HOME_DIR não encontrado"
+    echo "Error: Home directory $HOME_DIR not found"
     exit 1
 fi
 
-echo "Alterando tipo de sessão de $USERNAME para: $SESSION_TYPE"
+echo "Changing session type for $USERNAME to: $SESSION_TYPE"
 
 # Detectar layout de teclado do sistema
 XKBLAYOUT="us"
@@ -37,7 +37,7 @@ XKBMODEL="pc105"
 
 if [ -f /etc/default/keyboard ]; then
     source /etc/default/keyboard
-    echo "Layout de teclado detectado: $XKBLAYOUT"
+echo "Keyboard layout detected: $XKBLAYOUT"
 fi
 
 # Construir comando setxkbmap
@@ -52,7 +52,7 @@ fi
 # Verificar se usuário tem processos ativos
 ACTIVE_PIDS=$(pgrep -u "$USERNAME" 2>/dev/null || true)
 if [ -n "$ACTIVE_PIDS" ]; then
-    echo "Encerrando sessões de $USERNAME..."
+    echo "Ending sessions for $USERNAME..."
     /usr/bin/pkill -TERM -u "$USERNAME" 2>/dev/null || true
     sleep 2
     # Forçar encerramento se ainda houver processos
@@ -61,7 +61,7 @@ fi
 
 # Recriar arquivo .xsession
 XSESSION_FILE="$HOME_DIR/.xsession"
-echo "→ Recriando arquivo .xsession..."
+echo "→ Recreating .xsession file..."
 
 if [ "$SESSION_TYPE" = "remoteapp" ]; then
     # RemoteApp mode
@@ -139,6 +139,6 @@ fi
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "OK Tipo de sessão alterado com sucesso para $SESSION_TYPE"
-echo "  - Layout de teclado: $XKBLAYOUT"
+echo "OK Session type changed successfully to $SESSION_TYPE"
+echo "  - Keyboard layout: $XKBLAYOUT"
 exit 0
