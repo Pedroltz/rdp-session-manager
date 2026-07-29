@@ -18,6 +18,16 @@ run_test() {
         "${RDPSM_BUNDLE:-}"
 }
 
+collect_logs() {
+    local destination=/ci-home/installation-logs
+    mkdir -p "$destination"
+    cp /ci-home/.local/state/rdp-session-manager/install.log \
+        "$destination/install.log" 2>/dev/null || true
+    cp /ci-home/rdp-session-manager-gui.log \
+        "$destination/rdp-session-manager-gui.log" 2>/dev/null || true
+    chmod -R a+rX "$destination"
+}
+
 case "$RDPSM_FAMILY" in
     debian)
         export DEBIAN_FRONTEND=noninteractive
@@ -33,7 +43,12 @@ case "$RDPSM_FAMILY" in
             systemd \
             xvfb
         export HOME=/ci-home
+        set +e
         run_test
+        test_status=$?
+        set -e
+        collect_logs
+        exit "$test_status"
         ;;
     arch)
         pacman -Syu --needed --noconfirm \
@@ -74,7 +89,7 @@ case "$RDPSM_FAMILY" in
             '
         test_status=$?
         set -e
-        chmod -R a+rX /ci-home
+        collect_logs
         exit "$test_status"
         ;;
     *)

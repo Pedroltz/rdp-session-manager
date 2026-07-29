@@ -150,7 +150,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: quality-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
-          path: ci-logs/
+          path: ci-logs/**/installation-logs/
           if-no-files-found: ignore
-          include-hidden-files: true
           retention-days: 7

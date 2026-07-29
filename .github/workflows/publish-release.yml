@@ -147,9 +147,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pre-publish-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
-          path: ci-logs/
+          path: ci-logs/**/installation-logs/
           if-no-files-found: ignore
-          include-hidden-files: true
           retention-days: 14
 
   publish-candidate:
@@ -302,9 +301,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
-          path: ci-logs/
+          path: ci-logs/**/installation-logs/
           if-no-files-found: ignore
-          include-hidden-files: true
           retention-days: 14
 
   promote-release:
