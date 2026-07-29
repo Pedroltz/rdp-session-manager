@@ -407,12 +407,41 @@ class UserManager:
 
             logger.info(f"Executando script helper: {create_script.name}")
 
-            # Para WineGE, precisamos de timeout maior (download + setup = ~15min)
-            timeout_seconds = 1200 if session_type == 'winege-remoteapp' else 30
+            # A criação do primeiro usuário pode aguardar locks de passwd/group
+            # logo após a instalação do sistema. Trinta segundos é curto demais
+            # para máquinas de CI e também para hosts mais lentos.
+            timeout_seconds = 1200 if session_type == 'winege-remoteapp' else 120
             if session_type == 'winege-remoteapp':
                 logger.info("  WARNING WineGE may take 10–15 minutes to download and install")
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds
+                )
+            except subprocess.TimeoutExpired as exc:
+                def _timeout_output(value):
+                    if not value:
+                        return ""
+                    if isinstance(value, bytes):
+                        return value.decode(errors='replace').strip()
+                    return value.strip()
+
+                partial_stdout = _timeout_output(exc.stdout)
+                partial_stderr = _timeout_output(exc.stderr)
+                if partial_stdout:
+                    logger.error("Partial helper stdout before timeout:\n%s", partial_stdout)
+                if partial_stderr:
+                    logger.error("Partial helper stderr before timeout:\n%s", partial_stderr)
+
+                timeout_message = (
+                    f"User creation helper timed out after {timeout_seconds} seconds"
+                )
+                if partial_stdout:
+                    timeout_message += f"; last output: {partial_stdout.splitlines()[-1]}"
+                raise RuntimeError(timeout_message) from exc
 
             if result.returncode != 0:
                 # Verificar código de erro
