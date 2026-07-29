@@ -67,6 +67,73 @@ class InstallerHelpersTest(unittest.TestCase):
         self.assertEqual(checksums["installer.py"], "a" * 64)
         self.assertEqual(checksums["rdp-session-manager.deb"], "b" * 64)
 
+    def test_bundle_uses_resolved_release_and_validates_asset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_dir = Path(directory)
+            packages = {
+                installer.APP_DEB: b"deb package fixture",
+                installer.APP_ARCH: b"arch package fixture",
+            }
+            checksums = []
+            for name, content in packages.items():
+                package = bundle_dir / name
+                package.write_bytes(content)
+                checksums.append(f"{installer.sha256(package)} *{name}")
+            (bundle_dir / "SHA256SUMS").write_text(
+                "\n".join(checksums) + "\n",
+                encoding="utf-8",
+            )
+            args = installer.parser().parse_args(
+                [
+                    "--bundle-dir",
+                    directory,
+                    "--resolved-release",
+                    "v0.3.5",
+                    "--dry-run",
+                    "--yes",
+                    "--os-release",
+                    "/etc/os-release",
+                ]
+            )
+            instance = installer.Installer(args)
+            try:
+                self.assertEqual(instance.release_info()["tag_name"], "v0.3.5")
+                for name in packages:
+                    self.assertEqual(
+                        instance.bundled_asset(name),
+                        bundle_dir / name,
+                    )
+            finally:
+                instance.close()
+
+    def test_bundle_rejects_invalid_asset_checksum(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_dir = Path(directory)
+            package = bundle_dir / installer.APP_ARCH
+            package.write_bytes(b"arch package fixture")
+            (bundle_dir / "SHA256SUMS").write_text(
+                f"{'0' * 64} *{installer.APP_ARCH}\n",
+                encoding="utf-8",
+            )
+            args = installer.parser().parse_args(
+                [
+                    "--bundle-dir",
+                    directory,
+                    "--resolved-release",
+                    "v0.3.5",
+                    "--dry-run",
+                    "--yes",
+                    "--os-release",
+                    "/etc/os-release",
+                ]
+            )
+            instance = installer.Installer(args)
+            try:
+                with self.assertRaises(installer.InstallerError):
+                    instance.bundled_asset(installer.APP_ARCH)
+            finally:
+                instance.close()
+
     def test_parses_native_fraction_progress(self):
         self.assertEqual(
             installer.parse_progress_fraction("( 3/12) instalando pacote"),

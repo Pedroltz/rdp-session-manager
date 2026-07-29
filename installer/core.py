@@ -551,6 +551,14 @@ class Installer:
     def release_info(self) -> Mapping[str, object]:
         if self.release is not None:
             return self.release
+        if self.args.bundle_dir:
+            self.release = {
+                "tag_name": self.args.resolved_release or self.args.release or "bundle publicado",
+                "assets": [],
+                "prerelease": False,
+                "draft": False,
+            }
+            return self.release
         if self.args.local:
             self.release = {"tag_name": "código local", "assets": [], "prerelease": False, "draft": False}
             return self.release
@@ -619,6 +627,26 @@ class Installer:
         if isinstance(tag, str):
             return f"{DOWNLOAD_BASE}/download/{tag}/{name}"
         raise InstallerError(f"Asset não encontrado na release: {name}")
+
+    def bundled_asset(self, name: str) -> Path:
+        """Return and verify one file from an extracted release bundle."""
+        bundle_dir = Path(self.args.bundle_dir).expanduser().resolve()
+        asset_path = (bundle_dir / name).resolve()
+        if asset_path.parent != bundle_dir or not asset_path.is_file():
+            raise InstallerError(f"Asset não encontrado no bundle: {name}.")
+        checksums_path = bundle_dir / "SHA256SUMS"
+        if not checksums_path.is_file():
+            raise InstallerError("Bundle não contém SHA256SUMS.")
+        checksums = parse_checksums(checksums_path.read_text(encoding="utf-8"))
+        expected = checksums.get(name)
+        if not expected:
+            raise InstallerError(f"SHA256SUMS do bundle não contém {name}.")
+        actual = sha256(asset_path)
+        if actual.lower() != expected.lower():
+            raise InstallerError(f"Checksum inválido para {name} no bundle.")
+        self.log.write(f"bundle asset {asset_path} sha256={actual}")
+        self.ui.success(f"Checksum do bundle validado: {actual}")
+        return asset_path
 
     def package_names(self) -> list[str]:
         if self.distro.family == "debian":
@@ -850,7 +878,10 @@ class Installer:
             # prompts: it can redraw over the final confirmation and make the
             # installer look frozen at 0%.
             self.ui.stage(1, 5, "Plano aprovado")
-            if self.args.local:
+            if self.args.bundle_dir:
+                self.ui.stage(2, 5, "Validando pacote extraído do bundle")
+                app_path = self.bundled_asset(app_asset)
+            elif self.args.local:
                 app_path = Path(self.args.package_dir).expanduser().resolve() / app_asset
                 self.ui.stage(2, 5, "Validando o pacote gerado localmente")
                 if not app_path.is_file():
@@ -917,6 +948,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--dry-run", action="store_true", help="mostrar o plano sem alterar o sistema")
     result.add_argument("--verbose", action="store_true", help="mostrar toda a saída dos comandos")
     result.add_argument("--os-release", help=argparse.SUPPRESS)
+    result.add_argument("--bundle-dir", help=argparse.SUPPRESS)
+    result.add_argument("--resolved-release", help=argparse.SUPPRESS)
     return result
 
 
