@@ -4,6 +4,10 @@
 
 set -e
 
+step() {
+    printf '[%(%Y-%m-%dT%H:%M:%S%z)T] %s\n' -1 "$*"
+}
+
 USERNAME="$1"
 USER_UID="$2"
 HOME_DIR="$3"
@@ -58,19 +62,21 @@ if [ ! -d "/opt/rdp-users" ]; then
 fi
 
 # 3. Criar usuário
-echo "→ Creating user $USERNAME (UID: $USER_UID)..."
+step "→ Creating user $USERNAME (UID: $USER_UID)..."
 if [ -n "$FULLNAME" ]; then
     /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash -c "$FULLNAME" "$USERNAME"
 else
     /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash "$USERNAME"
 fi
+step "  OK System user created"
 
 # 4. Ajustar permissões do home directory (751 para permitir leitura do .xsession)
-echo "→ Adjusting home directory permissions..."
+step "→ Adjusting home directory permissions..."
 /usr/bin/chmod 751 "$HOME_DIR"
+step "  OK Home directory permissions adjusted"
 
 # 5. Criar arquivo .xsession
-echo "→ Creating .xsession file (mode: $SESSION_TYPE)..."
+step "→ Creating .xsession file (mode: $SESSION_TYPE)..."
 XSESSION_FILE="$HOME_DIR/.xsession"
 
 if [ "$SESSION_TYPE" = "remoteapp" ]; then

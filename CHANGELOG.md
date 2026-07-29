@@ -1,5 +1,16 @@
 # Changelog - RDP Session Manager
 
+## [0.4.2] - 2026-07-29
+
+### Added
+- Real end-to-end RDP test that creates an XFCE user through `rdpsm` and authenticates with FreeRDP
+- Independent checks for the desktop process, an in-session autostart marker, and rendered screenshot content
+- Automatic FreeRDP, xrdp, xrdp-sesman, and Xorg diagnostics for failed desktop sessions
+
+### Changed
+- Ubuntu 24.04 quality and pre-publish installation jobs now require a successful rendered RDP desktop
+- RDP test artifacts are retained for inspection and the temporary account is always removed
+
 ## [0.4.1] - 2026-07-29
 
 ### Changed
