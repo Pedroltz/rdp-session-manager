@@ -1,5 +1,14 @@
 # Changelog - RDP Session Manager
 
+## [0.3.5] - 2026-07-28
+
+### Changed
+- Releases agora publicam somente `install.sh` e um bundle ZIP verificado com o instalador e os pacotes Debian/Arch
+- O bootstrap valida o digest SHA-256 fornecido pelo GitHub e remove os arquivos temporários ao finalizar
+
+### Fixed
+- `--release` mantém compatibilidade com releases antigas que ainda usam assets separados
+
 ## [0.3.4] - 2026-07-28
 
 ### Fixed
