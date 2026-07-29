@@ -87,7 +87,7 @@ if [ "${ID:-}" != "ubuntu" ]; then
 fi
 
 required_commands=(
-    rdpsm systemctl ss Xvfb xdpyinfo import identify zenity pgrep getent
+    rdpsm systemctl ss Xvfb xdpyinfo import identify pgrep getent
 )
 for command_name in "${required_commands[@]}"; do
     command -v "${command_name}" >/dev/null ||
@@ -125,26 +125,17 @@ test -x "${TEST_HOME}/.xsession" || fail "rdpsm did not create an executable .xs
 grep -q 'startxfce4' "${TEST_HOME}/.xsession" ||
     fail "the generated .xsession does not start XFCE"
 
-log "Installing a deterministic marker in the XFCE autostart"
-install -d -o "${TEST_USER}" -g rdp-users \
-    "${TEST_HOME}/.local/bin" "${TEST_HOME}/.config/autostart"
-
-cat >"${TEST_HOME}/.local/bin/rdpsm-e2e-ready" <<EOF
+log "Installing a deterministic marker in the generated .xsession"
+cat >"${TEST_HOME}/.xsession" <<EOF
 #!/usr/bin/env bash
+export HOME='${TEST_HOME}'
+export USER='${TEST_USER}'
+export LOGNAME='${TEST_USER}'
 touch '${MARKER}'
-exec zenity --info --title='RDP E2E' --text='RDPSM E2E READY' --no-wrap
+exec startxfce4
 EOF
-chmod 0755 "${TEST_HOME}/.local/bin/rdpsm-e2e-ready"
-
-cat >"${TEST_HOME}/.config/autostart/rdpsm-e2e-ready.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=RDP Session Manager E2E marker
-Exec=${TEST_HOME}/.local/bin/rdpsm-e2e-ready
-OnlyShowIn=XFCE;
-Terminal=false
-EOF
-chown -R "${TEST_USER}:rdp-users" "${TEST_HOME}/.local" "${TEST_HOME}/.config"
+chmod 0755 "${TEST_HOME}/.xsession"
+chown "${TEST_USER}:rdp-users" "${TEST_HOME}/.xsession"
 
 log "Starting a virtual client display on ${DISPLAY_NUMBER}"
 Xvfb "${DISPLAY_NUMBER}" -screen 0 "${SCREEN_SIZE}x24" -ac \
@@ -173,7 +164,8 @@ DISPLAY="${DISPLAY_NUMBER}" "${FREERDP_BIN}" \
 FREERDP_PID=$!
 
 for _ in $(seq 1 120); do
-    if [ -f "${MARKER}" ]; then
+    if [ -f "${MARKER}" ] &&
+        pgrep -u "${TEST_USER}" -f 'xfce4-session' >/dev/null; then
         break
     fi
     if ! kill -0 "${FREERDP_PID}" 2>/dev/null; then
@@ -183,7 +175,7 @@ for _ in $(seq 1 120); do
 done
 
 test -f "${MARKER}" ||
-    fail "the XFCE autostart marker was not created within 60 seconds"
+    fail "the RDP session did not execute the generated .xsession within 60 seconds"
 pgrep -u "${TEST_USER}" -f 'xfce4-session' >/dev/null ||
     fail "no xfce4-session process is running for the RDP user"
 kill -0 "${FREERDP_PID}" 2>/dev/null ||
