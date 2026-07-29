@@ -28,5 +28,6 @@ Build and install the current checkout:
 python -m installer --local
 ```
 
-The release workflow publishes `install.sh`, `installer.py`, the bundled
-`installer.pyz`, both native packages and `SHA256SUMS` using stable asset names.
+The release workflow publishes only `install.sh` and
+`rdp-session-manager-installer.zip`. The ZIP contains `installer.pyz`, both
+native packages and their internal `SHA256SUMS`.
