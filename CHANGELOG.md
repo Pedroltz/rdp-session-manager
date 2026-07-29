@@ -1,5 +1,14 @@
 # Changelog - RDP Session Manager
 
+## [0.3.6] - 2026-07-28
+
+### Changed
+- No Arch, o instalador agora prepara automaticamente o `yay` pelo PKGBUILD oficial `yay-bin` quando nenhum helper AUR está disponível
+- Comandos AUR que podem renovar a autenticação do `sudo` passam a usar diretamente o terminal
+
+### Fixed
+- Evita que prompts internos do `makepkg` expirem escondidos atrás da barra de progresso durante a instalação do xrdp
+
 ## [0.3.5] - 2026-07-28
 
 ### Changed

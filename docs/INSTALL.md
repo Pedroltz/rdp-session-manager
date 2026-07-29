@@ -55,10 +55,11 @@ The release publishes one verified ZIP containing the Rich terminal installer
 and both native packages; no separate `pip install` is required for end users.
 
 On Arch, xrdp and xorgxrdp come from the AUR. The installer uses `yay` or
-`paru` when available; otherwise it displays the AUR sources and asks for
-confirmation before compiling them. On a clean Arch installation it also
-installs `base-devel`, Git and GnuPG, imports the full PGP fingerprints declared
-by the PKGBUILDs and lets `makepkg` resolve the remaining build dependencies.
+`paru` when available. If neither helper exists, it installs Git, `base-devel`
+and GnuPG, builds `yay-bin` from its official AUR PKGBUILD with `makepkg`
+checksum validation, installs the resulting package and then uses `yay`.
+Commands that may need to renew `sudo` authentication are attached directly to
+the terminal so their password prompt remains visible.
 
 When WineGE support is selected on Arch, the installer transparently enables
 the official `[multilib]` repository when needed, preserving the original

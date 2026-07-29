@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fast, offline tests for the release installer."""
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -190,6 +191,30 @@ class InstallerHelpersTest(unittest.TestCase):
             finally:
                 log.close()
 
+    def test_runner_interactive_inherits_terminal_streams(self):
+        ui = installer.UI()
+        log = installer.InstallLog()
+        try:
+            runner = installer.Runner(ui, log)
+            completed = subprocess.CompletedProcess(["yay"], 0)
+            with (
+                patch("subprocess.run", return_value=completed) as run,
+                patch("subprocess.Popen") as popen,
+            ):
+                result = runner.run(["yay", "-S", "xrdp"], interactive=True)
+            popen.assert_not_called()
+            run.assert_called_once_with(
+                ["yay", "-S", "xrdp"],
+                cwd=None,
+                env=None,
+                timeout=1800,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0)
+        finally:
+            ui.close()
+            log.close()
+
     def test_dry_run_installer_does_not_query_network(self):
         args = installer.parser().parse_args(["--dry-run", "--yes", "--os-release", "/etc/os-release"])
         with patch("installer.core.http_json", side_effect=AssertionError("network access in dry-run")):
@@ -202,7 +227,7 @@ class InstallerHelpersTest(unittest.TestCase):
                 if not instance.log.handle.closed:
                     instance.close()
 
-    def test_yay_install_is_non_interactive_after_confirmation(self):
+    def test_yay_install_uses_terminal_after_confirmation(self):
         args = installer.parser().parse_args(
             ["--dry-run", "--yes", "--os-release", "/etc/os-release"]
         )
@@ -220,6 +245,83 @@ class InstallerHelpersTest(unittest.TestCase):
             self.assertIn("--answerdiff", command)
             self.assertIn("--noremovemake", command)
             self.assertIn("--pgpfetch", command)
+            self.assertTrue(run.call_args.kwargs["interactive"])
+        finally:
+            instance.close()
+
+    def test_missing_aur_helper_bootstraps_and_uses_yay(self):
+        args = installer.parser().parse_args(
+            ["--dry-run", "--yes", "--os-release", "/etc/os-release"]
+        )
+        instance = installer.Installer(args)
+        instance.args.without_xrdp = False
+        try:
+            with (
+                patch.object(instance, "aur_helper", return_value=None),
+                patch.object(instance, "install_yay", return_value="yay") as install_yay,
+                patch.object(instance.runner, "run") as run,
+            ):
+                instance.install_arch_xrdp()
+            install_yay.assert_called_once_with()
+            self.assertEqual(run.call_args.args[0][0], "yay")
+            self.assertTrue(run.call_args.kwargs["interactive"])
+        finally:
+            instance.close()
+
+    def test_arch_plan_discloses_automatic_yay_install(self):
+        args = installer.parser().parse_args(
+            ["--dry-run", "--yes", "--os-release", "/etc/os-release"]
+        )
+        instance = installer.Installer(args)
+        instance.args.without_xrdp = False
+        instance.distro = installer.Distro(
+            family="arch",
+            identifier="arch",
+            version="rolling",
+            name="Arch Linux",
+            id_like=("arch",),
+        )
+        try:
+            with (
+                patch.object(instance, "aur_helper", return_value=None),
+                patch.object(instance.ui, "show_plan") as show_plan,
+            ):
+                instance.show_plan(installer.APP_ARCH)
+            rows, packages = show_plan.call_args.args
+            self.assertIn(
+                ("Helper AUR", "Instalar yay-bin automaticamente pelo AUR"),
+                rows,
+            )
+            self.assertIn("yay-bin (AUR)", packages)
+        finally:
+            instance.close()
+
+    def test_install_yay_bin_without_implicit_makepkg_sudo(self):
+        args = installer.parser().parse_args(
+            ["--dry-run", "--yes", "--os-release", "/etc/os-release"]
+        )
+        instance = installer.Installer(args)
+        package = instance.temp_dir / "yay-bin" / "yay-bin-test.pkg.tar.zst"
+        results = [
+            subprocess.CompletedProcess([], 0, "", ""),
+            subprocess.CompletedProcess([], 0, "", ""),
+            subprocess.CompletedProcess([], 0, "", ""),
+            subprocess.CompletedProcess([], 0, f"{package}\n", ""),
+            subprocess.CompletedProcess([], 0, "", ""),
+        ]
+        try:
+            with (
+                patch("os.geteuid", return_value=1000),
+                patch.object(instance, "import_pkgbuild_keys"),
+                patch.object(instance.runner, "run", side_effect=results) as run,
+            ):
+                self.assertEqual(instance.install_yay(), "yay")
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertIn("https://aur.archlinux.org/yay-bin.git", commands[1])
+            self.assertEqual(commands[2], ["makepkg", "--noconfirm", "--needed"])
+            self.assertNotIn("--syncdeps", commands[2])
+            self.assertEqual(commands[3], ["makepkg", "--packagelist"])
+            self.assertIn(str(package), commands[4])
         finally:
             instance.close()
 

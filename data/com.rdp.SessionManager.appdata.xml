@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.3.6" date="2026-07-28">
+      <description>
+        <p>Instala automaticamente o yay no Arch quando necessário e mantém prompts do sudo visíveis durante builds do AUR.</p>
+      </description>
+    </release>
     <release version="0.3.5" date="2026-07-28">
       <description>
         <p>Simplifica a distribuição para um bootstrap e um bundle verificado contendo os pacotes suportados.</p>

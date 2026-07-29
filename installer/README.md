@@ -31,3 +31,7 @@ python -m installer --local
 The release workflow publishes only `install.sh` and
 `rdp-session-manager-installer.zip`. The ZIP contains `installer.pyz`, both
 native packages and their internal `SHA256SUMS`.
+
+On Arch, the installer uses an existing `paru` or `yay`. When neither is
+available, it bootstraps `yay-bin` from its official AUR PKGBUILD and uses the
+installed `yay` to prepare xrdp and xorgxrdp.

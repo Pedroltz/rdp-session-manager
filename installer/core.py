@@ -137,6 +137,21 @@ class UI:
             self.console.print(Text(f"$ {line.removeprefix('$ ')}", style="dim"))
 
     @contextmanager
+    def terminal_passthrough(self) -> Generator[None, None, None]:
+        """Pause Rich output while a child process interacts with the terminal."""
+        live_was_running = bool(
+            self.overall is not None
+            and getattr(self.overall.live, "is_started", False)
+        )
+        if live_was_running:
+            self.overall.stop()
+        try:
+            yield
+        finally:
+            if live_was_running and self.overall is not None and not self._closed:
+                self.overall.start()
+
+    @contextmanager
     def running(self, label: str) -> Generator[ActivityStatus, None, None]:
         with Progress(
             SpinnerColumn(style="bright_cyan", finished_text="[green]✓[/]"),
@@ -185,17 +200,8 @@ class UI:
         self.console.print(Panel(package_text, title=f"[bold]Pacotes ({len(packages)})[/]", border_style="dim"))
 
     def confirm(self, question: str) -> bool:
-        live_was_running = bool(
-            self.overall is not None
-            and getattr(self.overall.live, "is_started", False)
-        )
-        if live_was_running:
-            self.overall.stop()
-        try:
+        with self.terminal_passthrough():
             return Prompt.ask(question, choices=["s", "n"], default="n", console=self.console) == "s"
-        finally:
-            if live_was_running and self.overall is not None:
-                self.overall.start()
 
     def component_prompt(self, question: str, description: str, *, default: bool) -> bool:
         self.console.print()
@@ -349,6 +355,7 @@ class Runner:
         check: bool = True,
         env: Optional[Mapping[str, str]] = None,
         cwd: Optional[Path] = None,
+        interactive: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         rendered = shell_command(command)
         self.ui.command_line(f"$ {rendered}")
@@ -356,6 +363,27 @@ class Runner:
         if self.dry_run:
             return subprocess.CompletedProcess(command, 0, "", "")
         try:
+            if interactive:
+                self.log.write("interactive command output is attached directly to the terminal")
+                with self.ui.terminal_passthrough():
+                    self.ui.info(
+                        "O instalador pode solicitar novamente a senha do sudo "
+                        "durante a compilação do AUR."
+                    )
+                    process = subprocess.run(
+                        list(command),
+                        cwd=str(cwd) if cwd else None,
+                        env=dict(env) if env else None,
+                        timeout=timeout,
+                        check=False,
+                    )
+                result = subprocess.CompletedProcess(command, process.returncode, "", "")
+                if check and result.returncode != 0:
+                    raise InstallerError(
+                        f"Comando falhou (código {result.returncode}): {rendered}. "
+                        f"Consulte o log: {self.log.path}"
+                    )
+                return result
             with self.ui.running(f"Executando {command[0]}") as status:
                 process = subprocess.Popen(
                     list(command),
@@ -673,6 +701,11 @@ class Installer:
         return packages
 
     def show_plan(self, app_asset: str) -> None:
+        arch_aur_helper = (
+            self.aur_helper()
+            if self.distro.family == "arch" and not self.args.without_xrdp
+            else None
+        )
         rows = [
             ("Sistema", f"{self.distro.name} · família {self.distro.family}"),
             ("Release", str(self.release_info().get("tag_name", "latest"))),
@@ -691,7 +724,20 @@ class Installer:
             ),
             ("Log", str(self.log.path)),
         ]
-        self.ui.show_plan(rows, self.package_names())
+        planned_packages = self.package_names()
+        if self.distro.family == "arch" and not self.args.without_xrdp:
+            rows.insert(
+                5,
+                (
+                    "Helper AUR",
+                    f"Usar {arch_aur_helper} já instalado"
+                    if arch_aur_helper
+                    else "Instalar yay-bin automaticamente pelo AUR",
+                ),
+            )
+            if not arch_aur_helper:
+                planned_packages += ["git", "base-devel", "gnupg", "yay-bin (AUR)"]
+        self.ui.show_plan(rows, planned_packages)
         if self.args.dry_run:
             self.ui.warning("Simulação concluída. Nenhum arquivo, pacote ou serviço foi alterado.")
             return
@@ -735,6 +781,64 @@ class Installer:
 
     def aur_helper(self) -> Optional[str]:
         return next((name for name in ("paru", "yay") if command_exists(name)), None)
+
+    def install_yay(self) -> str:
+        """Bootstrap yay-bin from its official AUR PKGBUILD."""
+        if os.geteuid() == 0:
+            raise InstallerError("A instalação do yay precisa ser executada por usuário comum, não como root.")
+
+        self.ui.warning(
+            "yay/paru não encontrado. O instalador baixará o PKGBUILD oficial "
+            "do yay-bin no AUR, validará o binário com o makepkg e instalará o yay."
+        )
+        self.runner.run(
+            self.privilege()
+            + ["pacman", "-S", "--needed", "--noconfirm", "git", "base-devel", "gnupg"],
+            timeout=1800,
+        )
+
+        destination = self.temp_dir / "yay-bin"
+        self.runner.run(
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://aur.archlinux.org/yay-bin.git",
+                str(destination),
+            ],
+            timeout=300,
+        )
+        self.import_pkgbuild_keys(destination / "PKGBUILD")
+        # All dependencies were installed explicitly above. Avoid --syncdeps:
+        # it invokes an implicit sudo prompt that can remain hidden until its
+        # authentication timeout expires.
+        self.runner.run(
+            ["makepkg", "--noconfirm", "--needed"],
+            cwd=destination,
+            timeout=900,
+        )
+        package_list = self.runner.run(
+            ["makepkg", "--packagelist"],
+            cwd=destination,
+            timeout=30,
+        )
+        built_packages = [
+            Path(line.strip())
+            for line in package_list.stdout.splitlines()
+            if line.strip().endswith((".pkg.tar.zst", ".pkg.tar.xz", ".pkg.tar.gz"))
+        ]
+        if not built_packages:
+            raise InstallerError(f"makepkg não informou o pacote gerado para yay-bin. Log: {self.log.path}")
+        self.runner.run(
+            self.privilege()
+            + ["pacman", "-U", "--needed", "--noconfirm", *(str(path) for path in built_packages)],
+            timeout=900,
+        )
+        if not self.args.dry_run and not command_exists("yay"):
+            raise InstallerError("O yay foi instalado, mas o comando não foi encontrado no PATH.")
+        self.ui.success("yay instalado e pronto para uso.")
+        return "yay"
 
     def ensure_arch_multilib(self) -> None:
         if not self.args.with_wine:
@@ -800,53 +904,37 @@ class Installer:
     def install_arch_xrdp(self) -> None:
         if self.args.without_xrdp:
             return
-        helper = self.aur_helper()
         self.ui.warning(
             "No Arch, xrdp e xorgxrdp são compilados a partir do AUR. "
             "Os PKGBUILDs serão baixados, validados e compilados no seu usuário."
         )
-        if helper:
-            if helper == "yay":
-                command = [
-                    helper, "-S", "--needed", "--noconfirm",
-                    "--answerclean", "None", "--answerdiff", "None",
-                    "--noremovemake", "--pgpfetch", "xrdp", "xorgxrdp",
-                ]
-            else:
-                command = [
-                    helper, "-S", "--needed", "--noconfirm", "--skipreview",
-                    "xrdp", "xorgxrdp",
-                ]
-            self.runner.run(command, timeout=2400)
-            return
-        if os.geteuid() == 0:
-            raise InstallerError("AUR fallback precisa ser executado por usuário comum, não como root.")
-        self.ui.warning("yay/paru não encontrado. Serão compilados PKGBUILDs oficiais do AUR.")
-        self.runner.run(
-            self.privilege() + ["pacman", "-S", "--needed", "--noconfirm", "git", "base-devel", "gnupg"],
-            timeout=1800,
-        )
-        for package in ("xrdp", "xorgxrdp"):
-            destination = self.temp_dir / package
-            self.runner.run(["git", "clone", "--depth", "1", f"https://aur.archlinux.org/{package}.git", str(destination)], timeout=300)
-            self.import_pkgbuild_keys(destination / "PKGBUILD")
-            self.runner.run(
-                ["makepkg", "--syncdeps", "--noconfirm", "--needed"],
-                cwd=destination,
-                timeout=2400,
-            )
-            package_list = self.runner.run(["makepkg", "--packagelist"], cwd=destination, timeout=30)
-            built_packages = [
-                Path(line.strip())
-                for line in package_list.stdout.splitlines()
-                if line.strip().endswith((".pkg.tar.zst", ".pkg.tar.xz", ".pkg.tar.gz"))
+        helper = self.aur_helper() or self.install_yay()
+        if helper == "yay":
+            command = [
+                helper,
+                "-S",
+                "--needed",
+                "--noconfirm",
+                "--answerclean",
+                "None",
+                "--answerdiff",
+                "None",
+                "--noremovemake",
+                "--pgpfetch",
+                "xrdp",
+                "xorgxrdp",
             ]
-            if not built_packages:
-                raise InstallerError(f"makepkg não informou o pacote gerado para {package}. Log: {self.log.path}")
-            self.runner.run(
-                self.privilege() + ["pacman", "-U", "--needed", "--noconfirm", *(str(path) for path in built_packages)],
-                timeout=900,
-            )
+        else:
+            command = [
+                helper,
+                "-S",
+                "--needed",
+                "--noconfirm",
+                "--skipreview",
+                "xrdp",
+                "xorgxrdp",
+            ]
+        self.runner.run(command, timeout=2400, interactive=True)
 
     def install_arch(self, app_path: Path) -> None:
         prefix = self.privilege()
