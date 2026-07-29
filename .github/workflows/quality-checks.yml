@@ -102,6 +102,7 @@ jobs:
             ~/.local/state/rdp-session-manager/install.log
             ~/rdp-session-manager-gui.log
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7
 
   install-containers:
@@ -151,4 +152,5 @@ jobs:
           name: quality-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
           path: ci-logs/
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7

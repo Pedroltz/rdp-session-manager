@@ -9,8 +9,9 @@
     <property name="title">RDP Session Manager</property>
 
     <child>
-      <object class="AdwToolbarView">
-        <child type="top">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
           <object class="AdwHeaderBar" id="header_bar">
             <child type="start">
               <object class="GtkButton" id="add_user_button">
@@ -31,7 +32,7 @@
           </object>
         </child>
 
-        <property name="content">
+        <child>
           <object class="GtkBox">
             <property name="orientation">vertical</property>
 
@@ -146,7 +147,7 @@
               </object>
             </child>
           </object>
-        </property>
+        </child>
       </object>
     </child>
   </template>

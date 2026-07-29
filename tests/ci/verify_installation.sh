@@ -42,7 +42,11 @@ if [[ "$package_version" != *"$EXPECTED_VERSION"* ]]; then
 fi
 
 rdpsm --version | grep -F "$EXPECTED_VERSION" >/dev/null
-python3 -m compileall -q /usr/share/rdp-session-manager/src
+if [[ "$EUID" -eq 0 ]]; then
+    python3 -m compileall -q /usr/share/rdp-session-manager/src
+else
+    sudo python3 -m compileall -q /usr/share/rdp-session-manager/src
+fi
 
 assert_file /usr/share/applications/com.rdp.SessionManager.desktop
 assert_file /usr/share/metainfo/com.rdp.SessionManager.appdata.xml

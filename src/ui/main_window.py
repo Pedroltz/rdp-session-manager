@@ -13,8 +13,6 @@ import subprocess
 import time
 from pathlib import Path
 
-from .user_dialog import UserDialog
-
 logger = logging.getLogger(__name__)
 
 
@@ -299,6 +297,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def create_xrdp_warning_banner(self):
         """Create warning banner for missing xrdp"""
+        if not hasattr(Adw, "Banner"):
+            logger.info("The installed libadwaita does not provide Adw.Banner.")
+            return
+
         # Criar Banner
         self.xrdp_banner = Adw.Banner()
         self.xrdp_banner.set_title("WARNING xrdp server is not installed—the application will not work without it")
@@ -306,16 +308,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.xrdp_banner.connect('button-clicked', self.on_install_xrdp_clicked)
         self.xrdp_banner.set_revealed(False)
 
-        # Obter a ToolbarView
-        toolbar_view = self.toast_overlay.get_child()
-
-        if toolbar_view and isinstance(toolbar_view, Adw.ToolbarView):
-            # Obter o box principal (conteúdo da toolbar)
-            content = toolbar_view.get_content()
-
-            if content and isinstance(content, Gtk.Box):
-                # Inserir banner como primeiro filho do box
-                content.prepend(self.xrdp_banner)
+        content = self.toast_overlay.get_child()
+        if content and isinstance(content, Gtk.Box):
+            content.prepend(self.xrdp_banner)
 
     def update_xrdp_status(self):
         """Update xrdp status and show/hide banner"""
@@ -366,6 +361,11 @@ class MainWindow(Adw.ApplicationWindow):
             dialog.connect("response", self.on_add_user_xrdp_check_response)
             dialog.present()
             return
+
+        # Adw.Dialog and the corresponding template are available only in
+        # newer libadwaita versions. Loading this module on demand keeps the
+        # main application compatible with older supported distributions.
+        from .user_dialog import UserDialog
 
         dialog = UserDialog(
             parent=self,
