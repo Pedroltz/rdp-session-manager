@@ -104,9 +104,9 @@ class Validator:
         Returns:
             Tuple (válido, mensagem_erro)
         """
-        valid_des = ['gnome', 'xfce', 'xfce4', 'kde', 'plasma', 'mate', 'cinnamon', 'lxde', 'lxqt']
+        valid_des = ['xfce', 'gnome', 'kde']
 
-        if de.lower() not in valid_des:
+        if not isinstance(de, str) or de.strip().lower() not in valid_des:
             return False, f"Unsupported desktop environment '{de}'. Options: {', '.join(valid_des)}"
 
         return True, ""

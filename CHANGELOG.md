@@ -1,5 +1,27 @@
 # Changelog - RDP Session Manager
 
+## [0.4.4] - 2026-07-30
+
+### Changed
+- Headless and CLI sessions now request administrative passwords through interactive terminal `sudo`
+- Graphical PolicyKit authentication now requires both a display and a desktop D-Bus session
+- The release installer uses graphical askpass only inside a real desktop D-Bus session
+
+### Fixed
+- Forwarded or stale `DISPLAY` values no longer cause `pkexec` authentication attempts on CLI-only servers
+- User creation reports the privilege method that is actually being used
+
+## [0.4.3] - 2026-07-30
+
+### Changed
+- Limited new desktop sessions and installation to KDE Plasma, GNOME, and XFCE
+- Added distribution-specific desktop package installation for Ubuntu, Debian, Arch, and supported derivatives
+- Added the Plasma X11 session and GNOME Flashback requirements used by xorgxrdp on current Arch Linux
+
+### Fixed
+- Desktop installation now uses `pacman -Syu --needed` on Arch instead of Debian-only APT and DPKG commands
+- Unsupported desktop IDs are rejected instead of silently creating an XFCE session
+
 ## [0.4.2] - 2026-07-29
 
 ### Added

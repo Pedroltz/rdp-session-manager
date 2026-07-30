@@ -93,6 +93,28 @@ def has_display() -> bool:
     return has_gui
 
 
+def has_graphical_session() -> bool:
+    """
+    Return whether the process belongs to an interactive graphical session.
+
+    A DISPLAY variable alone is not enough: it can be stale or forwarded over
+    SSH on an otherwise headless server. A desktop PolicyKit agent also needs
+    the user's session bus, so require both before selecting pkexec.
+    """
+    if not has_display():
+        return False
+
+    session_bus = os.environ.get("DBUS_SESSION_BUS_ADDRESS")
+    has_session = bool(session_bus)
+    logger.debug(
+        "Graphical session detection: DBUS_SESSION_BUS_ADDRESS=%s, "
+        "has_graphical_session=%s",
+        session_bus,
+        has_session,
+    )
+    return has_session
+
+
 def has_polkit_agent() -> bool:
     """
     Verifica se há um agente PolicyKit disponível para autenticação.
@@ -118,9 +140,14 @@ def has_polkit_agent() -> bool:
         logger.debug("WSL detected—PolicyKit is unavailable; using sudo")
         return False
 
-    # Se não há display, não há agente gráfico
-    if not has_display():
-        logger.debug("No display—assuming no PolicyKit agent is available")
+    # A display and its session bus are both required for the desktop
+    # authentication agent. This rejects DISPLAY values inherited from SSH
+    # forwarding or stale shell environments.
+    if not has_graphical_session():
+        logger.debug(
+            "No graphical user session—PolicyKit agent is unavailable; "
+            "using terminal sudo"
+        )
         return False
 
     return True
@@ -142,7 +169,12 @@ def get_privilege_command() -> Tuple[str, List[str]]:
         logger.debug("Using pkexec for privilege elevation")
         return ('pkexec', ['pkexec', '--user', 'root'])
     else:
-        logger.debug("Using sudo for privilege elevation (headless environment)")
+        logger.debug(
+            "Using interactive sudo for privilege elevation "
+            "(headless/terminal environment)"
+        )
+        # Plain sudo reads the password directly from the controlling terminal.
+        # Do not add -n, -S, or -A, which would disable or redirect that prompt.
         return ('sudo', ['sudo'])
 
 

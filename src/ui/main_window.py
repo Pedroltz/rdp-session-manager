@@ -13,6 +13,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from core.desktop_environments import get_startup_command
+
 logger = logging.getLogger(__name__)
 
 
@@ -1138,17 +1140,13 @@ Would you like to continue?"""
                         # Para desktop, usar o DE atual do usuário
                         user_obj = self.user_manager.get_user(original_username)
                         if user_obj and user_obj.desktop_env != 'remoteapp':
-                            # Mapear DE para comando
-                            de_commands = {
-                                'xfce': 'startxfce4',
-                                'gnome': 'gnome-session',
-                                'kde': 'startplasma-x11',
-                                'mate': 'mate-session',
-                                'cinnamon': 'cinnamon-session',
-                                'lxde': 'startlxde',
-                                'lxqt': 'startlxqt'
-                            }
-                            session_command = de_commands.get(user_obj.desktop_env, 'startxfce4')
+                            session_command = get_startup_command(user_obj.desktop_env)
+                            if session_command is None:
+                                GLib.idle_add(
+                                    self.show_toast,
+                                    f"Unsupported desktop environment: {user_obj.desktop_env}"
+                                )
+                                return
                         else:
                             session_command = 'startxfce4'  # Default
                         session_args = ''

@@ -15,7 +15,7 @@ RDP Session Manager provides a graphical interface for administering RDP access 
 ## Features
 
 - Create, remove, enable, and disable RDP user accounts.
-- Configure full desktop sessions with supported desktop environments.
+- Configure full desktop sessions with KDE Plasma, GNOME, or XFCE.
 - Run Linux applications as RemoteApp sessions.
 - Run Windows applications as WineGE RemoteApp sessions.
 - Check and install required RDP components when needed.

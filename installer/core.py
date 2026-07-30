@@ -527,6 +527,11 @@ class Installer:
             return None
         if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
             return None
+        # DISPLAY may be stale or forwarded over SSH on a CLI-only host. A
+        # graphical askpass helper is appropriate only inside a real desktop
+        # session with its user D-Bus available.
+        if not os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+            return None
         askpass = next(
             (path for name in ("ksshaskpass", "ssh-askpass", "lxqt-openssh-askpass") if (path := shutil.which(name))),
             None,

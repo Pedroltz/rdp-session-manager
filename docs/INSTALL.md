@@ -28,6 +28,15 @@ Complete installation instructions for RDP Session Manager on Ubuntu/Debian and 
 - Python 3.8 or higher
 - systemd or sysvinit (service management)
 
+### Supported desktop environments
+
+RDP Session Manager supports KDE Plasma, GNOME, and XFCE. Other desktop
+environments and the historical `plasma`/`xfce4` aliases are rejected.
+
+On Arch Linux, KDE installation includes the separate Plasma X11 session
+required by xorgxrdp. GNOME uses GNOME Flashback with Metacity because current
+GNOME Shell releases no longer provide the X11 session required by xorgxrdp.
+
 ## Automated Installation (recommended)
 
 ```bash
