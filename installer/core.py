@@ -519,6 +519,12 @@ class Installer:
         self.release: Optional[Mapping[str, object]] = None
 
     def _configure_graphical_auth(self) -> Optional[str]:
+        # The installer is a terminal application.  Prefer sudo's native
+        # prompt whenever stdin is attached to a TTY, even if DISPLAY is set
+        # (which is common in WSL and SSH sessions).  Forcing askpass there can
+        # open an invisible graphical dialog and make the installer look hung.
+        if sys.stdin.isatty():
+            return None
         if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
             return None
         askpass = next(
@@ -725,6 +731,21 @@ class Installer:
             return []
         return ["sudo", "-A"] if self.askpass else ["sudo"]
 
+    def authenticate_privileges(self) -> None:
+        """Authenticate before Rich starts rendering command progress."""
+        if self.args.dry_run or os.geteuid() == 0:
+            return
+        self.ui.info("Administrator privileges are required to continue.")
+        command = self.privilege() + ["-v"]
+        try:
+            result = subprocess.run(command, timeout=300, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise InstallerError("Timed out while waiting for sudo authentication.") from exc
+        except OSError as exc:
+            raise InstallerError(f"Could not authenticate with sudo: {exc}") from exc
+        if result.returncode != 0:
+            raise InstallerError("sudo authentication failed or was canceled.")
+
     def install_debian(self, app_path: Path) -> None:
         prefix = self.privilege()
         self.ui.stage(3, 5, "Updating indexes and installing Debian/Ubuntu dependencies")
@@ -886,6 +907,7 @@ class Installer:
             if self.args.dry_run:
                 self.ui.complete("Simulation complete")
                 return 0
+            self.authenticate_privileges()
             # Do not start Rich's live progress display before interactive
             # prompts: it can redraw over the final confirmation and make the
             # installer look frozen at 0%.

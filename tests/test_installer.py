@@ -201,6 +201,39 @@ class InstallerHelpersTest(unittest.TestCase):
             finally:
                 log.close()
 
+    def test_terminal_auth_does_not_force_graphical_askpass(self):
+        instance = object.__new__(installer.Installer)
+        with (
+            patch.object(installer.sys.stdin, "isatty", return_value=True),
+            patch.dict("os.environ", {"DISPLAY": ":99"}, clear=True),
+            patch("shutil.which", return_value="/usr/bin/ssh-askpass"),
+        ):
+            self.assertIsNone(instance._configure_graphical_auth())
+
+    def test_authenticates_sudo_before_live_progress(self):
+        instance = object.__new__(installer.Installer)
+        instance.args = SimpleNamespace(dry_run=False)
+        instance.ui = Mock()
+        instance.askpass = None
+        with (
+            patch("os.geteuid", return_value=1000),
+            patch("subprocess.run", return_value=Mock(returncode=0)) as run,
+        ):
+            instance.authenticate_privileges()
+        run.assert_called_once_with(["sudo", "-v"], timeout=300, check=False)
+
+    def test_reports_failed_sudo_authentication(self):
+        instance = object.__new__(installer.Installer)
+        instance.args = SimpleNamespace(dry_run=False)
+        instance.ui = Mock()
+        instance.askpass = None
+        with (
+            patch("os.geteuid", return_value=1000),
+            patch("subprocess.run", return_value=Mock(returncode=1)),
+            self.assertRaisesRegex(installer.InstallerError, "authentication failed"),
+        ):
+            instance.authenticate_privileges()
+
     def test_dry_run_installer_does_not_query_network(self):
         args = installer.parser().parse_args(["--dry-run", "--yes", "--os-release", "/etc/os-release"])
         with patch("installer.core.http_json", side_effect=AssertionError("network access in dry-run")):
