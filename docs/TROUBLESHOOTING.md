@@ -8,6 +8,26 @@ This document provides solutions to known issues and anticipates potential futur
 
 ## Critical Issues
 
+### Authentication on Headless Servers
+
+When no graphical user session is available, administrative operations use
+plain `sudo` instead of `pkexec`. The password prompt is shown directly in the
+controlling terminal.
+
+A forwarded or stale `DISPLAY` value is not treated as a graphical desktop
+unless a desktop D-Bus session is also available. CLI commands always use the
+terminal `sudo` path.
+
+If authentication cannot start, confirm that the command has an interactive
+terminal and that `sudo` is installed:
+
+```bash
+sudo -v
+rdpsm de install xfce
+```
+
+---
+
 ### RDP Port Conflicts
 
 **Symptom**: Multiple users attempting to use the same RDP port

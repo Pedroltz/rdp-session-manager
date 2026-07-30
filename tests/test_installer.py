@@ -11,6 +11,47 @@ from installer import core as installer
 
 
 class InstallerHelpersTest(unittest.TestCase):
+    @patch.dict("installer.core.os.environ", {}, clear=True)
+    def test_headless_installer_uses_terminal_sudo(self):
+        instance = object.__new__(installer.Installer)
+
+        self.assertIsNone(instance._configure_graphical_auth())
+        instance.askpass = None
+        with patch("installer.core.os.geteuid", return_value=1000):
+            self.assertEqual(instance.privilege(), ["sudo"])
+
+    @patch("installer.core.shutil.which", return_value="/usr/bin/ksshaskpass")
+    @patch.dict(
+        "installer.core.os.environ",
+        {"DISPLAY": "localhost:10.0"},
+        clear=True,
+    )
+    def test_forwarded_display_without_session_bus_uses_terminal_sudo(self, _which):
+        instance = object.__new__(installer.Installer)
+
+        self.assertIsNone(instance._configure_graphical_auth())
+
+    @patch("installer.core.shutil.which", return_value="/usr/bin/ksshaskpass")
+    @patch.dict(
+        "installer.core.os.environ",
+        {
+            "DISPLAY": ":0",
+            "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
+        },
+        clear=True,
+    )
+    def test_desktop_installer_configures_graphical_askpass(self, _which):
+        instance = object.__new__(installer.Installer)
+
+        self.assertEqual(
+            instance._configure_graphical_auth(),
+            "/usr/bin/ksshaskpass",
+        )
+        self.assertEqual(
+            installer.os.environ["SUDO_ASKPASS"],
+            "/usr/bin/ksshaskpass",
+        )
+
     def test_detects_debian_derivative_from_id_like(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "os-release"
