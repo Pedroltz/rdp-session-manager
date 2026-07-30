@@ -221,10 +221,13 @@ class UserManager:
             log("→ Checking the base directory...")
             self._create_base_directory(log_callback=log)
 
-            # Criar usuário via pkexec
+            # Create the user with the elevation method selected for this
+            # session (terminal sudo on headless systems, pkexec on desktops).
             log("")
             log("→ Creating the system user...")
-            log("  WARNING You will be asked to authenticate (pkexec)")
+            privilege_method, _ = get_privilege_command()
+            auth_name = "pkexec" if privilege_method == "pkexec" else "sudo"
+            log(f"  WARNING You will be asked to authenticate ({auth_name})")
             success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
                                                session_type, app_command, app_args, log_callback=log)
 

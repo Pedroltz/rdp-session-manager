@@ -1,5 +1,16 @@
 # Changelog - RDP Session Manager
 
+## [0.4.4] - 2026-07-30
+
+### Changed
+- Headless and CLI sessions now request administrative passwords through interactive terminal `sudo`
+- Graphical PolicyKit authentication now requires both a display and a desktop D-Bus session
+- The release installer uses graphical askpass only inside a real desktop D-Bus session
+
+### Fixed
+- Forwarded or stale `DISPLAY` values no longer cause `pkexec` authentication attempts on CLI-only servers
+- User creation reports the privilege method that is actually being used
+
 ## [0.4.3] - 2026-07-30
 
 ### Changed
