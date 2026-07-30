@@ -1,5 +1,11 @@
 # Changelog - RDP Session Manager
 
+## [0.4.5] - 2026-07-30
+
+### Fixed
+- The release installer now authenticates with `sudo` before starting live progress, keeping password prompts visible in headless terminals
+- Interactive terminals take precedence over graphical askpass even when stale or forwarded display variables are present
+
 ## [0.4.4] - 2026-07-30
 
 ### Changed
