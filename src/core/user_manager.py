@@ -12,6 +12,11 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from core.desktop_environments import (
+    SUPPORTED_DESKTOPS,
+    get_startup_command,
+    normalize_desktop_id,
+)
 from utils.polkit import get_privilege_command
 
 logger = logging.getLogger(__name__)
@@ -171,6 +176,14 @@ class UserManager:
                 logger.info(f"USER_MANAGER: {msg}")
                 if log_callback:
                     log_callback(msg)
+
+            if session_type == 'desktop':
+                desktop_env = normalize_desktop_id(desktop_env)
+                if desktop_env not in SUPPORTED_DESKTOPS:
+                    raise ValueError(
+                        f"Unsupported desktop environment '{desktop_env}'. "
+                        f"Options: {', '.join(SUPPORTED_DESKTOPS)}"
+                    )
 
             # Validar nome de usuário
             log("→ Validating username...")
@@ -367,19 +380,9 @@ class UserManager:
             priv_method, priv_cmd = get_privilege_command()
             auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
 
-            # Mapear desktop_env para comando DE (usado apenas para desktop mode)
-            de_commands = {
-                'gnome': 'gnome-session',
-                'xfce': 'startxfce4',
-                'xfce4': 'startxfce4',
-                'kde': 'startplasma-x11',
-                'plasma': 'startplasma-x11',
-                'mate': 'mate-session',
-                'cinnamon': 'cinnamon-session',
-                'lxde': 'startlxde',
-                'lxqt': 'startlxqt',
-            }
-            de_command = de_commands.get(desktop_env.lower(), 'startxfce4')
+            de_command = get_startup_command(desktop_env)
+            if session_type == 'desktop' and de_command is None:
+                raise ValueError(f"Unsupported desktop environment '{desktop_env}'")
 
             if log_callback:
                 log_callback("  → Creating user and configuring the system...")
@@ -1036,11 +1039,7 @@ class UserManager:
             else:
                 # Desktop mode - detectar DE
                 de_commands = {
-                    'startlxde': 'lxde',
-                    'startlxqt': 'lxqt',
                     'startxfce4': 'xfce',
-                    'mate-session': 'mate',
-                    'cinnamon-session': 'cinnamon',
                     'gnome-session': 'gnome',
                     'startplasma-x11': 'kde'
                 }

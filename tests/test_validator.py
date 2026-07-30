@@ -111,7 +111,7 @@ class TestValidator(unittest.TestCase):
 
     def test_validate_desktop_env_valid(self):
         """Test valid desktop environments"""
-        valid_des = ['gnome', 'xfce', 'kde', 'mate', 'cinnamon', 'lxde', 'lxqt', 'plasma']
+        valid_des = ['gnome', 'xfce', 'kde']
 
         for de in valid_des:
             valid, error = Validator.validate_desktop_env(de)
@@ -120,7 +120,10 @@ class TestValidator(unittest.TestCase):
 
     def test_validate_desktop_env_invalid(self):
         """Test invalid desktop environments"""
-        invalid_des = ['windows', 'macos', 'unity', 'invalid']
+        invalid_des = [
+            'windows', 'macos', 'unity', 'invalid',
+            'mate', 'cinnamon', 'lxde', 'lxqt', 'plasma', 'xfce4'
+        ]
 
         for de in invalid_des:
             valid, error = Validator.validate_desktop_env(de)

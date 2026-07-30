@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Post-installation test: create an XFCE user and open it through RDP.
+# Supported on Debian/Ubuntu and Arch families.
 
 set -Eeuo pipefail
 
@@ -82,8 +83,14 @@ if [ ! -r /etc/os-release ]; then
 fi
 # shellcheck disable=SC1091
 . /etc/os-release
-if [ "${ID:-}" != "ubuntu" ]; then
-    fail "the real RDP test currently supports Ubuntu only (detected: ${ID:-unknown})"
+distro_candidates=" ${ID:-} ${ID_LIKE:-} "
+if [[ "${distro_candidates}" != *" debian "* &&
+      "${distro_candidates}" != *" ubuntu "* &&
+      "${distro_candidates}" != *" arch "* &&
+      "${distro_candidates}" != *" manjaro "* &&
+      "${distro_candidates}" != *" endeavouros "* &&
+      "${distro_candidates}" != *" cachyos "* ]]; then
+    fail "unsupported distribution for the RDP test: ${ID:-unknown}"
 fi
 
 required_commands=(
@@ -183,8 +190,19 @@ kill -0 "${FREERDP_PID}" 2>/dev/null ||
 
 sleep 2
 log "Capturing and validating the rendered RDP desktop"
-DISPLAY="${DISPLAY_NUMBER}" import -window root "${ARTIFACTS_DIR}/rdp-desktop.png"
-COLOR_COUNT="$(identify -format '%k' "${ARTIFACTS_DIR}/rdp-desktop.png")"
+DISPLAY="${DISPLAY_NUMBER}" xwininfo -root -tree \
+    >"${ARTIFACTS_DIR}/x-window-tree.log" 2>&1 || true
+COLOR_COUNT=0
+for _ in $(seq 1 60); do
+    # On Xvfb, -screen includes the FreeRDP child window in the root capture.
+    DISPLAY="${DISPLAY_NUMBER}" import -window root -screen \
+        "${ARTIFACTS_DIR}/rdp-desktop.png"
+    COLOR_COUNT="$(identify -format '%k' "${ARTIFACTS_DIR}/rdp-desktop.png")"
+    if awk -v colors="${COLOR_COUNT}" 'BEGIN { exit !(colors >= 32) }'; then
+        break
+    fi
+    sleep 0.5
+done
 if ! awk -v colors="${COLOR_COUNT}" 'BEGIN { exit !(colors >= 32) }'; then
     fail "the captured desktop appears blank (${COLOR_COUNT} colors)"
 fi

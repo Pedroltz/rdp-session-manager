@@ -1,5 +1,16 @@
 # Changelog - RDP Session Manager
 
+## [0.4.3] - 2026-07-30
+
+### Changed
+- Limited new desktop sessions and installation to KDE Plasma, GNOME, and XFCE
+- Added distribution-specific desktop package installation for Ubuntu, Debian, Arch, and supported derivatives
+- Added the Plasma X11 session and GNOME Flashback requirements used by xorgxrdp on current Arch Linux
+
+### Fixed
+- Desktop installation now uses `pacman -Syu --needed` on Arch instead of Debian-only APT and DPKG commands
+- Unsupported desktop IDs are rejected instead of silently creating an XFCE session
+
 ## [0.4.2] - 2026-07-29
 
 ### Added
