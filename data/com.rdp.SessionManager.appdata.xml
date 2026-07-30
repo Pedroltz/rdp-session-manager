@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.4.5" date="2026-07-30">
+      <description>
+        <p>Keeps sudo authentication visible and reliable when installing from headless terminals.</p>
+      </description>
+    </release>
     <release version="0.4.2" date="2026-07-29">
       <description>
         <p>Adds real end-to-end validation that authenticates and renders an XFCE desktop through xrdp and FreeRDP.</p>
