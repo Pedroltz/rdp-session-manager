@@ -42,6 +42,24 @@ if [[ "$package_version" != *"$EXPECTED_VERSION"* ]]; then
 fi
 
 rdpsm --version | grep -F "$EXPECTED_VERSION" >/dev/null
+desktop_json="$(rdpsm de list --format json)"
+python3 -c '
+import json
+import sys
+
+items = json.loads(sys.stdin.read())
+actual = {item["id"] for item in items}
+expected = {"xfce", "gnome", "kde"}
+if actual != expected:
+    raise SystemExit(f"unexpected desktop IDs: {sorted(actual)}")
+' <<<"$desktop_json"
+
+for removed_desktop in mate cinnamon lxde lxqt plasma xfce4; do
+    if rdpsm de install "$removed_desktop" >/dev/null 2>&1; then
+        fail "removed desktop was accepted: $removed_desktop"
+    fi
+done
+
 if [[ "$EUID" -eq 0 ]]; then
     python3 -m compileall -q /usr/share/rdp-session-manager/src
 else

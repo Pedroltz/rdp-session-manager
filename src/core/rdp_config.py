@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import Dict
 
+from core.desktop_environments import get_startup_command, normalize_desktop_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,20 +83,10 @@ class RDPConfig:
                                      rdp_port: int) -> Dict:
         """Gera configuração de sessão xrdp"""
 
-        # Determinar comando de inicialização do DE
-        de_commands = {
-            'gnome': 'gnome-session',
-            'xfce': 'startxfce4',
-            'xfce4': 'startxfce4',
-            'kde': 'startplasma-x11',
-            'plasma': 'startplasma-x11',
-            'mate': 'mate-session',
-            'cinnamon': 'cinnamon-session',
-            'lxde': 'startlxde',
-            'lxqt': 'startlxqt',
-        }
-
-        de_command = de_commands.get(desktop_env.lower(), 'startxfce4')
+        desktop_env = normalize_desktop_id(desktop_env)
+        de_command = get_startup_command(desktop_env)
+        if de_command is None:
+            raise ValueError(f"Unsupported desktop environment '{desktop_env}'")
 
         config = {
             'session_name': f"{username}_session",
@@ -134,4 +126,3 @@ class RDPConfig:
             logger.error(f"RDP_CONFIG:   - Tipo: {type(e).__name__}")
             logger.error(f"RDP_CONFIG:   - Mensagem: {e}")
             return False
-

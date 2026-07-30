@@ -22,7 +22,7 @@
   - Support for multiple Desktop Environments
 
 - [x] Automatic Desktop Environment installer (`de_installer.py`)
-  - Support for GNOME, XFCE, KDE, MATE, Cinnamon, LXDE, LXQt
+  - Support for GNOME, XFCE, and KDE on Debian and Arch families
   - Disk space verification
   - Detection of installed DEs
 

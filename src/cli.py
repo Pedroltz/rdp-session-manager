@@ -13,6 +13,7 @@ from pathlib import Path
 from core.user_manager import UserManager
 from core.session_monitor import SessionMonitor
 from core.de_installer import DEInstaller
+from core.desktop_environments import SUPPORTED_DESKTOPS, normalize_desktop_id
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
 from utils.logger import setup_logger
@@ -86,7 +87,7 @@ class CLI:
             app_args = args.app_args or ""
 
             # Desktop environment (only for desktop sessions)
-            desktop_env = args.desktop or "xfce"
+            desktop_env = normalize_desktop_id(args.desktop or "xfce")
 
             # Validate session type
             if session_type not in ['desktop', 'remoteapp', 'winege-remoteapp']:
@@ -132,6 +133,12 @@ class CLI:
 
             # For desktop sessions, check if Desktop Environment is installed
             if session_type == 'desktop':
+                if desktop_env not in SUPPORTED_DESKTOPS:
+                    self.print_error(
+                        f"Unsupported desktop environment '{args.desktop}'. "
+                        f"Options: {', '.join(SUPPORTED_DESKTOPS)}"
+                    )
+                    return 1
                 de_installed = self.de_installer.is_de_installed(desktop_env)
 
                 if not de_installed:
@@ -872,7 +879,7 @@ class CLI:
                 for de in des:
                     installed = self.de_installer.is_de_installed(de['id'])
                     status = f"{self.GREEN}Yes{self.RESET}" if installed else "No"
-                    size = de.get('size', 'N/A')
+                    size = f"{de['size_mb']} MB"
 
                     print(
                         f"{de['id']:<12} "
@@ -890,7 +897,13 @@ class CLI:
     def de_install(self, args):
         """Install a desktop environment"""
         try:
-            de_id = args.de_id
+            de_id = normalize_desktop_id(args.de_id)
+            if de_id not in SUPPORTED_DESKTOPS:
+                self.print_error(
+                    f"Unsupported desktop environment '{args.de_id}'. "
+                    f"Options: {', '.join(SUPPORTED_DESKTOPS)}"
+                )
+                return 1
 
             # Check if already installed
             if self.de_installer.is_de_installed(de_id):
@@ -928,7 +941,13 @@ class CLI:
     def de_check(self, args):
         """Check if desktop environment is installed"""
         try:
-            de_id = args.de_id
+            de_id = normalize_desktop_id(args.de_id)
+            if de_id not in SUPPORTED_DESKTOPS:
+                self.print_error(
+                    f"Unsupported desktop environment '{args.de_id}'. "
+                    f"Options: {', '.join(SUPPORTED_DESKTOPS)}"
+                )
+                return 1
             installed = self.de_installer.is_de_installed(de_id)
 
             if installed:
@@ -1240,7 +1259,7 @@ class CLI:
 
         # de install
         de_install = de_subparsers.add_parser('install', help='Install desktop environment')
-        de_install.add_argument('de_id', help='Desktop environment ID (xfce, gnome, etc.)')
+        de_install.add_argument('de_id', help='Desktop environment ID (xfce, gnome, kde)')
         de_install.add_argument('--force', action='store_true',
                                help='Reinstall if already installed')
         de_install.set_defaults(func=self.de_install)

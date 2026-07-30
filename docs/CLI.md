@@ -93,7 +93,7 @@ rdpsm user create USERNAME -f "Full Name" -p "password123" \
 - `--app-command` - Application command for RemoteApp (e.g., firefox, thunderbird, libreoffice)
 - `--app-args` - Application arguments for RemoteApp (e.g., --private-window)
 
-**Desktop environments:** lxde, lxqt, xfce, mate, cinnamon, gnome, kde
+**Desktop environments:** xfce, gnome, kde
 
 **Example 1: Desktop Session**
 ```bash
@@ -515,11 +515,7 @@ rdpsm de list
 #
 # ID           Name                 Size       Installed
 # ------------------------------------------------------------
-# lxde         LXDE                 250MB      No
-# lxqt         LXQt                 350MB      No
 # xfce         XFCE                 400MB      Yes
-# mate         MATE                 600MB      No
-# cinnamon     Cinnamon             800MB      No
 # gnome        GNOME                1200MB     Yes
 # kde          KDE Plasma           1500MB     No
 ```
@@ -1181,11 +1177,7 @@ Available Desktop Environments
 
 ID           Name                 Size       Installed
 ------------------------------------------------------------
-lxde         LXDE                 250MB      No
-lxqt         LXQt                 350MB      No
 xfce         XFCE                 400MB      Yes
-mate         MATE                 600MB      No
-cinnamon     Cinnamon             800MB      No
 gnome        GNOME                1200MB     Yes
 kde          KDE Plasma           1500MB     No
 ```

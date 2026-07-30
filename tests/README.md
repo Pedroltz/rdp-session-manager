@@ -156,7 +156,8 @@ python3 tests/test_validator.py -v
 ## Real RDP Desktop Test
 
 The end-to-end test complements the unit suite by authenticating through the
-local xrdp server with FreeRDP and capturing the rendered XFCE desktop.
+local xrdp server with FreeRDP and capturing the rendered XFCE desktop. It
+supports Ubuntu, Debian, Arch Linux, and their recognized derivatives.
 
 On Ubuntu, install the test-only tools with:
 
@@ -169,6 +170,12 @@ and xrdp already installed, run:
 
 ```bash
 sudo ./tests/e2e/rdp_desktop.sh
+```
+
+On Arch, install the test-only tools with:
+
+```bash
+sudo pacman -S --needed freerdp xorg-server-xvfb imagemagick xorg-xdpyinfo
 ```
 
 The test requires active xrdp services, successful user creation through
