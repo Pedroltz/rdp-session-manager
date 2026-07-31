@@ -1,5 +1,18 @@
 # Changelog - RDP Session Manager
 
+## [0.5.0] - 2026-07-31
+
+### Added
+- **Multi-Connection Sources**: Support for configuring multiple connection profiles per RDP user (Full Desktop, RemoteApp Linux, and WineGE Windows applications)
+- **Interactive Session Launcher**: Modern GTK4/Libadwaita fullscreen launcher GUI presented upon RDP login to select connection sources
+- **Profile Management GUI**: New `Connection Sources` dialog allowing users to add, manage, default, and export `.rdp` shortcut files
+- **CLI Parity**: Subcommands under `rdpsm profile` (`list`, `add`, `remove`, `set-default`, `export`) providing 100% feature parity with the GUI
+- **Elevated Profile Helper**: `helpers/update-rdp-user-profiles.sh` script using `pkexec`/`sudo` for reliable system-level profile persistence and `.xsession` updates
+
+### Fixed
+- Fixed X11 window geometry negotiation by embedding a light Openbox configuration in `.xsession` to force 100% fullscreen presentation across all RDP clients (including Windows MSTSC)
+- Fixed session type detection in `UserManager._detect_session_info` to read `~/.rdp_profiles.json` directly and prevent false positive WineGE profile duplication
+
 ## [0.4.7] - 2026-07-31
 
 ### Added
