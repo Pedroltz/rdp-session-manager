@@ -1,7 +1,5 @@
 <div align="center">
   <h1>RDP Session Manager</h1>
-  <p><strong>Manage RDP sessions, users, remote apps and servers on Linux.</strong></p>
-  <p>Simple, modern and powerful administration through GTK 4 and libadwaita.</p>
   <br>
   <img src="imgs/rdp-session-manager-header.png" alt="RDP Session Manager" width="100%">
   <br><br>
