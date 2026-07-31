@@ -8,27 +8,27 @@ USERNAME="$1"
 shift  # Remove USERNAME dos argumentos
 
 if [ -z "$USERNAME" ]; then
-    echo "Erro: USERNAME não fornecido"
-    echo "Uso: $0 USERNAME [PACKAGES...]"
+    echo "Error: USERNAME was not provided"
+    echo "Usage: $0 USERNAME [PACKAGES...]"
     echo ""
-    echo "Packages comuns:"
+    echo "Common packages:"
     echo "  vcrun2015    - Visual C++ 2015 Runtime"
     echo "  vcrun2019    - Visual C++ 2019 Runtime"
     echo "  dotnet48     - .NET Framework 4.8"
     echo "  dotnet6      - .NET 6"
-    echo "  corefonts    - Fontes Microsoft"
+    echo "  corefonts    - Microsoft fonts"
     echo "  d3dx9        - DirectX 9"
     echo "  d3dx11       - DirectX 11"
     echo "  msxml3       - Microsoft XML Parser"
     echo "  vcrun6       - Visual C++ 6 Runtime"
     echo ""
-    echo "Exemplo: $0 myuser vcrun2015 dotnet48 corefonts"
+    echo "Example: $0 myuser vcrun2015 dotnet48 corefonts"
     exit 1
 fi
 
 # Verificar se o usuário existe
 if ! id "$USERNAME" &>/dev/null; then
-    echo "Erro: Usuário não existe: $USERNAME"
+    echo "Error: User does not exist: $USERNAME"
     exit 1
 fi
 
@@ -36,38 +36,38 @@ HOME_DIR="/opt/rdp-users/$USERNAME"
 WINE_PREFIX="$HOME_DIR/.wine"
 
 if [ ! -d "$WINE_PREFIX" ]; then
-    echo "Erro: Wine Prefix não encontrado para $USERNAME"
-    echo "  Esperado em: $WINE_PREFIX"
+    echo "Error: Wine prefix not found for $USERNAME"
+    echo "  Expected at: $WINE_PREFIX"
     exit 1
 fi
 
 # Se não foram passados pacotes, instalar conjunto padrão
 if [ $# -eq 0 ]; then
-    echo "Nenhum pacote especificado. Instalando conjunto padrão..."
+    echo "No package specified. Installing the default set..."
     PACKAGES="corefonts vcrun2015 msxml3 d3dx9"
 else
     PACKAGES="$@"
 fi
 
-echo "Instalando dependências Wine para: $USERNAME"
+echo "Installing Wine dependencies for: $USERNAME"
 echo "  - Wine Prefix: $WINE_PREFIX"
-echo "  - Pacotes: $PACKAGES"
+echo "  - Packages: $PACKAGES"
 echo ""
-echo "AVISO ATENÇÃO: Isso pode levar alguns minutos..."
+echo "WARNING: This may take a few minutes..."
 echo ""
 
 # Instalar cada pacote
 for PACKAGE in $PACKAGES; do
-    echo "→ Instalando $PACKAGE..."
+    echo "→ Installing $PACKAGE..."
     su - "$USERNAME" -c "WINEPREFIX='$WINE_PREFIX' winetricks -q $PACKAGE" || {
-        echo "  AVISO Falha ao instalar $PACKAGE (continuando...)"
+        echo "  WARNING Failed to install $PACKAGE (continuing...)"
     }
-    echo "  OK $PACKAGE instalado"
+    echo "  OK $PACKAGE installed"
 done
 
 echo ""
-echo "OK Dependências Wine instaladas com sucesso!"
+echo "OK Wine dependencies installed successfully!"
 echo ""
-echo "O usuário $USERNAME pode fazer login via RDP para testar."
+echo "User $USERNAME can now log in through RDP for testing."
 
 exit 0

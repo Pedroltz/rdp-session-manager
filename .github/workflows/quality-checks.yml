@@ -1,0 +1,177 @@
+name: Quality Checks
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Code and Installer Checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install test dependencies
+        run: python -m pip install -r installer/requirements.txt psutil
+      - name: Check shell scripts
+        run: bash -n installer/*.sh helpers/*.sh tests/*.sh tests/ci/*.sh tests/e2e/*.sh
+      - name: Test release bootstrap
+        run: bash tests/test_installer_bootstrap.sh
+      - name: Run unit tests
+        run: python -m unittest discover tests -v
+      - name: Check installer dry-run
+        run: python -m installer --dry-run --yes --os-release /etc/os-release
+
+  build-assets:
+    name: Build Release Bundle
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential zstd libarchive-tools
+          sudo gem install --no-document fpm
+      - name: Build and validate release assets
+        run: |
+          bash installer/build_release_assets.sh \
+            "$RUNNER_TEMP/release-assets" \
+            "$RUNNER_TEMP/release-work"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quality-release-assets
+          path: ${{ runner.temp }}/release-assets/
+          if-no-files-found: error
+          retention-days: 1
+
+  install-ubuntu:
+    name: Install on ${{ matrix.name }}
+    needs:
+      - checks
+      - build-assets
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 22.04
+            runner: ubuntu-22.04
+            with_wine: 'false'
+          - name: Ubuntu 24.04
+            runner: ubuntu-24.04
+            with_wine: 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: quality-release-assets
+          path: release-assets
+      - name: Prepare graphical test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates curl dbus-x11 iproute2 xvfb
+      - name: Install and verify the bundle
+        run: |
+          version="$(python3 -c "from src.version import __version__; print(__version__)")"
+          bash tests/ci/run_installation.sh \
+            bundle \
+            "ci-${GITHUB_SHA}" \
+            "$version" \
+            debian \
+            "${{ matrix.with_wine }}" \
+            true \
+            "$GITHUB_WORKSPACE/release-assets/rdp-session-manager-installer.zip"
+      - name: Prepare real RDP desktop test
+        if: matrix.runner == 'ubuntu-24.04'
+        run: |
+          freerdp_package=freerdp3-x11
+          if ! apt-cache show "$freerdp_package" >/dev/null 2>&1; then
+            freerdp_package=freerdp2-x11
+          fi
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            xfce4 xfce4-terminal imagemagick x11-utils "$freerdp_package"
+      - name: Open a real XFCE desktop over RDP
+        if: matrix.runner == 'ubuntu-24.04'
+        env:
+          RDPSM_E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/rdp-e2e
+        run: sudo --preserve-env=RDPSM_E2E_ARTIFACTS_DIR ./tests/e2e/rdp_desktop.sh
+      - name: Upload RDP diagnostics
+        if: always() && matrix.runner == 'ubuntu-24.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-rdp-e2e-diagnostics
+          path: artifacts/rdp-e2e/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-${{ matrix.runner }}-installation-logs
+          path: |
+            ~/.local/state/rdp-session-manager/install.log
+            ~/rdp-session-manager-gui.log
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
+
+  install-containers:
+    name: Install on ${{ matrix.name }}
+    needs:
+      - checks
+      - build-assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12
+            image: debian:12
+            family: debian
+            with_wine: 'false'
+          - name: Debian 13
+            image: debian:13
+            family: debian
+            with_wine: 'false'
+          - name: Arch Linux
+            image: archlinux:latest
+            family: arch
+            with_wine: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: quality-release-assets
+          path: release-assets
+      - name: Install and verify in container
+        run: |
+          version="$(python3 -c "from src.version import __version__; print(__version__)")"
+          bash tests/ci/run_container_installation.sh \
+            "${{ matrix.image }}" \
+            "${{ matrix.family }}" \
+            bundle \
+            "ci-${GITHUB_SHA}" \
+            "$version" \
+            "${{ matrix.with_wine }}" \
+            "$GITHUB_WORKSPACE/release-assets/rdp-session-manager-installer.zip"
+      - name: Upload installation logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-${{ matrix.family }}-${{ strategy.job-index }}-installation-logs
+          path: ci-logs/**/installation-logs/
+          if-no-files-found: ignore
+          retention-days: 7

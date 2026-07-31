@@ -6,16 +6,17 @@
   <template class="MainWindow" parent="AdwApplicationWindow">
     <property name="default-width">600</property>
     <property name="default-height">850</property>
-    <property name="title">Gerenciador de Sessões RDP</property>
+    <property name="title">RDP Session Manager</property>
 
     <child>
-      <object class="AdwToolbarView">
-        <child type="top">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
           <object class="AdwHeaderBar" id="header_bar">
             <child type="start">
               <object class="GtkButton" id="add_user_button">
                 <property name="icon-name">list-add-symbolic</property>
-                <property name="tooltip-text">Criar novo usuário RDP</property>
+                <property name="tooltip-text">Create a new RDP user</property>
                 <style>
                   <class name="suggested-action"/>
                 </style>
@@ -31,7 +32,7 @@
           </object>
         </child>
 
-        <property name="content">
+        <child>
           <object class="GtkBox">
             <property name="orientation">vertical</property>
 
@@ -41,7 +42,7 @@
                 <property name="search-mode-enabled">false</property>
                 <child>
                   <object class="GtkSearchEntry" id="search_entry">
-                    <property name="placeholder-text">Buscar usuários...</property>
+                    <property name="placeholder-text">Search users...</property>
                     <property name="hexpand">true</property>
                   </object>
                 </child>
@@ -72,10 +73,10 @@
                             <!-- Server Info Card -->
                             <child>
                               <object class="AdwPreferencesGroup" id="server_info_group">
-                                <property name="title">Informações do Servidor</property>
+                                <property name="title">Server Information</property>
                                 <child>
                                   <object class="AdwActionRow" id="ip_row">
-                                    <property name="title">Endereço IP</property>
+                                    <property name="title">IP Address</property>
                                     <property name="subtitle" bind-source="ip_row" bind-property="subtitle" bind-flags="sync-create"/>
                                     <child>
                                       <object class="GtkButton" id="copy_ip_button">
@@ -91,8 +92,8 @@
                                 </child>
                                 <child>
                                   <object class="AdwActionRow" id="sessions_row">
-                                    <property name="title">Sessões Ativas</property>
-                                    <property name="subtitle">0 sessões</property>
+                                    <property name="title">Active Sessions</property>
+                                    <property name="subtitle">0 sessions</property>
                                   </object>
                                 </child>
                               </object>
@@ -101,8 +102,8 @@
                             <!-- Users List -->
                             <child>
                               <object class="AdwPreferencesGroup" id="users_group">
-                                <property name="title">Usuários RDP</property>
-                                <property name="description">Clique em um usuário para ver detalhes</property>
+                                <property name="title">RDP Users</property>
+                                <property name="description">Click a user to view details</property>
                                 <child>
                                   <object class="GtkListBox" id="users_listbox">
                                     <property name="selection-mode">none</property>
@@ -127,11 +128,11 @@
                     <property name="child">
                       <object class="AdwStatusPage">
                         <property name="icon-name">avatar-default-symbolic</property>
-                        <property name="title">Nenhum usuário RDP</property>
-                        <property name="description">Crie seu primeiro usuário RDP para começar</property>
+                        <property name="title">No RDP users</property>
+                        <property name="description">Create your first RDP user to get started</property>
                         <child>
                           <object class="GtkButton" id="empty_add_user_button">
-                            <property name="label">Criar Usuário</property>
+                            <property name="label">Create User</property>
                             <property name="halign">center</property>
                             <style>
                               <class name="pill"/>
@@ -146,7 +147,7 @@
               </object>
             </child>
           </object>
-        </property>
+        </child>
       </object>
     </child>
   </template>
@@ -155,13 +156,13 @@
   <menu id="primary_menu">
     <section>
       <item>
-        <attribute name="label">Configurações</attribute>
+        <attribute name="label">Preferences</attribute>
         <attribute name="action">app.preferences</attribute>
       </item>
     </section>
     <section>
       <item>
-        <attribute name="label">Sobre</attribute>
+        <attribute name="label">About</attribute>
         <attribute name="action">app.about</attribute>
       </item>
     </section>

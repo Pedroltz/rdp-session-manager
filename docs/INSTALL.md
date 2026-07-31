@@ -28,10 +28,19 @@ Complete installation instructions for RDP Session Manager on Ubuntu/Debian and 
 - Python 3.8 or higher
 - systemd or sysvinit (service management)
 
+### Supported desktop environments
+
+RDP Session Manager supports KDE Plasma, GNOME, and XFCE. Other desktop
+environments and the historical `plasma`/`xfce4` aliases are rejected.
+
+On Arch Linux, KDE installation includes the separate Plasma X11 session
+required by xorgxrdp. GNOME uses GNOME Flashback with Metacity because current
+GNOME Shell releases no longer provide the X11 session required by xorgxrdp.
+
 ## Automated Installation (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 ```
 
 The installer shows the exact plan, downloads the correct package, validates
@@ -41,18 +50,18 @@ optional WineGE support should be installed. It is safe to run again.
 
 ```bash
 # Plan only, without changing the system
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --dry-run
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --dry-run
 
 # Optional WineGE dependencies
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --with-wine
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --with-wine
 
 # A specific beta release
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash -s -- --release v0.3.2-Beta
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash -s -- --release v0.3.2-Beta
 ```
 
 The complete log is written to `~/.local/state/rdp-session-manager/install.log`.
-The published installer bundles the Rich terminal interface inside
-`installer.pyz`; no separate `pip install` is required for end users.
+The release publishes one verified ZIP containing the Rich terminal installer
+and both native packages; no separate `pip install` is required for end users.
 
 On Arch, xrdp and xorgxrdp come from the AUR. The installer uses `yay` or
 `paru` when available; otherwise it displays the AUR sources and asks for
@@ -68,7 +77,7 @@ configuration as `/etc/pacman.conf.rdpsm.bak`. It then installs both 64-bit and
 To inspect the bootstrap before executing it:
 
 ```bash
-curl -fL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh -o install.sh
+curl -fL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh -o install.sh
 less install.sh
 bash install.sh
 ```

@@ -69,7 +69,7 @@ class SessionMonitor:
                 sessions.append(session)
 
         except Exception as e:
-            logger.error(f"Erro ao obter sessões ativas: {e}")
+            logger.error(f"Error getting active sessions: {e}")
 
         return sessions
 
@@ -155,7 +155,7 @@ class SessionMonitor:
                 pass
 
         except Exception as e:
-            logger.error(f"Erro ao obter conexões RDP: {e}")
+            logger.error(f"Error getting RDP connections: {e}")
 
         return connections
 
@@ -186,7 +186,7 @@ class SessionMonitor:
             return ip
 
         except Exception as e:
-            logger.error(f"Erro ao obter IP: {e}")
+            logger.error(f"Error getting IP address: {e}")
 
             # Tentar via hostname
             try:
@@ -219,7 +219,7 @@ class SessionMonitor:
                         ips.append(snic.address)
 
         except Exception as e:
-            logger.error(f"Erro ao obter IPs: {e}")
+            logger.error(f"Error getting IP addresses: {e}")
 
         return ips if ips else ["127.0.0.1"]
 
@@ -229,17 +229,17 @@ class SessionMonitor:
             session = self.get_user_session(username)
 
             if not session:
-                logger.warning(f"Nenhuma sessão ativa para {username}")
+                logger.warning(f"No active session for {username}")
                 return False
 
             # Desconectar via comando do sistema
             # TODO: Implementar desconexão real
-            logger.info(f"Desconectando usuário {username}")
+            logger.info(f"Disconnecting user {username}")
 
             return True
 
         except Exception as e:
-            logger.error(f"Erro ao desconectar {username}: {e}")
+            logger.error(f"Error disconnecting {username}: {e}")
             return False
 
     def kill_user_session(self, username: str) -> bool:
@@ -258,12 +258,12 @@ class SessionMonitor:
                     continue
 
             if killed:
-                logger.info(f"Sessão de {username} encerrada")
+                logger.info(f"Session for {username} terminated")
 
             return killed
 
         except Exception as e:
-            logger.error(f"Erro ao encerrar sessão de {username}: {e}")
+            logger.error(f"Error terminating session for {username}: {e}")
             return False
 
     def get_system_stats(self) -> Dict:
@@ -285,7 +285,7 @@ class SessionMonitor:
             }
 
         except Exception as e:
-            logger.error(f"Erro ao obter estatísticas: {e}")
+            logger.error(f"Error getting statistics: {e}")
             return {}
 
     def check_port_status(self, port: int) -> bool:
@@ -297,7 +297,7 @@ class SessionMonitor:
                 return result == 0
 
         except Exception as e:
-            logger.error(f"Erro ao verificar porta {port}: {e}")
+            logger.error(f"Error checking port {port}: {e}")
             return False
 
     def get_connection_history(self, username: str, limit: int = 10) -> List[Dict]:

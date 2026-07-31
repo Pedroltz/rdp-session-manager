@@ -15,7 +15,7 @@ RDP Session Manager provides a graphical interface for administering RDP access 
 ## Features
 
 - Create, remove, enable, and disable RDP user accounts.
-- Configure full desktop sessions with supported desktop environments.
+- Configure full desktop sessions with KDE Plasma, GNOME, or XFCE.
 - Run Linux applications as RemoteApp sessions.
 - Run Windows applications as WineGE RemoteApp sessions.
 - Check and install required RDP components when needed.
@@ -43,7 +43,7 @@ The application requires Python, GTK 4, libadwaita, and PolicyKit. The installer
 Run the official installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pedroltz/rdp-session-manager/master/installer/install.sh | bash
+curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash
 ```
 
 For manual installation, installer options, and platform-specific notes, see the [installation guide](docs/INSTALL.md).
@@ -71,6 +71,7 @@ Command-line usage and available commands are documented in the [CLI reference](
 - [WineGE RemoteApp guide](docs/WINEGE_REMOTEAPP.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](docs/DEVELOPMENT.md)
+- [Continuous integration and release checks](docs/CI.md)
 - [Changelog](CHANGELOG.md)
 
 ## Contributing

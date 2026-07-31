@@ -4,12 +4,55 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from installer import core as installer
 
 
 class InstallerHelpersTest(unittest.TestCase):
+    @patch.dict("installer.core.os.environ", {}, clear=True)
+    def test_headless_installer_uses_terminal_sudo(self):
+        instance = object.__new__(installer.Installer)
+
+        self.assertIsNone(instance._configure_graphical_auth())
+        instance.askpass = None
+        with patch("installer.core.os.geteuid", return_value=1000):
+            self.assertEqual(instance.privilege(), ["sudo"])
+
+    @patch("installer.core.shutil.which", return_value="/usr/bin/ksshaskpass")
+    @patch.dict(
+        "installer.core.os.environ",
+        {"DISPLAY": "localhost:10.0"},
+        clear=True,
+    )
+    def test_forwarded_display_without_session_bus_uses_terminal_sudo(self, _which):
+        instance = object.__new__(installer.Installer)
+
+        self.assertIsNone(instance._configure_graphical_auth())
+
+    @patch("installer.core.shutil.which", return_value="/usr/bin/ksshaskpass")
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch.dict(
+        "installer.core.os.environ",
+        {
+            "DISPLAY": ":0",
+            "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
+        },
+        clear=True,
+    )
+    def test_desktop_installer_configures_graphical_askpass(self, _isatty, _which):
+        instance = object.__new__(installer.Installer)
+
+        self.assertEqual(
+            instance._configure_graphical_auth(),
+            "/usr/bin/ksshaskpass",
+        )
+        self.assertEqual(
+            installer.os.environ["SUDO_ASKPASS"],
+            "/usr/bin/ksshaskpass",
+        )
+
     def test_detects_debian_derivative_from_id_like(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "os-release"
@@ -27,18 +70,28 @@ class InstallerHelpersTest(unittest.TestCase):
 
     def test_supported_distribution_families(self):
         samples = {
-            "ubuntu": "ID=ubuntu\nVERSION_ID=24.04\n",
-            "debian": "ID=debian\nVERSION_ID=12\n",
-            "pop": "ID=pop\nID_LIKE=ubuntu\nVERSION_ID=22.04\n",
-            "manjaro": "ID=manjaro\nID_LIKE=arch\n",
-            "endeavouros": "ID=endeavouros\nID_LIKE=arch\n",
+            "ubuntu": ("debian", "ID=ubuntu\nVERSION_ID=24.04\n"),
+            "debian": ("debian", "ID=debian\nVERSION_ID=13\n"),
+            "linuxmint": ("debian", 'ID=linuxmint\nID_LIKE="ubuntu debian"\nVERSION_ID=22\n'),
+            "pop": ("debian", 'ID=pop\nID_LIKE="ubuntu debian"\nVERSION_ID=22.04\n'),
+            "arch": ("arch", "ID=arch\n"),
+            "manjaro": ("arch", "ID=manjaro\nID_LIKE=arch\n"),
+            "endeavouros": ("arch", "ID=endeavouros\nID_LIKE=arch\n"),
+            "cachyos": ("arch", "ID=cachyos\nID_LIKE=arch\n"),
         }
-        for identifier, content in samples.items():
+        for identifier, (expected_family, content) in samples.items():
             with self.subTest(identifier=identifier), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "os-release"
                 path.write_text(content, encoding="utf-8")
                 distro = installer.detect_distro(path)
-                self.assertIn(distro.family, {"debian", "arch"})
+                self.assertEqual(distro.family, expected_family)
+
+                instance = object.__new__(installer.Installer)
+                instance.distro = distro
+                instance.args = SimpleNamespace(without_xrdp=False, with_wine=False)
+                packages = instance.package_names()
+                expected_package = "xrdp" if expected_family == "debian" else "xorg-server"
+                self.assertIn(expected_package, packages)
 
     def test_rejects_unknown_distribution(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -47,23 +100,18 @@ class InstallerHelpersTest(unittest.TestCase):
             with self.assertRaises(installer.InstallerError):
                 installer.detect_distro(path)
 
-    def test_selects_the_first_published_release(self):
-        releases = [
-            {"tag_name": "v0.4.0-Beta", "draft": False, "prerelease": True},
-            {"tag_name": "v0.3.2", "draft": False, "prerelease": False},
-        ]
-        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0-Beta")
+    def test_accepts_latest_stable_release(self):
+        release = {"tag_name": "v0.3.2", "draft": False, "prerelease": False}
+        self.assertEqual(installer.validate_stable_release(release)["tag_name"], "v0.3.2")
 
-    def test_skips_draft_releases_when_selecting_latest(self):
-        releases = [
-            {"tag_name": "v0.5.0", "draft": True},
-            {"tag_name": "v0.4.0", "draft": False},
-        ]
-        self.assertEqual(installer.latest_published_release(releases)["tag_name"], "v0.4.0")
-
-    def test_rejects_an_empty_release_list(self):
+    def test_rejects_prerelease_as_latest_stable(self):
+        release = {"tag_name": "v0.3.2-Beta", "draft": False, "prerelease": True}
         with self.assertRaises(installer.InstallerError):
-            installer.latest_published_release([])
+            installer.validate_stable_release(release)
+
+    def test_rejects_invalid_latest_release_response(self):
+        with self.assertRaises(installer.InstallerError):
+            installer.validate_stable_release([])
 
     def test_parses_sha256sum_formats(self):
         checksums = installer.parse_checksums(
@@ -71,6 +119,73 @@ class InstallerHelpersTest(unittest.TestCase):
         )
         self.assertEqual(checksums["installer.py"], "a" * 64)
         self.assertEqual(checksums["rdp-session-manager.deb"], "b" * 64)
+
+    def test_bundle_uses_resolved_release_and_validates_asset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_dir = Path(directory)
+            packages = {
+                installer.APP_DEB: b"deb package fixture",
+                installer.APP_ARCH: b"arch package fixture",
+            }
+            checksums = []
+            for name, content in packages.items():
+                package = bundle_dir / name
+                package.write_bytes(content)
+                checksums.append(f"{installer.sha256(package)} *{name}")
+            (bundle_dir / "SHA256SUMS").write_text(
+                "\n".join(checksums) + "\n",
+                encoding="utf-8",
+            )
+            args = installer.parser().parse_args(
+                [
+                    "--bundle-dir",
+                    directory,
+                    "--resolved-release",
+                    "v0.3.5",
+                    "--dry-run",
+                    "--yes",
+                    "--os-release",
+                    "/etc/os-release",
+                ]
+            )
+            instance = installer.Installer(args)
+            try:
+                self.assertEqual(instance.release_info()["tag_name"], "v0.3.5")
+                for name in packages:
+                    self.assertEqual(
+                        instance.bundled_asset(name),
+                        bundle_dir / name,
+                    )
+            finally:
+                instance.close()
+
+    def test_bundle_rejects_invalid_asset_checksum(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_dir = Path(directory)
+            package = bundle_dir / installer.APP_ARCH
+            package.write_bytes(b"arch package fixture")
+            (bundle_dir / "SHA256SUMS").write_text(
+                f"{'0' * 64} *{installer.APP_ARCH}\n",
+                encoding="utf-8",
+            )
+            args = installer.parser().parse_args(
+                [
+                    "--bundle-dir",
+                    directory,
+                    "--resolved-release",
+                    "v0.3.5",
+                    "--dry-run",
+                    "--yes",
+                    "--os-release",
+                    "/etc/os-release",
+                ]
+            )
+            instance = installer.Installer(args)
+            try:
+                with self.assertRaises(installer.InstallerError):
+                    instance.bundled_asset(installer.APP_ARCH)
+            finally:
+                instance.close()
 
     def test_parses_native_fraction_progress(self):
         self.assertEqual(
@@ -128,6 +243,39 @@ class InstallerHelpersTest(unittest.TestCase):
             finally:
                 log.close()
 
+    def test_terminal_auth_does_not_force_graphical_askpass(self):
+        instance = object.__new__(installer.Installer)
+        with (
+            patch.object(installer.sys.stdin, "isatty", return_value=True),
+            patch.dict("os.environ", {"DISPLAY": ":99"}, clear=True),
+            patch("shutil.which", return_value="/usr/bin/ssh-askpass"),
+        ):
+            self.assertIsNone(instance._configure_graphical_auth())
+
+    def test_authenticates_sudo_before_live_progress(self):
+        instance = object.__new__(installer.Installer)
+        instance.args = SimpleNamespace(dry_run=False)
+        instance.ui = Mock()
+        instance.askpass = None
+        with (
+            patch("os.geteuid", return_value=1000),
+            patch("subprocess.run", return_value=Mock(returncode=0)) as run,
+        ):
+            instance.authenticate_privileges()
+        run.assert_called_once_with(["sudo", "-v"], timeout=300, check=False)
+
+    def test_reports_failed_sudo_authentication(self):
+        instance = object.__new__(installer.Installer)
+        instance.args = SimpleNamespace(dry_run=False)
+        instance.ui = Mock()
+        instance.askpass = None
+        with (
+            patch("os.geteuid", return_value=1000),
+            patch("subprocess.run", return_value=Mock(returncode=1)),
+            self.assertRaisesRegex(installer.InstallerError, "authentication failed"),
+        ):
+            instance.authenticate_privileges()
+
     def test_dry_run_installer_does_not_query_network(self):
         args = installer.parser().parse_args(["--dry-run", "--yes", "--os-release", "/etc/os-release"])
         with patch("installer.core.http_json", side_effect=AssertionError("network access in dry-run")):
@@ -178,6 +326,39 @@ class InstallerHelpersTest(unittest.TestCase):
             self.assertIn("7zip", packages)
             self.assertIn("lib32-vulkan-icd-loader", packages)
             self.assertNotIn("p7zip", packages)
+        finally:
+            instance.close()
+
+    def test_debian_wine_enables_i386_before_apt_update(self):
+        args = installer.parser().parse_args(
+            ["--dry-run", "--yes", "--with-wine", "--os-release", "/etc/os-release"]
+        )
+        instance = installer.Installer(args)
+        instance.distro = installer.Distro(
+            family="debian",
+            identifier="ubuntu",
+            version="24.04",
+            name="Ubuntu 24.04",
+            id_like=("debian",),
+        )
+        instance.args.without_xrdp = True
+        app_path = Path("/tmp/rdp-session-manager.deb")
+        try:
+            with (
+                patch("platform.machine", return_value="x86_64"),
+                patch.object(instance.runner, "run") as run,
+            ):
+                run.side_effect = [
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
+                ]
+                instance.install_debian(app_path)
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(commands[0], ["dpkg", "--print-foreign-architectures"])
+            self.assertEqual(commands[1][-3:], ["dpkg", "--add-architecture", "i386"])
+            self.assertEqual(commands[2][-2:], ["apt-get", "update"])
         finally:
             instance.close()
 

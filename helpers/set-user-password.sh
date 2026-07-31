@@ -8,12 +8,12 @@ set -e
 read -r CREDENTIALS
 
 if [ -z "$CREDENTIALS" ]; then
-    echo "Erro: Credenciais não fornecidas via stdin"
+    echo "Error: Credentials were not provided through stdin"
     exit 1
 fi
 
 # Definir senha usando chpasswd
 echo "$CREDENTIALS" | /usr/sbin/chpasswd
 
-echo "OK Senha definida com sucesso!"
+echo "OK Password set successfully!"
 exit 0

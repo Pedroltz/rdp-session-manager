@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="libadwaita" version="1.0"/>
+  <template class="ConnectionSourcesDialog" parent="AdwDialog">
+    <property name="title" translatable="yes">User Connection Sources</property>
+    <property name="content-width">580</property>
+    <property name="content-height">500</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="AdwHeaderBar">
+            <child type="start">
+              <object class="GtkButton" id="close_button">
+                <property name="label" translatable="yes">Close</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton" id="add_profile_button">
+                <property name="label" translatable="yes">New Source</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesPage">
+            <child>
+              <object class="AdwPreferencesGroup" id="profiles_group">
+                <property name="title" translatable="yes">Configured Sources</property>
+                <property name="description" translatable="yes">Available connection sources for this RDP user</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

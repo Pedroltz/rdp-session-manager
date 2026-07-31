@@ -13,7 +13,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from .user_dialog import UserDialog
+from core.desktop_environments import get_startup_command
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class MainWindow(Adw.ApplicationWindow):
         all_sessions = self.session_monitor.get_active_sessions()
         enabled_users = [u.username for u in self.user_manager.list_users() if u.enabled]
         sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)
-        self.sessions_row.set_subtitle(f"{sessions_count} sessões ativas")
+        self.sessions_row.set_subtitle(f"{sessions_count} active sessions")
 
     def update_sessions_info(self):
         """Update sessions information periodically"""
@@ -92,7 +92,7 @@ class MainWindow(Adw.ApplicationWindow):
             # Filtrar sessões de usuários habilitados
             sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)
 
-            self.sessions_row.set_subtitle(f"{sessions_count} sessões ativas")
+            self.sessions_row.set_subtitle(f"{sessions_count} active sessions")
 
         except Exception as e:
             logger.error(f"Error updating sessions: {e}")
@@ -143,20 +143,20 @@ class MainWindow(Adw.ApplicationWindow):
         # Subtitle diferente para RemoteApp vs Desktop
         if hasattr(user, 'session_type') and user.session_type == 'remoteapp':
             app_name = user.app_command.split('/')[-1] if user.app_command else 'unknown'
-            row.set_subtitle(f"RemoteApp: {app_name} • Porta {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
+            row.set_subtitle(f"RemoteApp: {app_name} • Port {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
         else:
-            row.set_subtitle(f"{user.desktop_env.upper()} • Porta {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
+            row.set_subtitle(f"{user.desktop_env.upper()} • Port {user.rdp_port} • IP: {self.session_monitor.get_ip_address()}")
 
         # Status label and switch
         status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
         # Status label - prioridade: 1) Desabilitado, 2) Conectado, 3) Habilitado
         if not user.enabled:
-            status_text = 'Desabilitado'
+            status_text = 'Disabled'
         elif is_active:
-            status_text = 'Conectado'
+            status_text = 'Connected'
         else:
-            status_text = 'Habilitado'
+            status_text = 'Enabled'
 
         status_label = Gtk.Label(label=status_text)
         status_label.add_css_class('dim-label')
@@ -168,7 +168,7 @@ class MainWindow(Adw.ApplicationWindow):
         enable_switch = Gtk.Switch()
         enable_switch.set_active(user.enabled)
         enable_switch.set_valign(Gtk.Align.CENTER)
-        enable_switch.set_tooltip_text('Habilitar/Desabilitar usuário')
+        enable_switch.set_tooltip_text('Enable/disable user')
         enable_switch.connect('state-set', lambda s, state: self.on_user_toggle(user.username, state, s))
         status_box.append(enable_switch)
 
@@ -177,7 +177,7 @@ class MainWindow(Adw.ApplicationWindow):
         menu_button.set_icon_name('view-more-symbolic')
         menu_button.add_css_class('flat')
         menu_button.set_valign(Gtk.Align.CENTER)
-        menu_button.set_tooltip_text('Opções de gerenciamento')
+        menu_button.set_tooltip_text('Management options')
 
         # Create popover menu
         popover = Gtk.Popover()
@@ -194,20 +194,44 @@ class MainWindow(Adw.ApplicationWindow):
         sudo_row.set_margin_start(12)
         sudo_row.set_margin_end(12)
 
-        sudo_label = Gtk.Label(label="Superusuário")
+        sudo_label = Gtk.Label(label="Superuser")
         sudo_label.set_halign(Gtk.Align.START)
         sudo_label.set_hexpand(True)
 
         sudo_switch = Gtk.Switch()
         sudo_switch.set_active(user.is_superuser)
         sudo_switch.set_valign(Gtk.Align.CENTER)
-        sudo_switch.set_tooltip_text('Conceder/revogar privilégios sudo')
+        sudo_switch.set_tooltip_text('Grant/revoke sudo privileges')
         sudo_switch.connect('state-set', lambda s, state: self.on_sudo_toggle(user.username, state, s))
 
         sudo_row.append(sudo_label)
         sudo_row.append(sudo_switch)
 
         menu_box.append(sudo_row)
+
+        # Connection Sources row (Fontes de Conexão)
+        p_count = len(user.profiles) if hasattr(user, 'profiles') and user.profiles else 1
+        profiles_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        profiles_row.set_margin_top(6)
+        profiles_row.set_margin_bottom(6)
+        profiles_row.set_margin_start(12)
+        profiles_row.set_margin_end(12)
+
+        profiles_label = Gtk.Label(label=f"Connection Sources ({p_count})")
+        profiles_label.set_halign(Gtk.Align.START)
+        profiles_label.set_hexpand(True)
+
+        profiles_icon = Gtk.Image.new_from_icon_name("network-server-symbolic")
+
+        profiles_row.append(profiles_label)
+        profiles_row.append(profiles_icon)
+
+        profiles_gesture = Gtk.GestureClick.new()
+        profiles_gesture.connect("released", lambda g, n, x, y: self.on_manage_connection_sources(user, popover))
+        profiles_row.add_controller(profiles_gesture)
+        profiles_row.set_cursor_from_name("pointer")
+
+        menu_box.append(profiles_row)
 
         # Settings row (configurações de usuário)
         settings_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -216,7 +240,7 @@ class MainWindow(Adw.ApplicationWindow):
         settings_row.set_margin_start(12)
         settings_row.set_margin_end(12)
 
-        settings_label = Gtk.Label(label="Configurações de Usuário")
+        settings_label = Gtk.Label(label="User Settings")
         settings_label.set_halign(Gtk.Align.START)
         settings_label.set_hexpand(True)
 
@@ -248,7 +272,7 @@ class MainWindow(Adw.ApplicationWindow):
         copy_ip_row.set_margin_start(12)
         copy_ip_row.set_margin_end(12)
 
-        copy_ip_label = Gtk.Label(label="Copiar IP + Porta")
+        copy_ip_label = Gtk.Label(label="Copy IP + Port")
         copy_ip_label.set_halign(Gtk.Align.START)
         copy_ip_label.set_hexpand(True)
 
@@ -280,7 +304,7 @@ class MainWindow(Adw.ApplicationWindow):
         connect_btn = Gtk.Button(icon_name='network-wired-symbolic')
         connect_btn.add_css_class('flat')
         connect_btn.set_valign(Gtk.Align.CENTER)
-        connect_btn.set_tooltip_text('Conectar via RDP')
+        connect_btn.set_tooltip_text('Connect via RDP')
         connect_btn.connect('clicked', lambda b: self.on_connect_rdp(user))
 
         # Delete button
@@ -288,7 +312,7 @@ class MainWindow(Adw.ApplicationWindow):
         delete_btn.add_css_class('flat')
         delete_btn.add_css_class('destructive-action')
         delete_btn.set_valign(Gtk.Align.CENTER)
-        delete_btn.set_tooltip_text('Remover usuário')
+        delete_btn.set_tooltip_text('Remove user')
         delete_btn.connect('clicked', lambda b: self.on_delete_user(user.username))
 
         button_box.append(connect_btn)
@@ -299,23 +323,20 @@ class MainWindow(Adw.ApplicationWindow):
 
     def create_xrdp_warning_banner(self):
         """Create warning banner for missing xrdp"""
+        if not hasattr(Adw, "Banner"):
+            logger.info("The installed libadwaita does not provide Adw.Banner.")
+            return
+
         # Criar Banner
         self.xrdp_banner = Adw.Banner()
-        self.xrdp_banner.set_title("AVISO Servidor xrdp não está instalado - A aplicação não funcionará sem ele")
-        self.xrdp_banner.set_button_label("Instalar Agora")
+        self.xrdp_banner.set_title("WARNING xrdp server is not installed—the application will not work without it")
+        self.xrdp_banner.set_button_label("Install Now")
         self.xrdp_banner.connect('button-clicked', self.on_install_xrdp_clicked)
         self.xrdp_banner.set_revealed(False)
 
-        # Obter a ToolbarView
-        toolbar_view = self.toast_overlay.get_child()
-
-        if toolbar_view and isinstance(toolbar_view, Adw.ToolbarView):
-            # Obter o box principal (conteúdo da toolbar)
-            content = toolbar_view.get_content()
-
-            if content and isinstance(content, Gtk.Box):
-                # Inserir banner como primeiro filho do box
-                content.prepend(self.xrdp_banner)
+        content = self.toast_overlay.get_child()
+        if content and isinstance(content, Gtk.Box):
+            content.prepend(self.xrdp_banner)
 
     def update_xrdp_status(self):
         """Update xrdp status and show/hide banner"""
@@ -334,12 +355,12 @@ class MainWindow(Adw.ApplicationWindow):
 
         # Atualizar tooltip
         if not xrdp_ready:
-            tooltip = "Instale o xrdp primeiro para criar usuários RDP"
+            tooltip = "Install xrdp before creating RDP users"
             self.add_user_button.set_tooltip_text(tooltip)
             self.empty_add_user_button.set_tooltip_text(tooltip)
         else:
-            self.add_user_button.set_tooltip_text("Adicionar novo usuário RDP")
-            self.empty_add_user_button.set_tooltip_text("Adicionar novo usuário RDP")
+            self.add_user_button.set_tooltip_text("Add a new RDP user")
+            self.empty_add_user_button.set_tooltip_text("Add a new RDP user")
 
         return True  # Continue periodic check
 
@@ -357,15 +378,20 @@ class MainWindow(Adw.ApplicationWindow):
             # Mostrar dialog informando que precisa instalar xrdp
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading="xrdp não está instalado",
-                body="Você precisa instalar o servidor xrdp antes de criar usuários RDP.\n\nDeseja instalar agora?"
+                heading="xrdp Is Not Installed",
+                body="You must install the xrdp server before creating RDP users.\n\nWould you like to install it now?"
             )
-            dialog.add_response("cancel", "Cancelar")
-            dialog.add_response("install", "Instalar xrdp")
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("install", "Install xrdp")
             dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
             dialog.connect("response", self.on_add_user_xrdp_check_response)
             dialog.present()
             return
+
+        # Adw.Dialog and the corresponding template are available only in
+        # newer libadwaita versions. Loading this module on demand keeps the
+        # main application compatible with older supported distributions.
+        from .user_dialog import UserDialog
 
         dialog = UserDialog(
             parent=self,
@@ -396,28 +422,28 @@ class MainWindow(Adw.ApplicationWindow):
                     # Habilitar usuário
                     success = self.user_manager.unlock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK Usuário {username} habilitado")
+                        GLib.idle_add(self.show_toast, f"OK User {username} enabled")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Erro ao habilitar {username}")
+                        GLib.idle_add(self.show_toast, f"X Error enabling {username}")
                 else:
                     # Desabilitar usuário
                     success = self.user_manager.lock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK Usuário {username} desabilitado")
+                        GLib.idle_add(self.show_toast, f"OK User {username} disabled")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Erro ao desabilitar {username}")
+                        GLib.idle_add(self.show_toast, f"X Error disabling {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"X Erro ao alterar status de {username}")
+                GLib.idle_add(self.show_toast, f"X Error changing the status of {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -429,6 +455,13 @@ class MainWindow(Adw.ApplicationWindow):
         # (vamos controlar manualmente após sucesso da operação)
         return True
 
+    def on_manage_connection_sources(self, user, popover):
+        """Abre o diálogo de gerenciamento de fontes de conexão do usuário"""
+        popover.popdown()
+        from .connection_sources_dialog import ConnectionSourcesDialog
+        dialog = ConnectionSourcesDialog(self, self.user_manager, user)
+        dialog.present(self)
+
     def on_sudo_toggle(self, username, new_state, switch):
         """Handle sudo privilege toggle"""
         # Bloquear mudança automática do switch - vamos controlar manualmente
@@ -439,20 +472,20 @@ class MainWindow(Adw.ApplicationWindow):
 
         if is_connected or has_processes:
             # Mostrar aviso sobre reconexão necessária
-            action_text = "conceder" if new_state else "revogar"
+            action_text = "grant" if new_state else "revoke"
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"AVISO {username} está conectado",
-                body=f"""Para {action_text} privilégios sudo, a sessão do usuário será encerrada automaticamente.
+                heading=f"WARNING {username} is connected",
+                body=f"""To {action_text} sudo privileges, the user's session will be terminated automatically.
 
-AVISO IMPORTANTE: Mudanças de grupo só têm efeito após logout/login completo.
+IMPORTANT: Group changes only take effect after a complete logout and login.
 
-O usuário precisará reconectar via RDP para que os privilégios {"de superusuário sejam aplicados" if new_state else "sejam removidos"}.
+The user must reconnect via RDP for the privileges to be {"applied" if new_state else "removed"}.
 
-Deseja continuar?"""
+Would you like to continue?"""
             )
-            dialog.add_response("cancel", "Cancelar")
-            dialog.add_response("continue", "Continuar e Encerrar Sessão")
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("continue", "Continue and End Session")
             dialog.set_response_appearance("continue", Adw.ResponseAppearance.SUGGESTED)
             dialog.set_default_response("continue")
             dialog.set_close_response("cancel")
@@ -485,28 +518,28 @@ Deseja continuar?"""
                     # Conceder privilégios sudo
                     success = self.user_manager.grant_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK Privilégios sudo concedidos - Reconecte para aplicar")
+                        GLib.idle_add(self.show_toast, "OK Sudo privileges granted—reconnect to apply")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Erro ao conceder privilégios sudo para {username}")
+                        GLib.idle_add(self.show_toast, f"X Error granting sudo privileges to {username}")
                 else:
                     # Revogar privilégios sudo
                     success = self.user_manager.revoke_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK Privilégios sudo revogados - Reconecte para aplicar")
+                        GLib.idle_add(self.show_toast, "OK Sudo privileges revoked—reconnect to apply")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Erro ao revogar privilégios sudo de {username}")
+                        GLib.idle_add(self.show_toast, f"X Error revoking sudo privileges from {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling sudo for user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"X Erro ao alterar privilégios sudo de {username}")
+                GLib.idle_add(self.show_toast, f"X Error changing sudo privileges for {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -522,16 +555,16 @@ Deseja continuar?"""
         if active_pids:
             # Usuário tem sessão ativa - mostrar aviso
             is_connected = self.session_monitor.is_user_connected(username)
-            session_info = " está conectado via RDP" if is_connected else f" tem {len(active_pids)} processos ativos"
+            session_info = " is connected through RDP" if is_connected else f" has {len(active_pids)} active processes"
 
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"AVISO {username} está ativo",
-                body=f"O usuário {username}{session_info}.\n\nPara remover o usuário, suas sessões serão encerradas automaticamente.\n\nDeseja continuar?"
+                heading=f"WARNING {username} is active",
+                body=f"User {username}{session_info}.\n\nThe user's sessions will be terminated automatically before removal.\n\nWould you like to continue?"
             )
 
-            dialog.add_response("cancel", "Cancelar")
-            dialog.add_response("delete", "Encerrar e Remover")
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("delete", "End Sessions and Remove")
             dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
             dialog.set_default_response("cancel")
             dialog.set_close_response("cancel")
@@ -542,12 +575,12 @@ Deseja continuar?"""
             # Usuário não tem processos ativos - confirmação normal
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"Remover {username}?",
-                body="Esta ação não pode ser desfeita. Todos os dados do usuário serão removidos:\n\n• Conta de usuário\n• Diretório home (/opt/rdp-users/...)\n• Configurações RDP\n• Arquivos pessoais"
+                heading=f"Remove {username}?",
+                body="This action cannot be undone. All user data will be removed:\n\n• User account\n• Home directory (/opt/rdp-users/...)\n• RDP settings\n• Personal files"
             )
 
-            dialog.add_response("cancel", "Cancelar")
-            dialog.add_response("delete", "Remover")
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("delete", "Remove")
             dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
             dialog.set_default_response("cancel")
             dialog.set_close_response("cancel")
@@ -563,25 +596,25 @@ Deseja continuar?"""
                 active_pids = self.user_manager.get_user_processes(username)
 
                 if active_pids:
-                    self.show_toast(f"Encerrando sessões de {username}...")
+                    self.show_toast(f"Ending sessions for {username}...")
                     logger.info(f"User {username} has {len(active_pids)} active processes, will be killed")
                 else:
-                    self.show_toast(f"Removendo usuário {username}...")
+                    self.show_toast(f"Removing user {username}...")
 
                 # Deletar usuário (vai matar processos automaticamente)
                 success = self.user_manager.delete_user(username, remove_home=True, kill_processes=True)
 
                 if success:
                     self.load_users()
-                    self.show_toast(f"OK Usuário {username} removido com sucesso")
+                    self.show_toast(f"OK User {username} removed successfully")
                     logger.info(f"User {username} deleted successfully")
                 else:
-                    self.show_toast(f"X Erro ao remover {username}")
+                    self.show_toast(f"X Error removing {username}")
                     # Show error dialog
                     error_dialog = Adw.MessageDialog(
                         transient_for=self,
-                        heading="Erro ao remover usuário",
-                        body=f"Não foi possível remover o usuário {username}. Verifique se você tem permissões de administrador."
+                        heading="Error Removing User",
+                        body=f"User {username} could not be removed. Check that you have administrator permissions."
                     )
                     error_dialog.add_response("ok", "OK")
                     error_dialog.present()
@@ -590,8 +623,8 @@ Deseja continuar?"""
                 # Mostrar erro detalhado
                 error_dialog = Adw.MessageDialog(
                     transient_for=self,
-                    heading="Erro ao remover usuário",
-                    body=f"Não foi possível remover o usuário {username}.\n\nErro: {str(e)}"
+                    heading="Error Removing User",
+                    body=f"User {username} could not be removed.\n\nError: {str(e)}"
                 )
                 error_dialog.add_response("ok", "OK")
                 error_dialog.present()
@@ -603,11 +636,11 @@ Deseja continuar?"""
             # Mostrar dialog para instalar FreeRDP
             install_dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading="FreeRDP não está instalado",
-                body="O cliente FreeRDP é necessário para conectar a sessões RDP.\n\nDeseja instalar agora?"
+                heading="FreeRDP Is Not Installed",
+                body="The FreeRDP client is required to connect to RDP sessions.\n\nWould you like to install it now?"
             )
-            install_dialog.add_response("cancel", "Cancelar")
-            install_dialog.add_response("install", "Instalar FreeRDP")
+            install_dialog.add_response("cancel", "Cancel")
+            install_dialog.add_response("install", "Install FreeRDP")
             install_dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
             install_dialog.connect("response", lambda d, r: self.on_freerdp_install_response(r, user))
             install_dialog.present()
@@ -631,7 +664,7 @@ Deseja continuar?"""
 
         # Criar dialog de configurações usando Adw.Dialog (não MessageDialog) para ter controle total do tamanho
         dialog = Adw.Dialog()
-        dialog.set_title(f"Editar Usuário RDP")
+        dialog.set_title("Edit RDP User")
         dialog.set_content_width(500)
         dialog.set_content_height(680)
         dialog.set_can_close(True)
@@ -643,12 +676,12 @@ Deseja continuar?"""
         header_bar = Adw.HeaderBar()
 
         # Botão Cancelar
-        cancel_button = Gtk.Button(label="Cancelar")
+        cancel_button = Gtk.Button(label="Cancel")
         cancel_button.connect('clicked', lambda b: dialog.close())
         header_bar.pack_start(cancel_button)
 
         # Botão Salvar
-        save_button = Gtk.Button(label="Salvar Alterações")
+        save_button = Gtk.Button(label="Save Changes")
         save_button.add_css_class("suggested-action")
         header_bar.pack_end(save_button)
 
@@ -670,23 +703,23 @@ Deseja continuar?"""
 
         # === Banner de Status no Topo ===
         status_banner = Adw.PreferencesGroup()
-        status_banner.set_title("Informações do Usuário")
+        status_banner.set_title("User Information")
 
         # UID Row
         uid_row = Adw.ActionRow()
-        uid_row.set_title("UID do Sistema")
+        uid_row.set_title("System UID")
         uid_row.set_subtitle(f"{user.uid}")
         status_banner.add(uid_row)
 
         # Porta RDP Row
         port_row = Adw.ActionRow()
-        port_row.set_title("Porta RDP")
+        port_row.set_title("RDP Port")
         port_row.set_subtitle(f"{user.rdp_port}")
         status_banner.add(port_row)
 
         # Diretório Home Row
         home_row = Adw.ActionRow()
-        home_row.set_title("Diretório Home")
+        home_row.set_title("Home Directory")
         home_row.set_subtitle(f"{user.home_dir}")
         status_banner.add(home_row)
 
@@ -694,12 +727,12 @@ Deseja continuar?"""
 
         # === Grupo: Informações Básicas ===
         basic_info_group = Adw.PreferencesGroup()
-        basic_info_group.set_title("Informações Básicas")
-        basic_info_group.set_description("Identidade e nome de exibição do usuário")
+        basic_info_group.set_title("Basic Information")
+        basic_info_group.set_description("User identity and display name")
 
         # Campo: Nome de usuário
         username_entry = Adw.EntryRow()
-        username_entry.set_title("Nome de Usuário")
+        username_entry.set_title("Username")
         username_entry.set_text(user.username)
         username_entry.set_show_apply_button(False)
         basic_info_group.add(username_entry)
@@ -714,7 +747,7 @@ Deseja continuar?"""
             current_fullname = ""
 
         fullname_entry = Adw.EntryRow()
-        fullname_entry.set_title("Nome Completo")
+        fullname_entry.set_title("Full Name")
         fullname_entry.set_text(current_fullname)
         fullname_entry.set_show_apply_button(False)
         basic_info_group.add(fullname_entry)
@@ -723,17 +756,17 @@ Deseja continuar?"""
 
         # === Grupo: Tipo de Sessão ===
         session_group = Adw.PreferencesGroup()
-        session_group.set_title("Tipo de Sessão")
-        session_group.set_description("Escolha entre desktop completo ou aplicativo único")
+        session_group.set_title("Session Type")
+        session_group.set_description("Choose between a full desktop or a single application")
 
         # Campo: Tipo de Sessão usando AdwComboRow
         session_type_combo = Adw.ComboRow()
-        session_type_combo.set_title("Modo de Conexão")
+        session_type_combo.set_title("Connection Mode")
         # Create string list for session types
         session_string_list = Gtk.StringList()
-        session_string_list.append("Desktop Completo")
-        session_string_list.append("RemoteApp (Aplicativo Linux)")
-        session_string_list.append("WineGE RemoteApp (Aplicativo Windows)")
+        session_string_list.append("Full Desktop")
+        session_string_list.append("RemoteApp (Linux Application)")
+        session_string_list.append("WineGE RemoteApp (Windows Application)")
 
         session_type_combo.set_model(session_string_list)
 
@@ -748,11 +781,11 @@ Deseja continuar?"""
         # === Grupo: RemoteApp (Linux) ===
         remoteapp_group = Adw.PreferencesGroup()
         remoteapp_group.set_title("RemoteApp Linux")
-        remoteapp_group.set_description("Configure o aplicativo Linux a ser executado")
+        remoteapp_group.set_description("Configure the Linux application to run")
 
         # Campo de entrada para comando personalizado
         custom_app_entry = Adw.EntryRow()
-        custom_app_entry.set_title("Comando do Aplicativo")
+        custom_app_entry.set_title("Application Command")
         custom_app_entry.set_show_apply_button(False)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_command'):
             custom_app_entry.set_text(user.app_command)
@@ -760,7 +793,7 @@ Deseja continuar?"""
 
         # Campo: Argumentos (Linux RemoteApp)
         app_args_entry = Adw.EntryRow()
-        app_args_entry.set_title("Argumentos (opcional)")
+        app_args_entry.set_title("Arguments (optional)")
         app_args_entry.set_show_apply_button(False)
         if current_session_type == 'remoteapp' and hasattr(user, 'app_args'):
             app_args_entry.set_text(user.app_args)
@@ -770,25 +803,25 @@ Deseja continuar?"""
 
         # === Grupo: WineGE RemoteApp ===
         winege_group = Adw.PreferencesGroup()
-        winege_group.set_title("Aplicativo Windows (WineGE)")
-        winege_group.set_description("Configure o executável Windows a ser executado via Wine-GE")
+        winege_group.set_title("Windows Application (WineGE)")
+        winege_group.set_description("Configure the Windows executable to run through Wine-GE")
 
         # Row com botões de seleção
         winege_buttons_row = Adw.ActionRow()
-        winege_buttons_row.set_title("Selecionar Arquivo")
-        winege_buttons_row.set_subtitle("Escolha o executável .exe do seu computador")
+        winege_buttons_row.set_title("Select File")
+        winege_buttons_row.set_subtitle("Choose the .exe file from your computer")
         # Box horizontal para botões
         winege_buttons_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         winege_buttons_box.set_valign(Gtk.Align.CENTER)
 
         # Botão para selecionar .exe
         winege_select_button = Gtk.Button()
-        winege_select_button.set_label("Selecionar")
+        winege_select_button.set_label("Select")
         winege_select_button.add_css_class("suggested-action")
 
         def on_select_winege_exe(btn):
             """File picker for .exe - hide dialog temporarily to allow GTK4 file picker"""
-            logger.info("=== WineGE 'Selecionar' button clicked ===")
+            logger.info("=== WineGE 'Select' button clicked ===")
             from gi.repository import Gio
 
             # Esconder o dialog de configurações temporariamente
@@ -796,7 +829,7 @@ Deseja continuar?"""
 
             # Criar file dialog GTK4
             file_dialog = Gtk.FileDialog.new()
-            file_dialog.set_title("Selecionar Executável Windows")
+            file_dialog.set_title("Select Windows Executable")
 
             # Definir diretório inicial
             user_home = f"/opt/rdp-users/{user.username}"
@@ -810,7 +843,7 @@ Deseja continuar?"""
 
             # Filters
             filter_exe = Gtk.FileFilter()
-            filter_exe.set_name("Executáveis Windows (*.exe)")
+            filter_exe.set_name("Windows Executables (*.exe)")
             filter_exe.add_pattern("*.exe")
             filter_exe.add_pattern("*.EXE")
 
@@ -862,7 +895,7 @@ Deseja continuar?"""
 
         # Botão para listar executáveis disponíveis
         winege_list_button = Gtk.Button()
-        winege_list_button.set_label("Listar Disponíveis")
+        winege_list_button.set_label("List Available")
 
         def on_list_winege_exes(btn):
             """Show list of available executables for the user"""
@@ -872,14 +905,14 @@ Deseja continuar?"""
             executables = self.user_manager.list_user_executables(user.username)
 
             if not executables:
-                self.show_toast("X Nenhum executável encontrado")
+                self.show_toast("X No executables found")
                 return
 
             # Criar dialog de seleção
             list_dialog = Adw.MessageDialog(
                 transient_for=dialog,
-                heading="Executáveis Disponíveis",
-                body=f"Selecione o executável para {user.username}:"
+                heading="Available Executables",
+                body=f"Select the executable for {user.username}:"
             )
 
             # Criar listbox com executáveis
@@ -925,8 +958,8 @@ Deseja continuar?"""
             scrolled.set_child(listbox)
             list_dialog.set_extra_child(scrolled)
 
-            list_dialog.add_response("cancel", "Cancelar")
-            list_dialog.add_response("select", "Selecionar")
+            list_dialog.add_response("cancel", "Cancel")
+            list_dialog.add_response("select", "Select")
             list_dialog.set_response_appearance("select", Adw.ResponseAppearance.SUGGESTED)
 
             def on_list_dialog_response(dlg, response):
@@ -935,7 +968,7 @@ Deseja continuar?"""
                     if selected_row and hasattr(selected_row, 'exe_path'):
                         logger.info(f"Selected executable: {selected_row.exe_path}")
                         winege_exe_entry.set_text(selected_row.exe_path)
-                        self.show_toast("OK Executável selecionado")
+                        self.show_toast("OK Executable selected")
 
             list_dialog.connect('response', on_list_dialog_response)
             list_dialog.present()
@@ -949,7 +982,7 @@ Deseja continuar?"""
 
         # Campo de entrada para caminho do .exe
         winege_exe_entry = Adw.EntryRow()
-        winege_exe_entry.set_title("Caminho do Executável")
+        winege_exe_entry.set_title("Executable Path")
         winege_exe_entry.set_show_apply_button(False)
         if current_session_type == 'winege-remoteapp' and hasattr(user, 'app_command'):
             winege_exe_entry.set_text(user.app_command)
@@ -1005,16 +1038,16 @@ Deseja continuar?"""
 
         # === Grupo: Segurança (Senha) ===
         security_group = Adw.PreferencesGroup()
-        security_group.set_title("Segurança")
-        security_group.set_description("Alterar senha de acesso RDP (deixe vazio para manter a atual)")
+        security_group.set_title("Security")
+        security_group.set_description("Change the RDP password (leave blank to keep the current password)")
 
         password_entry = Adw.PasswordEntryRow()
-        password_entry.set_title("Nova Senha")
+        password_entry.set_title("New Password")
         security_group.add(password_entry)
 
         # Confirmação de senha
         confirm_entry = Adw.PasswordEntryRow()
-        confirm_entry.set_title("Confirmar Senha")
+        confirm_entry.set_title("Confirm Password")
         security_group.add(confirm_entry)
 
         settings_box.append(security_group)
@@ -1051,7 +1084,7 @@ Deseja continuar?"""
 
                 # Validar que app command não está vazio
                 if not new_app_command:
-                    self.show_toast("X Comando do aplicativo não pode estar vazio para RemoteApp")
+                    self.show_toast("X Application command cannot be empty for RemoteApp")
                     return
 
             elif new_session_type == 'winege-remoteapp':
@@ -1061,26 +1094,26 @@ Deseja continuar?"""
 
                 # Validar que .exe não está vazio e existe
                 if not new_app_command:
-                    self.show_toast("X Caminho do executável não pode estar vazio para WineGE RemoteApp")
+                    self.show_toast("X Executable path cannot be empty for WineGE RemoteApp")
                     return
 
                 from pathlib import Path
                 if not Path(new_app_command).exists():
-                    self.show_toast(f"X Arquivo não encontrado: {new_app_command}")
+                    self.show_toast(f"X File not found: {new_app_command}")
                     return
 
             # Validar dados
             if not new_username:
-                self.show_toast("X Nome de usuário não pode estar vazio")
+                self.show_toast("X Username cannot be empty")
                 return
 
             # Validar senha se fornecida
             if new_password or confirm_password:
                 if new_password != confirm_password:
-                    self.show_toast("X As senhas não coincidem")
+                    self.show_toast("X Passwords do not match")
                     return
                 if len(new_password) < 6:
-                    self.show_toast("X Senha deve ter pelo menos 6 caracteres")
+                    self.show_toast("X Password must be at least 6 characters long")
                     return
 
             # Call the existing save handler
@@ -1114,18 +1147,18 @@ Deseja continuar?"""
                 if new_fullname and new_fullname != original_fullname:
                     success = self.user_manager.change_user_fullname(original_username, new_fullname)
                     if success:
-                        changes_made.append("nome completo")
+                        changes_made.append("full name")
                     else:
-                        GLib.idle_add(self.show_toast, "X Erro ao alterar nome completo")
+                        GLib.idle_add(self.show_toast, "X Error changing full name")
                         return
 
                 # 2. Alterar senha (se fornecida)
                 if new_password:
                     success = self.user_manager.change_password(original_username, new_password)
                     if success:
-                        changes_made.append("senha")
+                        changes_made.append("password")
                     else:
-                        GLib.idle_add(self.show_toast, "X Erro ao alterar senha")
+                        GLib.idle_add(self.show_toast, "X Error changing password")
                         return
 
                 # 3. Alterar tipo de sessão (se mudou)
@@ -1138,17 +1171,13 @@ Deseja continuar?"""
                         # Para desktop, usar o DE atual do usuário
                         user_obj = self.user_manager.get_user(original_username)
                         if user_obj and user_obj.desktop_env != 'remoteapp':
-                            # Mapear DE para comando
-                            de_commands = {
-                                'xfce': 'startxfce4',
-                                'gnome': 'gnome-session',
-                                'kde': 'startplasma-x11',
-                                'mate': 'mate-session',
-                                'cinnamon': 'cinnamon-session',
-                                'lxde': 'startlxde',
-                                'lxqt': 'startlxqt'
-                            }
-                            session_command = de_commands.get(user_obj.desktop_env, 'startxfce4')
+                            session_command = get_startup_command(user_obj.desktop_env)
+                            if session_command is None:
+                                GLib.idle_add(
+                                    self.show_toast,
+                                    f"Unsupported desktop environment: {user_obj.desktop_env}"
+                                )
+                                return
                         else:
                             session_command = 'startxfce4'  # Default
                         session_args = ''
@@ -1157,9 +1186,9 @@ Deseja continuar?"""
                         original_username, new_session_type, session_command, session_args
                     )
                     if success:
-                        changes_made.append("tipo de sessão")
+                        changes_made.append("session type")
                     else:
-                        GLib.idle_add(self.show_toast, "X Erro ao alterar tipo de sessão")
+                        GLib.idle_add(self.show_toast, "X Error changing session type")
                         return
                 elif new_session_type == 'remoteapp':
                     # Mesmo tipo, mas pode ter mudado app/args
@@ -1171,9 +1200,9 @@ Deseja continuar?"""
                             original_username, 'remoteapp', new_app_command, new_app_args
                         )
                         if success:
-                            changes_made.append("aplicativo RemoteApp")
+                            changes_made.append("RemoteApp application")
                         else:
-                            GLib.idle_add(self.show_toast, "X Erro ao alterar aplicativo")
+                            GLib.idle_add(self.show_toast, "X Error changing application")
                             return
 
                 elif new_session_type == 'winege-remoteapp':
@@ -1188,9 +1217,9 @@ Deseja continuar?"""
                                 original_username, new_app_command
                             )
                             if not success:
-                                GLib.idle_add(self.show_toast, "X Erro ao atualizar executável WineGE")
+                                GLib.idle_add(self.show_toast, "X Error updating WineGE executable")
                                 return
-                            changes_made.append("executável WineGE")
+                            changes_made.append("WineGE executable")
 
                         # Atualizar argumentos se mudou
                         if new_app_args != original_args:
@@ -1198,31 +1227,31 @@ Deseja continuar?"""
                                 original_username, 'winege-remoteapp', new_app_command, new_app_args
                             )
                             if success:
-                                changes_made.append("argumentos WineGE")
+                                changes_made.append("WineGE arguments")
                             else:
-                                GLib.idle_add(self.show_toast, "X Erro ao alterar argumentos")
+                                GLib.idle_add(self.show_toast, "X Error changing arguments")
                                 return
 
                 # 4. Renomear usuário (último, pois muda o username)
                 if new_username != original_username:
                     success = self.user_manager.rename_user(original_username, new_username)
                     if success:
-                        changes_made.append("nome de usuário")
+                        changes_made.append("username")
                     else:
-                        GLib.idle_add(self.show_toast, f"X Erro ao renomear usuário")
+                        GLib.idle_add(self.show_toast, "X Error renaming user")
                         return
 
                 # Mostrar sucesso
                 if changes_made:
                     changes_text = ", ".join(changes_made)
-                    GLib.idle_add(self.show_toast, f"OK Alterado: {changes_text}")
+                    GLib.idle_add(self.show_toast, f"OK Changed: {changes_text}")
                     GLib.timeout_add(300, self.load_users)
                 else:
-                    GLib.idle_add(self.show_toast, "ℹ Nenhuma alteração foi feita")
+                    GLib.idle_add(self.show_toast, "ℹ No changes were made")
 
             except Exception as e:
                 logger.error(f"Error updating user settings: {e}")
-                GLib.idle_add(self.show_toast, f"X Erro ao atualizar configurações")
+                GLib.idle_add(self.show_toast, "X Error updating settings")
 
         # Executar em thread
         import threading
@@ -1238,7 +1267,7 @@ Deseja continuar?"""
         clipboard = self.get_clipboard()
         clipboard.set(connection_string)
 
-        self.show_toast(f"OK {connection_string} copiado!")
+        self.show_toast(f"OK {connection_string} copied!")
 
         # Fechar o popover
         popover.popdown()
@@ -1248,8 +1277,8 @@ Deseja continuar?"""
         # Create dialog
         dialog = Adw.MessageDialog(
             transient_for=self,
-            heading=f"Conectar a {user.username}",
-            body=f"Digite as credenciais para conectar via RDP."
+            heading=f"Connect to {user.username}",
+            body="Enter the credentials to connect through RDP."
         )
 
         # Create credentials entry container
@@ -1260,7 +1289,7 @@ Deseja continuar?"""
         creds_box.set_margin_end(12)
 
         # Domain field (opcional)
-        domain_label = Gtk.Label(label="Domínio (opcional):")
+        domain_label = Gtk.Label(label="Domain (optional):")
         domain_label.set_halign(Gtk.Align.START)
         creds_box.append(domain_label)
 
@@ -1270,7 +1299,7 @@ Deseja continuar?"""
         creds_box.append(domain_entry)
 
         # Password field
-        password_label = Gtk.Label(label="Senha:")
+        password_label = Gtk.Label(label="Password:")
         password_label.set_halign(Gtk.Align.START)
         password_label.set_margin_top(8)
         creds_box.append(password_label)
@@ -1289,8 +1318,8 @@ Deseja continuar?"""
         creds_box.append(password_entry)
 
         dialog.set_extra_child(creds_box)
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("connect", "Conectar")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("connect", "Connect")
         dialog.set_response_appearance("connect", Adw.ResponseAppearance.SUGGESTED)
         dialog.set_default_response("connect")
         dialog.set_close_response("cancel")
@@ -1309,7 +1338,7 @@ Deseja continuar?"""
             domain = dialog._domain_entry.get_text().strip()
 
             if not password:
-                self.show_toast("X Senha não pode estar vazia")
+                self.show_toast("X Password cannot be empty")
                 return
 
             # Fechar diálogo antes de abrir FreeRDP
@@ -1324,7 +1353,7 @@ Deseja continuar?"""
             # Obter o comando FreeRDP correto
             freerdp_cmd = self.system_deps.get_freerdp_command()
             if not freerdp_cmd:
-                self.show_toast("X FreeRDP não encontrado")
+                self.show_toast("X FreeRDP not found")
                 logger.error("FreeRDP command not found")
                 return
 
@@ -1372,24 +1401,24 @@ Deseja continuar?"""
                 _, stderr = process.communicate()
                 error_msg = stderr.decode('utf-8', errors='ignore') if stderr else ''
                 logger.error(f"FreeRDP failed. Exit code: {process.returncode}, Error: {error_msg}")
-                raise Exception(f"FreeRDP terminou com código {process.returncode}: {error_msg[:200]}")
+                raise Exception(f"FreeRDP exited with code {process.returncode}: {error_msg[:200]}")
 
             # Mostrar mensagem de sucesso
             is_remoteapp = hasattr(user, 'session_type') and user.session_type == 'remoteapp'
             if is_remoteapp:
                 app_name = user.app_command.split('/')[-1]
-                self.show_toast(f"Abrindo RemoteApp: {app_name}...")
+                self.show_toast(f"Opening RemoteApp: {app_name}...")
                 logger.info(f"Launched RemoteApp {app_name} for user {user.username}")
             else:
-                domain_suffix = f" (domínio: {domain})" if domain else ""
-                self.show_toast(f"Abrindo {freerdp_cmd}{domain_suffix}...")
+                domain_suffix = f" (domain: {domain})" if domain else ""
+                self.show_toast(f"Opening {freerdp_cmd}{domain_suffix}...")
                 logger.info(f"Launched {freerdp_cmd} for user {user.username}{domain_suffix}")
         except FileNotFoundError:
-            self.show_toast("X FreeRDP não encontrado")
+            self.show_toast("X FreeRDP not found")
             logger.error("FreeRDP command not found")
         except Exception as e:
             logger.error(f"Error launching FreeRDP: {e}")
-            self.show_toast(f"X Erro ao abrir FreeRDP: {e}")
+            self.show_toast(f"X Error opening FreeRDP: {e}")
 
     def on_copy_ip(self, button):
         """Copy IP to clipboard"""
@@ -1398,7 +1427,7 @@ Deseja continuar?"""
         clipboard = self.get_clipboard()
         clipboard.set(ip)
 
-        self.show_toast(f"OK IP {ip} copiado!")
+        self.show_toast(f"OK IP {ip} copied!")
         logger.info(f"IP {ip} copied to clipboard")
 
     def show_toast(self, message):

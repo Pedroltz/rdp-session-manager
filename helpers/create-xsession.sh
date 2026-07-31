@@ -10,14 +10,14 @@ DE_COMMAND="$3"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$HOME_DIR" ] || [ -z "$DE_COMMAND" ]; then
-    echo "Erro: Parâmetros insuficientes"
-    echo "Uso: $0 USERNAME HOME_DIR DE_COMMAND"
+    echo "Error: Not enough arguments"
+    echo "Usage: $0 USERNAME HOME_DIR DE_COMMAND"
     exit 1
 fi
 
 XSESSION_FILE="$HOME_DIR/.xsession"
 
-echo "Criando arquivo .xsession para $USERNAME..."
+echo "Creating .xsession file for $USERNAME..."
 
 # Detectar layout de teclado do sistema
 XKBLAYOUT="us"
@@ -26,7 +26,7 @@ XKBMODEL="pc105"
 
 if [ -f /etc/default/keyboard ]; then
     source /etc/default/keyboard
-    echo "Layout de teclado detectado: $XKBLAYOUT (variante: $XKBVARIANT, modelo: $XKBMODEL)"
+echo "Keyboard layout detected: $XKBLAYOUT (variant: $XKBVARIANT, model: $XKBMODEL)"
 fi
 
 # Construir comando setxkbmap
@@ -48,6 +48,31 @@ export HOME=$HOME_DIR
 export USER=$USERNAME
 export LOGNAME=$USERNAME
 
+# Configure desktop environment variables
+case "$DE_COMMAND" in
+    *gnome*)
+        export XDG_CURRENT_DESKTOP=GNOME-Flashback:GNOME
+        export XDG_SESSION_DESKTOP=gnome-flashback-metacity
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=gnome-flashback-metacity
+        ;;
+    *plasma*|*kde*)
+        export XDG_CURRENT_DESKTOP=KDE
+        export XDG_SESSION_DESKTOP=KDE
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=plasma
+        ;;
+    *xfce*)
+        export XDG_CURRENT_DESKTOP=XFCE
+        export XDG_SESSION_DESKTOP=xfce
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=xfce
+        ;;
+    *)
+        export XDG_SESSION_TYPE=x11
+        ;;
+esac
+
 # Configure D-Bus
 if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval \$(dbus-launch --sh-syntax --exit-with-session)
@@ -64,6 +89,6 @@ EOF
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "OK Arquivo .xsession criado com sucesso!"
-echo "  - Layout de teclado: $XKBLAYOUT"
+echo "OK .xsession file created successfully!"
+echo "  - Keyboard layout: $XKBLAYOUT"
 exit 0

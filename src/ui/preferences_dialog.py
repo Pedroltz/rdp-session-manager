@@ -26,18 +26,18 @@ class PreferencesDialog(Adw.PreferencesWindow):
 
         # Criar página de configurações
         page = Adw.PreferencesPage()
-        page.set_title("Configurações")
+        page.set_title("Preferences")
         page.set_icon_name("preferences-system-symbolic")
 
         # Grupo de configurações RDP
         rdp_group = Adw.PreferencesGroup()
-        rdp_group.set_title("Servidor RDP")
-        rdp_group.set_description("Configurações do servidor xrdp")
+        rdp_group.set_title("RDP Server")
+        rdp_group.set_description("xrdp server settings")
 
         # Campo de porta padrão
         self.port_row = Adw.SpinRow()
-        self.port_row.set_title("Porta Padrão")
-        self.port_row.set_subtitle("Porta usada por todos os usuários RDP")
+        self.port_row.set_title("Default Port")
+        self.port_row.set_subtitle("Port used by all RDP users")
 
         # Configurar adjustment (min, max, step)
         adjustment = Gtk.Adjustment()
@@ -69,6 +69,6 @@ class PreferencesDialog(Adw.PreferencesWindow):
         success = self.app_config.set_default_rdp_port(new_port)
 
         if success:
-            logger.info(f"Porta padrão alterada para: {new_port}")
+            logger.info(f"Default port changed to: {new_port}")
         else:
-            logger.error(f"Erro ao alterar porta para: {new_port}")
+            logger.error(f"Error changing port to: {new_port}")

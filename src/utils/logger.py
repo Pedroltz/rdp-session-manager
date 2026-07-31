@@ -72,7 +72,7 @@ class AuditLogger:
                 f.write(log_line)
 
         except Exception as e:
-            logging.error(f"Erro ao escrever log de auditoria: {e}")
+            logging.error(f"Error writing audit log: {e}")
 
     def get_recent_events(self, limit: int = 100) -> list:
         """Retorna eventos recentes de auditoria"""
@@ -93,7 +93,7 @@ class AuditLogger:
         except FileNotFoundError:
             return []
         except Exception as e:
-            logging.error(f"Erro ao ler eventos de auditoria: {e}")
+            logging.error(f"Error reading audit events: {e}")
             return []
 
     def get_user_events(self, username: str, limit: int = 50) -> list:
@@ -163,7 +163,7 @@ def setup_logger(name: str = 'rdp-session-manager',
         root_logger.addHandler(file_handler)
 
     except Exception as e:
-        root_logger.warning(f"Não foi possível criar arquivo de log: {e}")
+        root_logger.warning(f"Could not create log file: {e}")
 
     # Retornar o logger específico deste módulo
     return logging.getLogger(name)

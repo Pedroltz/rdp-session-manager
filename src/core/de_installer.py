@@ -1,438 +1,211 @@
 #!/usr/bin/env python3
-"""
-Módulo de instalação de ambientes desktop
-"""
+"""Desktop-environment installation for Debian and Arch families."""
 
-import subprocess
 import logging
+import shutil
+import subprocess
 from typing import Dict, List, Optional, Tuple
 
-from utils.polkit import get_privilege_command, has_display
+from core.desktop_environments import (
+    DESKTOPS,
+    SUPPORTED_DESKTOPS,
+    detect_distro,
+    get_desktop_info,
+    normalize_desktop_id,
+)
+from utils.polkit import get_privilege_command
 
 logger = logging.getLogger(__name__)
 
 
 class DEInstaller:
-    """Instalador de ambientes desktop"""
+    """Install and inspect the desktop environments supported by RDPSM."""
 
-    # Pacotes necessários para cada DE (Debian/Ubuntu)
-    DE_PACKAGES = {
-        'gnome': {
-            'name': 'GNOME',
-            'packages': [
-                'gnome-session',
-                'gnome-shell',
-                'gnome-terminal',
-                'nautilus',
-                'gnome-control-center',
-                'gnome-tweaks',
-                'mutter',              # Window manager
-                'gnome-settings-daemon',
-                'dbus-x11'
-            ],
-            'size_mb': 1400,
-            'startup_cmd': 'gnome-session'
-        },
-        'xfce': {
-            'name': 'XFCE',
-            'packages': [
-                'xfce4',
-                'xfce4-goodies',
-                'xfce4-terminal',
-                'thunar',
-                'xfwm4',               # Window manager
-                'xfce4-settings',
-                'dbus-x11'
-            ],
-            'size_mb': 450,
-            'startup_cmd': 'startxfce4'
-        },
-        'xfce4': {  # Alias para xfce
-            'name': 'XFCE',
-            'packages': [
-                'xfce4',
-                'xfce4-goodies',
-                'xfce4-terminal',
-                'thunar',
-                'xfwm4',
-                'xfce4-settings',
-                'dbus-x11'
-            ],
-            'size_mb': 450,
-            'startup_cmd': 'startxfce4'
-        },
-        'kde': {
-            'name': 'KDE Plasma',
-            'packages': [
-                'kde-plasma-desktop',
-                'plasma-workspace',
-                'kwin-x11',            # Window manager (essential!)
-                'konsole',
-                'dolphin',
-                'systemsettings',
-                'plasma-desktop',
-                'dbus-x11'
-            ],
-            'size_mb': 1800,
-            'startup_cmd': 'startplasma-x11'
-        },
-        'plasma': {  # Alias para kde
-            'name': 'KDE Plasma',
-            'packages': [
-                'kde-plasma-desktop',
-                'plasma-workspace',
-                'kwin-x11',
-                'konsole',
-                'dolphin',
-                'systemsettings',
-                'plasma-desktop',
-                'dbus-x11'
-            ],
-            'size_mb': 1800,
-            'startup_cmd': 'startplasma-x11'
-        },
-        'mate': {
-            'name': 'MATE',
-            'packages': [
-                'mate-desktop-environment',
-                'mate-terminal',
-                'caja',
-                'marco',               # Window manager
-                'mate-settings-daemon',
-                'mate-panel',
-                'dbus-x11'
-            ],
-            'size_mb': 700,
-            'startup_cmd': 'mate-session'
-        },
-        'cinnamon': {
-            'name': 'Cinnamon',
-            'packages': [
-                'cinnamon-desktop-environment',
-                'cinnamon',
-                'nemo',
-                'muffin',              # Window manager
-                'cinnamon-settings-daemon',
-                'dbus-x11'
-            ],
-            'size_mb': 900,
-            'startup_cmd': 'cinnamon-session'
-        },
-        'lxde': {
-            'name': 'LXDE',
-            'packages': [
-                'lxde',
-                'lxterminal',
-                'pcmanfm',
-                'openbox',             # Window manager
-                'lxpanel',
-                'dbus-x11'
-            ],
-            'size_mb': 300,
-            'startup_cmd': 'startlxde'
-        },
-        'lxqt': {
-            'name': 'LXQt',
-            'packages': [
-                'lxqt',
-                'qterminal',
-                'pcmanfm-qt',
-                'openbox',             # Window manager
-                'lxqt-panel',
-                'dbus-x11'
-            ],
-            'size_mb': 400,
-            'startup_cmd': 'startlxqt'
-        }
-    }
+    # Kept as a public compatibility attribute, now containing canonical IDs only.
+    DE_PACKAGES = DESKTOPS
 
     def __init__(self):
         self.distro_info = self._detect_distro()
 
     def _detect_distro(self) -> Dict:
-        """Detecta a distribuição Linux"""
-        try:
-            with open('/etc/os-release', 'r') as f:
-                lines = f.readlines()
+        return detect_distro()
 
-            info = {}
-            for line in lines:
-                if '=' in line:
-                    key, value = line.strip().split('=', 1)
-                    info[key] = value.strip('"')
+    @property
+    def family(self) -> str:
+        return str(self.distro_info.get("family", "unknown"))
 
-            return {
-                'id': info.get('ID', 'unknown'),
-                'version': info.get('VERSION_ID', 'unknown'),
-                'name': info.get('NAME', 'Unknown')
-            }
-
-        except Exception as e:
-            logger.error(f"Erro ao detectar distribuição: {e}")
-            return {'id': 'unknown', 'version': 'unknown', 'name': 'Unknown'}
+    def _info(self, de_id: str) -> Optional[Dict]:
+        return get_desktop_info(normalize_desktop_id(de_id), self.family)
 
     def get_available_des(self) -> List[Dict]:
-        """Retorna lista de DEs disponíveis para instalação"""
-        des = []
-
-        for de_id, de_info in self.DE_PACKAGES.items():
-            # Evitar aliases duplicados
-            if de_id in ['xfce4', 'plasma']:
-                continue
-
-            des.append({
-                'id': de_id,
-                'name': de_info['name'],
-                'size_mb': de_info['size_mb'],
-                'installed': self.is_de_installed(de_id)
-            })
-
-        return sorted(des, key=lambda x: x['size_mb'])
+        desktops = []
+        for de_id in SUPPORTED_DESKTOPS:
+            info = self._info(de_id)
+            if info is None:
+                definition = DESKTOPS[de_id]
+                info = {
+                    "id": de_id,
+                    "name": definition["name"],
+                    "size_mb": max(definition["size_mb"].values()),
+                }
+            desktops.append(
+                {
+                    "id": de_id,
+                    "name": info["name"],
+                    "size_mb": info["size_mb"],
+                    "installed": self.is_de_installed(de_id),
+                }
+            )
+        return sorted(desktops, key=lambda item: item["size_mb"])
 
     def is_de_installed(self, de_id: str) -> bool:
-        """Verifica se um DE está instalado"""
-        if de_id not in self.DE_PACKAGES:
+        info = self._info(de_id)
+        if info is None:
             return False
-
-        de_info = self.DE_PACKAGES[de_id]
-        packages = de_info['packages']
-        if not packages:
-            return False
-
-        main_package = packages[0]
 
         try:
-            result = subprocess.run(
-                ['dpkg', '-l', main_package],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            return result.returncode == 0 and 'ii' in result.stdout
+            if self.family == "arch":
+                command = ["/usr/bin/pacman", "-Q", info["check_package"]]
+                result = subprocess.run(
+                    command, capture_output=True, text=True, timeout=10
+                )
+                return result.returncode == 0
 
-        except Exception as e:
-            logger.error(f"Erro ao verificar instalação de {de_id}: {e}")
+            command = [
+                "/usr/bin/dpkg-query",
+                "-W",
+                "-f=${db:Status-Abbrev}",
+                info["check_package"],
+            ]
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=10
+            )
+            return result.returncode == 0 and result.stdout.startswith("ii")
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.error("Error checking installation of %s: %s", de_id, exc)
             return False
 
+    def _run_command(self, command: List[str], timeout: int = 1800):
+        return subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
     def install_de(self, de_id: str, progress_callback=None) -> Tuple[bool, str]:
-        """
-        Instala um ambiente desktop
-
-        Args:
-            de_id: ID do desktop environment
-            progress_callback: Função de callback para progresso (progress, message)
-
-        Returns:
-            Tuple (sucesso, mensagem)
-        """
         def log(progress, message):
             if progress_callback:
                 progress_callback(progress, message)
             logger.info(message)
 
-        if de_id not in self.DE_PACKAGES:
-            return False, f"Desktop environment '{de_id}' não suportado"
+        normalized = normalize_desktop_id(de_id)
+        info = self._info(normalized)
+        if normalized not in SUPPORTED_DESKTOPS:
+            return False, (
+                f"Desktop environment '{de_id}' is not supported. "
+                f"Options: {', '.join(SUPPORTED_DESKTOPS)}"
+            )
+        if info is None:
+            return False, (
+                f"Desktop installation is not supported on "
+                f"{self.distro_info.get('name', 'this distribution')}"
+            )
+        if self.is_de_installed(normalized):
+            message = f"{info['name']} is already installed"
+            log(100, f"OK {message}")
+            return True, message
 
-        if self.is_de_installed(de_id):
-            msg = f"{self.DE_PACKAGES[de_id]['name']} já está instalado"
-            logger.info(msg)
-            log(100, f"OK {msg}")
-            return True, msg
-
-        de_info = self.DE_PACKAGES[de_id]
-        packages = de_info['packages']
-
-        if not packages:
-            return False, f"Nenhum pacote definido para {de_id}"
+        has_space, required, available = self.check_disk_space(normalized)
+        if not has_space:
+            message = (
+                f"Not enough disk space. Required: {required} MB, "
+                f"available: {available} MB"
+            )
+            log(0, f"X {message}")
+            return False, message
 
         try:
-            log(5, f"→ Verificando espaço em disco...")
+            privilege_method, privilege_command = get_privilege_command()
+            auth_name = "pkexec" if privilege_method == "pkexec" else "sudo"
+            packages = list(info["packages"])
 
-            # Verificar espaço em disco
-            has_space, required, available = self.check_disk_space(de_id)
-            if not has_space:
-                error_msg = f"Espaço insuficiente. Necessário: {required}MB, Disponível: {available}MB"
-                log(0, f"X {error_msg}")
-                return False, error_msg
+            log(5, f"OK Available disk space: {available} MB")
+            log(10, f"WARNING You may be asked to authenticate ({auth_name})")
 
-            log(5, f"  OK Espaço disponível: {available}MB (necessário: {required}MB)")
-            log(5, "")
-
-            # Atualizar cache do gerenciador de pacotes
-            log(10, "→ Atualizando cache de pacotes...")
-
-            # Obter comando de elevação apropriado (pkexec ou sudo)
-            priv_method, priv_cmd = get_privilege_command()
-            auth_msg = "pkexec" if priv_method == "pkexec" else "sudo"
-            log(10, f"  AVISO Você será solicitado a autenticar ({auth_msg})")
-
-            log(10, f"  $ {auth_msg} apt-get update")
-            update_result = subprocess.run(
-                priv_cmd + ['/usr/bin/apt-get', 'update'],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-
-            if update_result.returncode != 0:
-                logger.warning(f"Update retornou código {update_result.returncode}")
-                log(10, f"  AVISO Aviso: Update retornou código {update_result.returncode}")
+            if self.family == "arch":
+                install_command = privilege_command + [
+                    "/usr/bin/pacman",
+                    "-Syu",
+                    "--needed",
+                    "--noconfirm",
+                    *packages,
+                ]
+                log(20, f"$ {auth_name} pacman -Syu --needed --noconfirm {' '.join(packages)}")
             else:
-                log(15, "  OK Cache atualizado com sucesso")
+                update_command = privilege_command + ["/usr/bin/apt-get", "update"]
+                log(10, f"$ {auth_name} apt-get update")
+                update = self._run_command(update_command, timeout=300)
+                if update.returncode != 0:
+                    detail = (update.stderr or update.stdout).strip()
+                    message = f"Package cache update failed: {detail or update.returncode}"
+                    log(0, f"X {message}")
+                    return False, message
 
-            log(15, "")
+                install_command = privilege_command + [
+                    "/usr/bin/apt-get",
+                    "install",
+                    "-y",
+                    "--no-install-recommends",
+                    *packages,
+                ]
+                log(20, f"$ {auth_name} apt-get install -y --no-install-recommends {' '.join(packages)}")
 
-            # Instalar pacotes
-            log(20, f"→ Instalando {de_info['name']}...")
-            log(20, f"  Pacotes: {', '.join(packages)}")
-            log(20, "")
+            log(30, f"Installing {info['name']}...")
+            result = self._run_command(install_command)
+            if result.returncode != 0:
+                detail = (result.stderr or result.stdout).strip()
+                message = f"Installation failed: {detail or result.returncode}"
+                log(0, f"X {message}")
+                return False, message
 
-            # Se estamos usando sudo e já autenticamos, não precisa autenticar novamente
-            if priv_method == "pkexec":
-                log(20, "  AVISO Você será solicitado a autenticar novamente")
+            if not self.is_de_installed(normalized):
+                message = "Package manager completed, but the desktop was not detected"
+                log(0, f"X {message}")
+                return False, message
 
-            log(20, f"  $ {auth_msg} apt-get install -y {' '.join(packages)}")
-            log(20, "")
-            log(30, "→ Baixando e instalando pacotes...")
-            if priv_method == "pkexec":
-                log(30, "  (pkexec bloqueia saída - monitorando /var/log/apt/term.log)")
-            log(30, "")
-
-            # Monitorar arquivos de log em tempo real
-            import time
-            import os
-
-            log_file = '/var/log/apt/term.log'
-            cmd = priv_cmd + ['/usr/bin/apt-get', 'install', '-y', '--no-install-recommends'] + packages
-
-            try:
-                initial_size = os.path.getsize(log_file)
-            except:
-                initial_size = 0
-
-            # Executar em background (stdout vai para /dev/null pois pkexec bloqueia)
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-
-            # Monitorar arquivo de log em tempo real
-            progress = 30
-            last_position = initial_size
-            last_log_time = time.time()
-
-            try:
-                while process.poll() is None:  # Enquanto processo está rodando
-                    time.sleep(1)  # Check a cada 1 segundo
-
-                    # A cada 5 segundos, mostrar que está vivo
-                    if time.time() - last_log_time > 5:
-                        log(progress, "  ... instalando (processo rodando)...")
-                        last_log_time = time.time()
-
-                    try:
-                        with open(log_file, 'r') as f:
-                            f.seek(last_position)
-                            new_lines = f.readlines()
-                            last_position = f.tell()
-
-                            for line in new_lines:
-                                line = line.rstrip()
-                                if line and progress < 90:
-                                    # Filtrar linhas relevantes do apt
-                                    if any(kw in line for kw in ['Desempacotando', 'Unpacking', 'Preparando', 'Preparing', 'Configurando', 'Setting up']):
-                                        log(progress, f"  {line[:100]}")
-                                        progress = min(progress + 2, 90)
-                                        last_log_time = time.time()
-                                    elif any(kw in line for kw in ['Get:', 'Obter:', 'Fetched', 'Baixados']):
-                                        if 'Get:' in line or 'Obter:' in line:
-                                            log(progress, f"  {line[:100]}")
-                                        progress = min(progress + 1, 90)
-                                        last_log_time = time.time()
-                                    elif any(kw in line for kw in ['erro', 'error', 'E:', 'Err:']):
-                                        log(progress, f"  X {line[:150]}")
-                                        last_log_time = time.time()
-                    except Exception as e:
-                        logger.debug(f"Erro lendo log: {e}")
-
-                # Processo terminou, pegar código de retorno
-                returncode = process.wait()
-
-                if returncode != 0:
-                    error_msg = f"Falha na instalação (código: {returncode})"
-                    logger.error(error_msg)
-                    log(progress, f"X {error_msg}")
-                    return False, error_msg
-
-            except Exception as e:
-                logger.error(f"Erro durante instalação: {e}")
-                try:
-                    process.kill()
-                except:
-                    pass
-                raise
-
-            log(90, "")
-            log(90, "  OK Pacotes instalados com sucesso")
-            log(95, f"  OK {de_info['name']} configurado")
-            log(100, "")
-            log(100, f"OK {de_info['name']} instalado com sucesso!")
-
-            logger.info(f"{de_info['name']} instalado com sucesso")
-            return True, f"{de_info['name']} instalado com sucesso"
-
+            message = f"{info['name']} installed successfully"
+            log(100, f"OK {message}")
+            return True, message
         except subprocess.TimeoutExpired:
-            error_msg = f"Timeout na instalação de {de_info['name']} (30 minutos)"
-            logger.error(error_msg)
-            log(0, f"X {error_msg}")
-            return False, error_msg
-        except Exception as e:
-            error_msg = f"Erro ao instalar {de_info['name']}: {e}"
-            logger.error(error_msg)
-            log(0, f"X {error_msg}")
-            return False, error_msg
+            message = f"Installation of {info['name']} timed out (30 minutes)"
+            log(0, f"X {message}")
+            return False, message
+        except (OSError, subprocess.SubprocessError) as exc:
+            message = f"Error installing {info['name']}: {exc}"
+            log(0, f"X {message}")
+            return False, message
 
     def get_de_info(self, de_id: str) -> Optional[Dict]:
-        """Retorna informações sobre um DE específico"""
-        if de_id in self.DE_PACKAGES:
-            info = self.DE_PACKAGES[de_id].copy()
-            info['id'] = de_id
-            info['installed'] = self.is_de_installed(de_id)
-            return info
-
-        return None
+        info = self._info(de_id)
+        if info is None:
+            return None
+        info["installed"] = self.is_de_installed(de_id)
+        return info
 
     def get_de_startup_command(self, de_id: str) -> Optional[str]:
-        """Retorna o comando de inicialização de um DE"""
-        if de_id in self.DE_PACKAGES:
-            return self.DE_PACKAGES[de_id]['startup_cmd']
-
-        return None
+        info = self._info(de_id)
+        return str(info["startup_cmd"]) if info else None
 
     def check_disk_space(self, de_id: str) -> Tuple[bool, int, int]:
-        """
-        Verifica se há espaço em disco suficiente
-
-        Returns:
-            Tuple (suficiente, necessário_mb, disponível_mb)
-        """
-        import shutil
-
-        if de_id not in self.DE_PACKAGES:
+        info = self._info(de_id)
+        if info is None:
             return False, 0, 0
-
-        required_mb = self.DE_PACKAGES[de_id]['size_mb']
-
+        required_mb = int(info["size_mb"])
         try:
-            stat = shutil.disk_usage('/')
-            available_mb = stat.free // (1024 * 1024)
-
-            # Adicionar 20% de margem de segurança
+            available_mb = shutil.disk_usage("/").free // (1024 * 1024)
             required_with_margin = int(required_mb * 1.2)
-
             return available_mb >= required_with_margin, required_with_margin, available_mb
-
-        except Exception as e:
-            logger.error(f"Erro ao verificar espaço em disco: {e}")
+        except OSError as exc:
+            logger.error("Error checking disk space: %s", exc)
             return False, required_mb, 0

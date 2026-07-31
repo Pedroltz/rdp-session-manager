@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 RDP Session Manager - Setup Script
-Gerenciador de sessões RDP com interface GTK4 para GNOME
+RDP session manager with a GTK4 interface for GNOME
 """
 
 from setuptools import setup, find_packages
@@ -17,7 +17,7 @@ helper_scripts = glob.glob('helpers/*.sh')
 setup(
     name='rdp-session-manager',
     version=VERSION,
-    description='Gerenciador de sessões RDP com interface GTK4',
+    description='RDP session manager with a GTK4 interface',
     author='Pedroltz',
     author_email='your.email@example.com',
     url='https://github.com/Pedroltz/rdp-session-manager',

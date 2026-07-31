@@ -1,5 +1,101 @@
 # Changelog - RDP Session Manager
 
+## [0.4.7] - 2026-07-31
+
+### Added
+- RemoteApp support for Snap and Flatpak applications alongside APT packages
+- Automated RemoteApp E2E test battery `tests/e2e/test_remoteapps.sh` for APT, Snap, and Flatpak apps
+- Automatic `/snap/bin` and `/var/lib/flatpak/exports/bin` environment injection in `.xsession` scripts
+
+## [0.4.6] - 2026-07-31
+
+### Added
+- Multi-desktop end-to-end test script `tests/e2e/test_all_desktops.sh` for XFCE, GNOME, and KDE Plasma
+
+### Fixed
+- Fixed GNOME session startup on RDP by utilizing `gnome-session-flashback` under X11
+- Fixed KDE Plasma session startup on Debian/Ubuntu by adding `plasma-session-x11` package requirement
+- Injected XDG environment variables (`XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE=x11`, `DESKTOP_SESSION`) into `.xsession` generation scripts for all desktop environments
+
+## [0.4.5] - 2026-07-30
+
+### Fixed
+- The release installer now authenticates with `sudo` before starting live progress, keeping password prompts visible in headless terminals
+- Interactive terminals take precedence over graphical askpass even when stale or forwarded display variables are present
+
+## [0.4.4] - 2026-07-30
+
+### Changed
+- Headless and CLI sessions now request administrative passwords through interactive terminal `sudo`
+- Graphical PolicyKit authentication now requires both a display and a desktop D-Bus session
+- The release installer uses graphical askpass only inside a real desktop D-Bus session
+
+### Fixed
+- Forwarded or stale `DISPLAY` values no longer cause `pkexec` authentication attempts on CLI-only servers
+- User creation reports the privilege method that is actually being used
+
+## [0.4.3] - 2026-07-30
+
+### Changed
+- Limited new desktop sessions and installation to KDE Plasma, GNOME, and XFCE
+- Added distribution-specific desktop package installation for Ubuntu, Debian, Arch, and supported derivatives
+- Added the Plasma X11 session and GNOME Flashback requirements used by xorgxrdp on current Arch Linux
+
+### Fixed
+- Desktop installation now uses `pacman -Syu --needed` on Arch instead of Debian-only APT and DPKG commands
+- Unsupported desktop IDs are rejected instead of silently creating an XFCE session
+
+## [0.4.2] - 2026-07-29
+
+### Added
+- Real end-to-end RDP test that creates an XFCE user through `rdpsm` and authenticates with FreeRDP
+- Independent checks for the desktop process, an in-session autostart marker, and rendered screenshot content
+- Automatic FreeRDP, xrdp, xrdp-sesman, and Xorg diagnostics for failed desktop sessions
+
+### Changed
+- Ubuntu 24.04 quality and pre-publish installation jobs now require a successful rendered RDP desktop
+- RDP test artifacts are retained for inspection and the temporary account is always removed
+
+## [0.4.1] - 2026-07-29
+
+### Changed
+- Renamed the continuous integration workflows to `Quality Checks` and `Publish Release`
+- Replaced installer smoke tests with real package installations across Ubuntu, Debian, and Arch Linux
+- Added prerelease validation through the public GitHub installer before stable release promotion
+
+### Fixed
+- Enabled the i386 architecture before installing Wine dependencies on Debian-based x86_64 systems
+
+## [0.4.0] - 2026-07-29
+
+### Changed
+- Standardized the installer, application interface, command-line output, and package metadata in English
+- Kept the verified release bundle and interactive terminal behavior introduced in the 0.3.x series
+
+## [0.3.5] - 2026-07-28
+
+### Changed
+- Releases agora publicam somente `install.sh` e um bundle ZIP verificado com o instalador e os pacotes Debian/Arch
+- O bootstrap valida o digest SHA-256 fornecido pelo GitHub e remove os arquivos temporários ao finalizar
+
+### Fixed
+- `--release` mantém compatibilidade com releases antigas que ainda usam assets separados
+
+## [0.3.4] - 2026-07-28
+
+### Fixed
+- O comando `curl | bash` agora lê confirmações interativas pelo terminal em vez do pipe já consumido
+- Execuções sem terminal recebem uma mensagem clara e ainda podem usar `--yes` para o modo não interativo
+
+## [0.3.3] - 2026-07-28
+
+### Changed
+- O link público do instalador acompanha automaticamente a release estável mais recente
+- O workflow de release valida todos os artefatos e executa os testes do bootstrap antes da publicação
+
+### Fixed
+- O bootstrap agora aceita entradas `SHA256SUMS` nos formatos texto (`installer.pyz`) e binário (`*installer.pyz`)
+
 ## [0.3.2] - 2026-07-28
 
 ### Added
@@ -59,4 +155,3 @@
 - Wine stack overflow errors (ulimit + registry configuration)
 - Wine DISPLAY configuration for xrdp sessions
 - Application file path issues with symlink and file copying
-

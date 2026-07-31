@@ -8,6 +8,26 @@ This document provides solutions to known issues and anticipates potential futur
 
 ## Critical Issues
 
+### Authentication on Headless Servers
+
+When no graphical user session is available, administrative operations use
+plain `sudo` instead of `pkexec`. The password prompt is shown directly in the
+controlling terminal.
+
+A forwarded or stale `DISPLAY` value is not treated as a graphical desktop
+unless a desktop D-Bus session is also available. CLI commands always use the
+terminal `sudo` path.
+
+If authentication cannot start, confirm that the command has an interactive
+terminal and that `sudo` is installed:
+
+```bash
+sudo -v
+rdpsm de install xfce
+```
+
+---
+
 ### RDP Port Conflicts
 
 **Symptom**: Multiple users attempting to use the same RDP port
@@ -110,10 +130,12 @@ sudo chown root:rdp-users /opt/rdp-users
 
 **Impact**: Medium - Poor user experience
 
-**Problematic DEs**:
-- **GNOME**: Wayland does not work via RDP (requires X11)
-- **KDE Plasma**: May have performance issues
-- **Cinnamon**: Visual effects cause lag
+**Considerations**:
+- **GNOME**: Wayland does not work with xorgxrdp. Arch uses the supported
+  GNOME Flashback X11 session automatically.
+- **KDE Plasma**: May have performance issues; Arch also requires the separate
+  `plasma-x11-session` package, installed automatically.
+- **XFCE**: Recommended for the most predictable RDP experience.
 
 **Solutions**:
 
@@ -129,7 +151,7 @@ echo "export GDM_BACKEND=x11" >> /opt/rdp-users/user/.xsessionrc
 echo "export KWIN_COMPOSE=N" >> ~/.config/startupconfig
 ```
 
-**Recommendation**: Use XFCE or MATE for best RDP experience.
+**Recommendation**: Use XFCE for the best RDP experience.
 
 ---
 
