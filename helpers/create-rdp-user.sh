@@ -186,6 +186,31 @@ export HOME=$HOME_DIR
 export USER=$USERNAME
 export LOGNAME=$USERNAME
 
+# Configure desktop environment variables
+case "$SESSION_COMMAND" in
+    *gnome*)
+        export XDG_CURRENT_DESKTOP=GNOME-Flashback:GNOME
+        export XDG_SESSION_DESKTOP=gnome-flashback-metacity
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=gnome-flashback-metacity
+        ;;
+    *plasma*|*kde*)
+        export XDG_CURRENT_DESKTOP=KDE
+        export XDG_SESSION_DESKTOP=KDE
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=plasma
+        ;;
+    *xfce*)
+        export XDG_CURRENT_DESKTOP=XFCE
+        export XDG_SESSION_DESKTOP=xfce
+        export XDG_SESSION_TYPE=x11
+        export DESKTOP_SESSION=xfce
+        ;;
+    *)
+        export XDG_SESSION_TYPE=x11
+        ;;
+esac
+
 # Configure D-Bus
 if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval \$(dbus-launch --sh-syntax --exit-with-session)

@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.4.6" date="2026-07-31">
+      <description>
+        <p>Fixes installation, environment variables, and graphical desktop execution for XFCE, GNOME, and KDE Plasma over RDP.</p>
+      </description>
+    </release>
     <release version="0.4.5" date="2026-07-30">
       <description>
         <p>Keeps sudo authentication visible and reliable when installing from headless terminals.</p>
