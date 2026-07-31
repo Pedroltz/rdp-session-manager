@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="imgs/rdp-session-manager-header.png" alt="RDP Session Manager" width="100%">
-  <br>
   <h1>RDP Session Manager</h1>
   <p><strong>Manage RDP sessions, users, remote apps and servers on Linux.</strong></p>
   <p>Simple, modern and powerful administration through GTK 4 and libadwaita.</p>
   <br>
+  <img src="imgs/rdp-session-manager-header.png" alt="RDP Session Manager" width="100%">
+  <br><br>
   <a href="https://github.com/Pedroltz/rdp-session-manager/stargazers"><img src="https://img.shields.io/github/stars/Pedroltz/rdp-session-manager?style=for-the-badge&logo=github&color=f5c451" alt="GitHub stars"></a>
   <a href="https://github.com/Pedroltz/rdp-session-manager/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-ea4aaa?style=for-the-badge" alt="GPL-3.0 license"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9 or later"></a>
