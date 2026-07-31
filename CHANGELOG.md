@@ -1,5 +1,15 @@
 # Changelog - RDP Session Manager
 
+## [0.4.6] - 2026-07-31
+
+### Added
+- Multi-desktop end-to-end test script `tests/e2e/test_all_desktops.sh` for XFCE, GNOME, and KDE Plasma
+
+### Fixed
+- Fixed GNOME session startup on RDP by utilizing `gnome-session-flashback` under X11
+- Fixed KDE Plasma session startup on Debian/Ubuntu by adding `plasma-session-x11` package requirement
+- Injected XDG environment variables (`XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE=x11`, `DESKTOP_SESSION`) into `.xsession` generation scripts for all desktop environments
+
 ## [0.4.4] - 2026-07-30
 
 ### Changed
