@@ -1115,6 +1115,68 @@ class CLI:
             self.print_error(f"Error adding profile: {e}")
             return 1
 
+    def profile_remove(self, args):
+        """Remove a connection profile for a user"""
+        try:
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                self.print_error(f"User '{args.username}' not found")
+                return 1
+
+            if len(user.profiles) <= 1:
+                self.print_error("Cannot remove the last connection profile of a user")
+                return 1
+
+            initial_count = len(user.profiles)
+            user.profiles = [p for p in user.profiles if p.profile_id != args.profile_id]
+
+            if len(user.profiles) == initial_count:
+                self.print_error(f"Profile ID '{args.profile_id}' not found for user {args.username}")
+                return 1
+
+            if not any(p.is_default for p in user.profiles):
+                user.profiles[0].is_default = True
+
+            if self.user_manager.save_profiles_for_user(args.username, user.profiles):
+                self.print_success(f"Removed connection profile '{args.profile_id}' for {args.username}")
+                return 0
+            else:
+                self.print_error("Failed to save profiles")
+                return 1
+        except Exception as e:
+            self.print_error(f"Error removing profile: {e}")
+            return 1
+
+    def profile_set_default(self, args):
+        """Set default connection profile for a user"""
+        try:
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                self.print_error(f"User '{args.username}' not found")
+                return 1
+
+            found = False
+            for p in user.profiles:
+                if p.profile_id == args.profile_id:
+                    p.is_default = True
+                    found = True
+                else:
+                    p.is_default = False
+
+            if not found:
+                self.print_error(f"Profile ID '{args.profile_id}' not found for user {args.username}")
+                return 1
+
+            if self.user_manager.save_profiles_for_user(args.username, user.profiles):
+                self.print_success(f"Profile '{args.profile_id}' set as default for {args.username}")
+                return 0
+            else:
+                self.print_error("Failed to save profiles")
+                return 1
+        except Exception as e:
+            self.print_error(f"Error setting default profile: {e}")
+            return 1
+
     def profile_export(self, args):
         """Export .rdp file for a connection profile"""
         try:
@@ -1402,6 +1464,18 @@ class CLI:
         p_exp.add_argument('profile_id', help='Profile ID')
         p_exp.add_argument('-o', '--out', help='Output .rdp file path')
         p_exp.set_defaults(func=self.profile_export)
+
+        # profile remove
+        p_rem = profile_subparsers.add_parser('remove', help='Remove a connection profile')
+        p_rem.add_argument('username', help='Username')
+        p_rem.add_argument('profile_id', help='Profile ID')
+        p_rem.set_defaults(func=self.profile_remove)
+
+        # profile set-default
+        p_def = profile_subparsers.add_parser('set-default', help='Set default connection profile')
+        p_def.add_argument('username', help='Username')
+        p_def.add_argument('profile_id', help='Profile ID')
+        p_def.set_defaults(func=self.profile_set_default)
 
         # Parse arguments
         args = parser.parse_args(argv)

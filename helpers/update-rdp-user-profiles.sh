@@ -1,88 +1,31 @@
 #!/bin/bash
-# Helper script para criar usuário RDP com pkexec
-# Uso: pkexec helpers/create-rdp-user.sh USERNAME USER_UID HOME_DIR FULLNAME SESSION_TYPE SESSION_COMMAND [APP_ARGS]
+# Helper script to update RDP user profiles and .xsession dispatcher with pkexec/sudo
+# Usage: pkexec helpers/update-rdp-user-profiles.sh USERNAME PROFILES_JSON_FILE
 
 set -e
 
-step() {
-    printf '[%(%Y-%m-%dT%H:%M:%S%z)T] %s\n' -1 "$*"
-}
-
 USERNAME="$1"
-USER_UID="$2"
-HOME_DIR="$3"
-FULLNAME="$4"
-SESSION_TYPE="$5"        # 'desktop', 'remoteapp', ou 'winege-remoteapp'
-SESSION_COMMAND="$6"     # DE command (ex: startxfce4), app command (ex: firefox), ou .exe path para WineGE
-APP_ARGS="$7"            # Argumentos do app (apenas para remoteapp)
+PROFILES_JSON_SRC="$2"
 
-# Validar parâmetros
-if [ -z "$USERNAME" ] || [ -z "$USER_UID" ] || [ -z "$HOME_DIR" ]; then
-    echo "Error: Not enough arguments"
-    echo "Usage: $0 USERNAME USER_UID HOME_DIR [FULLNAME] [SESSION_TYPE] [SESSION_COMMAND] [APP_ARGS]"
+if [ -z "$USERNAME" ] || [ -z "$PROFILES_JSON_SRC" ] || [ ! -f "$PROFILES_JSON_SRC" ]; then
+    echo "Error: Invalid arguments"
+    echo "Usage: $0 USERNAME PROFILES_JSON_FILE"
     exit 1
 fi
 
-# Defaults
-SESSION_TYPE="${SESSION_TYPE:-desktop}"
-SESSION_COMMAND="${SESSION_COMMAND:-startxfce4}"
-
-echo "Creating RDP user: $USERNAME"
-
-# Detectar layout de teclado do sistema
-XKBLAYOUT="us"
-XKBVARIANT=""
-XKBMODEL="pc105"
-
-if [ -f /etc/default/keyboard ]; then
-    source /etc/default/keyboard
-    echo "→ Keyboard layout detected: $XKBLAYOUT"
+HOME_DIR=$(getent passwd "$USERNAME" | cut -d: -f6)
+if [ -z "$HOME_DIR" ] || [ ! -d "$HOME_DIR" ]; then
+    echo "Error: Home directory for $USERNAME not found"
+    exit 1
 fi
 
-# Construir comando setxkbmap
-SETXKBMAP_CMD="setxkbmap -layout $XKBLAYOUT"
-if [ -n "$XKBVARIANT" ]; then
-    SETXKBMAP_CMD="$SETXKBMAP_CMD -variant $XKBVARIANT"
-fi
-if [ -n "$XKBMODEL" ]; then
-    SETXKBMAP_CMD="$SETXKBMAP_CMD -model $XKBMODEL"
-fi
+# 1. Copy profiles JSON file
+PROFILES_DEST="$HOME_DIR/.rdp_profiles.json"
+/usr/bin/cp "$PROFILES_JSON_SRC" "$PROFILES_DEST"
+/usr/bin/chown "$USERNAME:rdp-users" "$PROFILES_DEST"
+/usr/bin/chmod 644 "$PROFILES_DEST"
 
-# 1. Criar grupo rdp-users se não existir
-if ! getent group rdp-users > /dev/null 2>&1; then
-    echo "→ Creating rdp-users group..."
-    /usr/sbin/groupadd rdp-users
-fi
-
-# 2. Criar diretório base se não existir e instalar launcher
-if [ ! -d "/opt/rdp-users" ]; then
-    echo "→ Creating /opt/rdp-users directory..."
-    /usr/bin/mkdir -p /opt/rdp-users
-    /usr/bin/chmod 755 /opt/rdp-users
-fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/rdp-session-launcher.py" ]; then
-    /usr/bin/cp "$SCRIPT_DIR/rdp-session-launcher.py" /opt/rdp-users/rdp-session-launcher.py
-    /usr/bin/chmod 755 /opt/rdp-users/rdp-session-launcher.py
-fi
-
-# 3. Criar usuário
-step "→ Creating user $USERNAME (UID: $USER_UID)..."
-if [ -n "$FULLNAME" ]; then
-    /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash -c "$FULLNAME" "$USERNAME"
-else
-    /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash "$USERNAME"
-fi
-step "  OK System user created"
-
-# 4. Ajustar permissões do home directory (751 para permitir leitura do .xsession)
-step "→ Adjusting home directory permissions..."
-/usr/bin/chmod 751 "$HOME_DIR"
-step "  OK Home directory permissions adjusted"
-
-# 5. Criar arquivo .xsession
-step "→ Creating .xsession file (mode: $SESSION_TYPE)..."
+# 2. Update .xsession dispatcher script
 XSESSION_FILE="$HOME_DIR/.xsession"
 
 cat > "$XSESSION_FILE" <<'EOFSCRIPT'
@@ -96,7 +39,10 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/
 export XDG_DATA_DIRS="/var/lib/snapd/desktop:/var/lib/flatpak/exports/share:$HOME_DIR/.local/share/flatpak/exports/share:/usr/local/share:/usr/share:${XDG_DATA_DIRS:-}"
 
 # Configure keyboard layout
-$SETXKBMAP_CMD
+if [ -f /etc/default/keyboard ]; then
+    source /etc/default/keyboard
+    setxkbmap -layout ${XKBLAYOUT:-us} -variant ${XKBVARIANT:-} -model ${XKBMODEL:-pc105} 2>/dev/null || true
+fi
 
 # Configure D-Bus
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
@@ -199,45 +145,13 @@ OPENBOXEOF
     fi
 fi
 
-# Fallback se não usar perfis
-exec $SESSION_COMMAND $APP_ARGS
+# Fallback
+exec startxfce4
 EOFSCRIPT
 
 sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
 sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
-sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
-sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
-sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
-
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
-echo "  OK .xsession file created"
 
-# 6. Se for WineGE RemoteApp, configurar WineGE
-if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
-    echo ""
-    echo "→ Configuring WineGE RemoteApp..."
-
-    # SESSION_COMMAND contém o caminho do .exe
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    WINEGE_SCRIPT="$SCRIPT_DIR/setup-winege-app.sh"
-
-    if [ ! -f "$WINEGE_SCRIPT" ]; then
-        echo "  X Error: setup-winege-app.sh script not found in $SCRIPT_DIR"
-        exit 1
-    fi
-
-    # Executar setup do WineGE (não precisa de pkexec, já estamos como root)
-    bash "$WINEGE_SCRIPT" "$USERNAME" "$HOME_DIR" "$SESSION_COMMAND"
-
-    if [ $? -ne 0 ]; then
-        echo "  X Error configuring WineGE"
-        exit 1
-    fi
-
-    echo "  OK WineGE RemoteApp configured successfully"
-fi
-
-echo "OK User $USERNAME created successfully!"
-echo "  - Keyboard layout: $XKBLAYOUT"
-exit 0
+echo "OK Profiles and .xsession updated for $USERNAME"
