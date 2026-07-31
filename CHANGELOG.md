@@ -1,5 +1,12 @@
 # Changelog - RDP Session Manager
 
+## [0.4.7] - 2026-07-31
+
+### Added
+- RemoteApp support for Snap and Flatpak applications alongside APT packages
+- Automated RemoteApp E2E test battery `tests/e2e/test_remoteapps.sh` for APT, Snap, and Flatpak apps
+- Automatic `/snap/bin` and `/var/lib/flatpak/exports/bin` environment injection in `.xsession` scripts
+
 ## [0.4.6] - 2026-07-31
 
 ### Added
