@@ -1,7 +1,7 @@
 <div align="center">
-  <h1>RDP Session Manager</h1>
+  <img src="imgs/rdp-session-manager-header.png" alt="RDP Session Manager" width="100%">
+  <br><br>
   <p>A GTK-based Linux application for managing Remote Desktop Protocol (RDP) users and sessions.</p>
-  <img src="imgs/RDPSM.png" alt="RDP Session Manager" width="220">
   <br><br>
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="GPL-3.0 license">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue.svg" alt="Python 3.9 or later">
