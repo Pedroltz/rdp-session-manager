@@ -1246,14 +1246,29 @@ class UserManager:
                                default_args: str = '') -> List[ConnectionProfile]:
         """Carrega lista de ConnectionProfile da home do usuário ou migra a sessão existente"""
         profiles_file = Path(home_dir) / '.rdp_profiles.json'
+        content = None
         if profiles_file.exists():
             try:
                 with open(profiles_file, 'r') as f:
-                    data = json.load(f)
-                    if isinstance(data, list) and len(data) > 0:
-                        return [ConnectionProfile.from_dict(item) for item in data]
+                    content = f.read()
             except Exception as e:
-                logger.error(f"Erro ao ler .rdp_profiles.json em {home_dir}: {e}")
+                # Tentar ler com privilégios de elevação caso falhe a leitura direta
+                try:
+                    _, priv_cmd = get_privilege_command()
+                    res = subprocess.run(priv_cmd + ['/usr/bin/cat', str(profiles_file)],
+                                         capture_output=True, text=True, timeout=5)
+                    if res.returncode == 0:
+                        content = res.stdout
+                except Exception as ex:
+                    logger.error(f"Erro ao ler .rdp_profiles.json em {home_dir}: {ex}")
+
+        if content:
+            try:
+                data = json.loads(content)
+                if isinstance(data, list) and len(data) > 0:
+                    return [ConnectionProfile.from_dict(item) for item in data]
+            except Exception as e:
+                logger.error(f"Erro ao parsear .rdp_profiles.json em {home_dir}: {e}")
 
         # Fallback para perfil legado único
         def_name = "Área de Trabalho" if default_session_type == 'desktop' else (
@@ -1272,18 +1287,34 @@ class UserManager:
         ]
 
     def save_profiles_for_user(self, username: str, profiles: List[ConnectionProfile]) -> bool:
-        """Salva a lista de fontes de conexão no arquivo .rdp_profiles.json do usuário"""
+        """Salva a lista de fontes de conexão no arquivo .rdp_profiles.json do usuário usando o helper script elevado"""
+        import tempfile
         try:
-            user = self.get_user(username)
-            if not user:
-                logger.error(f"Usuário {username} não encontrado ao salvar perfis")
-                return False
-
-            profiles_file = Path(user.home_dir) / '.rdp_profiles.json'
             data = [p.to_dict() for p in profiles]
 
-            with open(profiles_file, 'w') as f:
-                json.dump(data, f, indent=2)
+            # Salvar dados em arquivo temporário
+            with tempfile.NamedTemporaryFile('w', delete=False, suffix='.json') as temp_file:
+                json.dump(data, temp_file, indent=2)
+                temp_path = temp_file.name
+
+            # Chamar helper de atualização com elevação (pkexec/sudo)
+            script_dir = Path(__file__).parent.parent.parent / "helpers"
+            update_script = script_dir / "update-rdp-user-profiles.sh"
+
+            _, priv_cmd = get_privilege_command()
+            cmd = priv_cmd + [str(update_script), username, temp_path]
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            # Remover arquivo temporário
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+            if result.returncode != 0:
+                logger.error(f"Erro ao salvar perfis para {username}: {result.stderr}")
+                return False
 
             logger.info(f"Perfis de conexão atualizados com sucesso para {username}: {len(profiles)} perfil(is)")
             return True

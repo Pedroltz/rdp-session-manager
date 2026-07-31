@@ -217,7 +217,7 @@ class MainWindow(Adw.ApplicationWindow):
         profiles_row.set_margin_start(12)
         profiles_row.set_margin_end(12)
 
-        profiles_label = Gtk.Label(label=f"Fontes de Conexão ({p_count})")
+        profiles_label = Gtk.Label(label=f"Connection Sources ({p_count})")
         profiles_label.set_halign(Gtk.Align.START)
         profiles_label.set_hexpand(True)
 

@@ -52,7 +52,7 @@ class ConnectionSourcesDialog(Adw.Dialog):
             row.set_title(profile.name)
 
             if profile.profile_type == 'desktop':
-                row.set_subtitle(f"Área de Trabalho ({profile.desktop_env.upper()})")
+                row.set_subtitle(f"Full Desktop ({profile.desktop_env.upper()})")
                 row.set_icon_name("computer-symbolic")
             elif profile.profile_type == 'remoteapp':
                 row.set_subtitle(f"RemoteApp Linux: {profile.app_command}")
@@ -63,7 +63,7 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 row.set_icon_name("application-x-executable-symbolic")
 
             if profile.is_default:
-                badge = Gtk.Label(label="Padrão")
+                badge = Gtk.Label(label="Default")
                 badge.add_css_class("accent")
                 badge.add_css_class("caption")
                 row.add_suffix(badge)
@@ -71,7 +71,7 @@ class ConnectionSourcesDialog(Adw.Dialog):
             # Export button
             export_btn = Gtk.Button()
             export_btn.set_icon_name("document-save-symbolic")
-            export_btn.set_tooltip_text("Exportar arquivo .rdp")
+            export_btn.set_tooltip_text("Export .rdp file")
             export_btn.set_valign(Gtk.Align.CENTER)
             export_btn.connect('clicked', lambda b, p=profile: self.on_export_profile(p))
             row.add_suffix(export_btn)
@@ -100,7 +100,7 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 path = file.get_path()
                 self.user_manager.export_rdp_file(self.rdp_user.username, profile.profile_id, path)
         except Exception as e:
-            logger.error(f"Cancelado ou erro ao salvar .rdp: {e}")
+            logger.error(f"Error or canceled saving .rdp file: {e}")
 
     def on_delete_profile(self, profile: ConnectionProfile):
         """Removes a profile"""
@@ -112,9 +112,9 @@ class ConnectionSourcesDialog(Adw.Dialog):
 
     def on_add_profile_clicked(self, button):
         """Shows dialog to create a new profile"""
-        dialog = ProfileEditDialog(self.parent, self.rdp_user)
+        dialog = ProfileEditDialog(self, self.rdp_user)
         dialog.connect('profile-saved', self.on_profile_added)
-        dialog.present(self.parent)
+        dialog.present(self)
 
     def on_profile_added(self, dialog, profile: ConnectionProfile):
         self.rdp_user.profiles.append(profile)
@@ -126,25 +126,25 @@ class ProfileEditDialog(Adw.Dialog):
     """Dialog to configure a new connection profile"""
 
     __gsignals__ = {
-        'profile-saved': (GObject.SignalFlags.RUN_FIRST, None, (object,))
+        'profile-saved': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
     def __init__(self, parent, rdp_user: RDPUser, **kwargs):
         super().__init__(**kwargs)
         self.rdp_user = rdp_user
 
-        self.set_title("Adicionar Fonte de Conexão")
+        self.set_title("Add Connection Source")
         self.set_content_width(450)
-        self.set_content_height(400)
+        self.set_content_height(450)
 
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         header = Adw.HeaderBar()
-        cancel_btn = Gtk.Button(label="Cancelar")
+        cancel_btn = Gtk.Button(label="Cancel")
         cancel_btn.connect('clicked', lambda b: self.close())
         header.pack_start(cancel_btn)
 
-        save_btn = Gtk.Button(label="Adicionar")
+        save_btn = Gtk.Button(label="Add")
         save_btn.add_css_class("suggested-action")
         save_btn.connect('clicked', self.on_save)
         header.pack_end(save_btn)
@@ -154,11 +154,11 @@ class ProfileEditDialog(Adw.Dialog):
         group = Adw.PreferencesGroup()
 
         # Name
-        self.name_row = Adw.EntryRow(title="Nome da Fonte")
+        self.name_row = Adw.EntryRow(title="Source Name")
         group.add(self.name_row)
 
         # Type Combo
-        self.type_combo = Adw.ComboRow(title="Tipo de Conexão")
+        self.type_combo = Adw.ComboRow(title="Connection Type")
         model = Gtk.StringList()
         model.append("Full Desktop")
         model.append("RemoteApp (Linux)")
@@ -167,7 +167,7 @@ class ProfileEditDialog(Adw.Dialog):
         group.add(self.type_combo)
 
         # DE Combo
-        self.de_combo = Adw.ComboRow(title="Ambiente Desktop")
+        self.de_combo = Adw.ComboRow(title="Desktop Environment")
         de_model = Gtk.StringList()
         de_model.append("XFCE")
         de_model.append("GNOME")
@@ -176,19 +176,34 @@ class ProfileEditDialog(Adw.Dialog):
         group.add(self.de_combo)
 
         # App Command
-        self.cmd_row = Adw.EntryRow(title="Comando do App / Caminho .exe")
+        self.cmd_row = Adw.EntryRow(title="App Command / .exe Path")
         group.add(self.cmd_row)
 
         # App Args
-        self.args_row = Adw.EntryRow(title="Argumentos do App")
+        self.args_row = Adw.EntryRow(title="App Arguments")
         group.add(self.args_row)
 
         page.add(group)
         main_box.append(page)
-        self.set_content(main_box)
+        self.set_child(main_box)
+
+        # Signal for type combo change
+        self.type_combo.connect("notify::selected", self.on_type_changed)
+        self.on_type_changed(self.type_combo, None)
+
+    def on_type_changed(self, combo, pspec):
+        sel = combo.get_selected()
+        if sel == 0:  # Desktop
+            self.de_combo.set_visible(True)
+            self.cmd_row.set_visible(False)
+            self.args_row.set_visible(False)
+        else:  # RemoteApp / WineGE
+            self.de_combo.set_visible(False)
+            self.cmd_row.set_visible(True)
+            self.args_row.set_visible(True)
 
     def on_save(self, btn):
-        name = self.name_row.get_text().strip() or "Nova Fonte de Conexão"
+        name = self.name_row.get_text().strip() or "New Connection Source"
         sel_type = self.type_combo.get_selected()
         p_type = "desktop" if sel_type == 0 else ("remoteapp" if sel_type == 1 else "winege-remoteapp")
         
