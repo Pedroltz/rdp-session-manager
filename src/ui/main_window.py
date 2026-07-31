@@ -209,6 +209,30 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu_box.append(sudo_row)
 
+        # Connection Sources row (Fontes de Conexão)
+        p_count = len(user.profiles) if hasattr(user, 'profiles') and user.profiles else 1
+        profiles_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        profiles_row.set_margin_top(6)
+        profiles_row.set_margin_bottom(6)
+        profiles_row.set_margin_start(12)
+        profiles_row.set_margin_end(12)
+
+        profiles_label = Gtk.Label(label=f"Fontes de Conexão ({p_count})")
+        profiles_label.set_halign(Gtk.Align.START)
+        profiles_label.set_hexpand(True)
+
+        profiles_icon = Gtk.Image.new_from_icon_name("network-server-symbolic")
+
+        profiles_row.append(profiles_label)
+        profiles_row.append(profiles_icon)
+
+        profiles_gesture = Gtk.GestureClick.new()
+        profiles_gesture.connect("released", lambda g, n, x, y: self.on_manage_connection_sources(user, popover))
+        profiles_row.add_controller(profiles_gesture)
+        profiles_row.set_cursor_from_name("pointer")
+
+        menu_box.append(profiles_row)
+
         # Settings row (configurações de usuário)
         settings_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         settings_row.set_margin_top(6)
@@ -430,6 +454,13 @@ class MainWindow(Adw.ApplicationWindow):
         # Retornar True para impedir mudança automática do switch
         # (vamos controlar manualmente após sucesso da operação)
         return True
+
+    def on_manage_connection_sources(self, user, popover):
+        """Abre o diálogo de gerenciamento de fontes de conexão do usuário"""
+        popover.popdown()
+        from .connection_sources_dialog import ConnectionSourcesDialog
+        dialog = ConnectionSourcesDialog(self, self.user_manager, user)
+        dialog.present(self)
 
     def on_sudo_toggle(self, username, new_state, switch):
         """Handle sudo privilege toggle"""

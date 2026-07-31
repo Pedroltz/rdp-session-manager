@@ -54,11 +54,17 @@ if ! getent group rdp-users > /dev/null 2>&1; then
     /usr/sbin/groupadd rdp-users
 fi
 
-# 2. Criar diretório base se não existir
+# 2. Criar diretório base se não existir e instalar launcher
 if [ ! -d "/opt/rdp-users" ]; then
     echo "→ Creating /opt/rdp-users directory..."
     /usr/bin/mkdir -p /opt/rdp-users
     /usr/bin/chmod 755 /opt/rdp-users
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/rdp-session-launcher.py" ]; then
+    /usr/bin/cp "$SCRIPT_DIR/rdp-session-launcher.py" /opt/rdp-users/rdp-session-launcher.py
+    /usr/bin/chmod 755 /opt/rdp-users/rdp-session-launcher.py
 fi
 
 # 3. Criar usuário
@@ -79,29 +85,40 @@ step "  OK Home directory permissions adjusted"
 step "→ Creating .xsession file (mode: $SESSION_TYPE)..."
 XSESSION_FILE="$HOME_DIR/.xsession"
 
-if [ "$SESSION_TYPE" = "remoteapp" ]; then
-    # RemoteApp mode - lançar aplicativo individual
-    cat > "$XSESSION_FILE" <<'EOFSCRIPT'
+cat > "$XSESSION_FILE" <<'EOFSCRIPT'
 #!/bin/bash
-# RDP Session startup script for $USERNAME
-# Mode: RemoteApp
+# RDP Session startup script with multi-profile dispatcher for $USERNAME
 
-# Set environment variables
 export HOME=$HOME_DIR
 export USER=$USERNAME
 export LOGNAME=$USERNAME
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/var/lib/flatpak/exports/bin:$PATH"
+export XDG_DATA_DIRS="/var/lib/snapd/desktop:/var/lib/flatpak/exports/share:$HOME_DIR/.local/share/flatpak/exports/share:/usr/local/share:/usr/share:${XDG_DATA_DIRS:-}"
+
+# Configure keyboard layout
+$SETXKBMAP_CMD
 
 # Configure D-Bus
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
     eval $(dbus-launch --sh-syntax --exit-with-session)
 fi
 
-# Configure keyboard layout (inherited from host system)
-$SETXKBMAP_CMD
+# Check for multi-profile setup
+LAUNCHER="/opt/rdp-users/rdp-session-launcher.py"
+SELECTED_FILE="/tmp/selected_profile_${USER}_$$.json"
 
-# Configure openbox with window decorations for RemoteApps
-mkdir -p $HOME_DIR/.config/openbox
-cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
+if [ -f "$HOME/.rdp_profiles.json" ] && [ -f "$LAUNCHER" ] && python3 "$LAUNCHER" "$1" > "$SELECTED_FILE" 2>/dev/null; then
+    PROFILE_JSON=$(cat "$SELECTED_FILE")
+    rm -f "$SELECTED_FILE"
+
+    P_TYPE=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('profile_type','desktop'))")
+    P_DE=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('desktop_env','xfce'))")
+    P_CMD=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('app_command',''))")
+    P_ARGS=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('app_args',''))")
+
+    if [ "$P_TYPE" = "remoteapp" ]; then
+        mkdir -p $HOME/.config/openbox
+        cat > $HOME/.config/openbox/rc.xml <<'OPENBOXEOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <openbox_config xmlns="http://openbox.org/3.4/rc">
   <applications>
@@ -112,117 +129,65 @@ cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
   </applications>
 </openbox_config>
 OPENBOXEOF
+        openbox --config-file $HOME/.config/openbox/rc.xml &
+        sleep 1
+        exec $P_CMD $P_ARGS
+    elif [ "$P_TYPE" = "winege-remoteapp" ]; then
+        mkdir -p $HOME/.config/openbox
+        cat > $HOME/.config/openbox/rc.xml <<'OPENBOXEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <applications>
+    <application class="*">
+      <maximized>yes</maximized>
+      <decor>yes</decor>
+    </application>
+  </applications>
+</openbox_config>
+OPENBOXEOF
+        openbox --config-file $HOME/.config/openbox/rc.xml &
+        sleep 1
+        if [ -f "$HOME/.launch_winege_app.sh" ]; then
+            exec $HOME/.launch_winege_app.sh $P_ARGS
+        else
+            exec wine "$P_CMD" $P_ARGS
+        fi
+    else
+        case "$P_DE" in
+            gnome)
+                export XDG_CURRENT_DESKTOP=GNOME-Flashback:GNOME
+                export XDG_SESSION_DESKTOP=gnome-flashback-metacity
+                export XDG_SESSION_TYPE=x11
+                export DESKTOP_SESSION=gnome-flashback-metacity
+                exec gnome-session
+                ;;
+            kde)
+                export XDG_CURRENT_DESKTOP=KDE
+                export XDG_SESSION_DESKTOP=KDE
+                export XDG_SESSION_TYPE=x11
+                export DESKTOP_SESSION=plasma
+                exec startplasma-x11
+                ;;
+            *)
+                export XDG_CURRENT_DESKTOP=XFCE
+                export XDG_SESSION_DESKTOP=xfce
+                export XDG_SESSION_TYPE=x11
+                export DESKTOP_SESSION=xfce
+                exec startxfce4
+                ;;
+        esac
+    fi
+fi
 
-# Start openbox window manager (better for fullscreen apps)
-openbox --config-file $HOME_DIR/.config/openbox/rc.xml &
-sleep 1
-
-# Launch RemoteApp
+# Fallback se não usar perfis
 exec $SESSION_COMMAND $APP_ARGS
 EOFSCRIPT
 
-    # Replace variables in the script
-    sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
-    sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
-    sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
-    sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
-    sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
-elif [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
-    # WineGE RemoteApp mode - lançar aplicativo Windows via WineGE
-    cat > "$XSESSION_FILE" <<'EOFSCRIPT'
-#!/bin/bash
-# RDP Session startup script for $USERNAME
-# Mode: WineGE RemoteApp
-
-# Set environment variables
-export HOME=$HOME_DIR
-export USER=$USERNAME
-export LOGNAME=$USERNAME
-
-# Configure D-Bus
-if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
-    eval $(dbus-launch --sh-syntax --exit-with-session)
-fi
-
-# Configure keyboard layout (inherited from host system)
-$SETXKBMAP_CMD
-
-# Configure openbox with window decorations for RemoteApps
-mkdir -p $HOME_DIR/.config/openbox
-cat > $HOME_DIR/.config/openbox/rc.xml <<'OPENBOXEOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<openbox_config xmlns="http://openbox.org/3.4/rc">
-  <applications>
-    <application class="*">
-      <maximized>yes</maximized>
-      <decor>yes</decor>
-    </application>
-  </applications>
-</openbox_config>
-OPENBOXEOF
-
-# Start openbox window manager
-openbox --config-file $HOME_DIR/.config/openbox/rc.xml &
-sleep 1
-
-# Launch WineGE RemoteApp using wrapper script
-exec $HOME_DIR/.launch_winege_app.sh $APP_ARGS
-EOFSCRIPT
-
-    # Replace variables in the script
-    sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
-    sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
-    sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
-    sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
-else
-    # Desktop mode - lançar desktop completo
-    cat > "$XSESSION_FILE" <<EOF
-#!/bin/bash
-# RDP Session startup script for $USERNAME
-# Mode: Desktop
-
-# Set environment variables
-export HOME=$HOME_DIR
-export USER=$USERNAME
-export LOGNAME=$USERNAME
-
-# Configure desktop environment variables
-case "$SESSION_COMMAND" in
-    *gnome*)
-        export XDG_CURRENT_DESKTOP=GNOME-Flashback:GNOME
-        export XDG_SESSION_DESKTOP=gnome-flashback-metacity
-        export XDG_SESSION_TYPE=x11
-        export DESKTOP_SESSION=gnome-flashback-metacity
-        ;;
-    *plasma*|*kde*)
-        export XDG_CURRENT_DESKTOP=KDE
-        export XDG_SESSION_DESKTOP=KDE
-        export XDG_SESSION_TYPE=x11
-        export DESKTOP_SESSION=plasma
-        ;;
-    *xfce*)
-        export XDG_CURRENT_DESKTOP=XFCE
-        export XDG_SESSION_DESKTOP=xfce
-        export XDG_SESSION_TYPE=x11
-        export DESKTOP_SESSION=xfce
-        ;;
-    *)
-        export XDG_SESSION_TYPE=x11
-        ;;
-esac
-
-# Configure D-Bus
-if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
-    eval \$(dbus-launch --sh-syntax --exit-with-session)
-fi
-
-# Configure keyboard layout (inherited from host system)
-$SETXKBMAP_CMD
-
-# Start desktop environment
-exec $SESSION_COMMAND
-EOF
-fi
+sed -i "s|\$USERNAME|$USERNAME|g" "$XSESSION_FILE"
+sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
+sed -i "s|\$SESSION_COMMAND|$SESSION_COMMAND|g" "$XSESSION_FILE"
+sed -i "s|\$APP_ARGS|$APP_ARGS|g" "$XSESSION_FILE"
+sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
 
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"

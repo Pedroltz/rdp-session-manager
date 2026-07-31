@@ -74,6 +74,11 @@ if [ "$SESSION_TYPE" = "remoteapp" ]; then
 export HOME=$HOME_DIR
 export USER=$USERNAME
 export LOGNAME=$USERNAME
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/var/lib/flatpak/exports/bin:$PATH"
+export XDG_DATA_DIRS="/var/lib/snapd/desktop:/var/lib/flatpak/exports/share:$HOME_DIR/.local/share/flatpak/exports/share:/usr/local/share:/usr/share:${XDG_DATA_DIRS:-}"
+export XDG_CURRENT_DESKTOP="Openbox"
+export XDG_SESSION_TYPE="x11"
+export DESKTOP_SESSION="openbox"
 
 # Configure D-Bus
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
