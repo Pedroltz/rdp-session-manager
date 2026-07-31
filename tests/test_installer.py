@@ -32,6 +32,7 @@ class InstallerHelpersTest(unittest.TestCase):
         self.assertIsNone(instance._configure_graphical_auth())
 
     @patch("installer.core.shutil.which", return_value="/usr/bin/ksshaskpass")
+    @patch("sys.stdin.isatty", return_value=False)
     @patch.dict(
         "installer.core.os.environ",
         {
@@ -40,7 +41,7 @@ class InstallerHelpersTest(unittest.TestCase):
         },
         clear=True,
     )
-    def test_desktop_installer_configures_graphical_askpass(self, _which):
+    def test_desktop_installer_configures_graphical_askpass(self, _isatty, _which):
         instance = object.__new__(installer.Installer)
 
         self.assertEqual(

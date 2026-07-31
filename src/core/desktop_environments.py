@@ -30,12 +30,14 @@ DESKTOPS = {
         "name": "GNOME",
         "size_mb": {"debian": 1400, "arch": 1100},
         "startup_cmd": {
-            "debian": "gnome-session",
+            "debian": "gnome-session --session=gnome-flashback-metacity",
             "arch": "gnome-session --session=gnome-flashback-metacity",
         },
-        "check_package": {"debian": "gnome-session", "arch": "gnome-flashback"},
+        "check_package": {"debian": "gnome-flashback", "arch": "gnome-flashback"},
         "packages": {
             "debian": [
+                "gnome-session-flashback",
+                "gnome-flashback",
                 "gnome-session",
                 "gnome-shell",
                 "gnome-terminal",
@@ -72,6 +74,7 @@ DESKTOPS = {
             "debian": [
                 "kde-plasma-desktop",
                 "plasma-workspace",
+                "plasma-session-x11",
                 "kwin-x11",
                 "konsole",
                 "dolphin",

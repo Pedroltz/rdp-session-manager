@@ -93,6 +93,17 @@ if [[ "${distro_candidates}" != *" debian "* &&
     fail "unsupported distribution for the RDP test: ${ID:-unknown}"
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if ! command -v rdpsm >/dev/null 2>&1; then
+    cat > /tmp/rdpsm <<WRAPPEREOF
+#!/bin/bash
+export PYTHONPATH="${SCRIPT_DIR}/src:\${PYTHONPATH}"
+exec python3 "${SCRIPT_DIR}/src/cli.py" "\$@"
+WRAPPEREOF
+    chmod +x /tmp/rdpsm
+    export PATH="/tmp:${PATH}"
+fi
+
 required_commands=(
     rdpsm systemctl ss Xvfb xdpyinfo import identify pgrep getent
 )

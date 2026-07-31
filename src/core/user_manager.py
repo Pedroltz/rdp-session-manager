@@ -22,24 +22,116 @@ from utils.polkit import get_privilege_command
 logger = logging.getLogger(__name__)
 
 
+class ConnectionProfile:
+    """Representa uma fonte de conexão específica de um usuário RDP"""
+
+    def __init__(self, profile_id: str, name: str, profile_type: str = 'desktop',
+                 desktop_env: str = 'xfce', app_command: str = '',
+                 app_args: str = '', is_default: bool = False):
+        self.profile_id = profile_id
+        self.name = name
+        self.profile_type = profile_type  # 'desktop', 'remoteapp', 'winege-remoteapp'
+        self.desktop_env = desktop_env
+        self.app_command = app_command
+        self.app_args = app_args
+        self.is_default = is_default
+
+    def to_dict(self) -> Dict:
+        return {
+            'profile_id': self.profile_id,
+            'name': self.name,
+            'profile_type': self.profile_type,
+            'desktop_env': self.desktop_env,
+            'app_command': self.app_command,
+            'app_args': self.app_args,
+            'is_default': self.is_default,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'ConnectionProfile':
+        return cls(
+            profile_id=data.get('profile_id', 'default'),
+            name=data.get('name', 'Fonte de Conexão'),
+            profile_type=data.get('profile_type', data.get('session_type', 'desktop')),
+            desktop_env=data.get('desktop_env', 'xfce'),
+            app_command=data.get('app_command', ''),
+            app_args=data.get('app_args', ''),
+            is_default=data.get('is_default', False)
+        )
+
+
 class RDPUser:
-    """Representa um usuário RDP"""
+    """Representa um usuário RDP com suporte a múltiplas fontes de conexão"""
 
     def __init__(self, username: str, uid: int, home_dir: str,
-                 desktop_env: str, rdp_port: int, active: bool = False, enabled: bool = True,
+                 desktop_env: str = 'xfce', rdp_port: int = 3389, active: bool = False, enabled: bool = True,
                  is_superuser: bool = False, session_type: str = 'desktop',
-                 app_command: str = '', app_args: str = ''):
+                 app_command: str = '', app_args: str = '',
+                 profiles: Optional[List[ConnectionProfile]] = None):
         self.username = username
         self.uid = uid
         self.home_dir = home_dir
-        self.desktop_env = desktop_env
         self.rdp_port = rdp_port
         self.active = active
         self.enabled = enabled  # Se a conta está habilitada (não bloqueada)
         self.is_superuser = is_superuser  # Se o usuário tem privilégios sudo
-        self.session_type = session_type  # 'desktop', 'remoteapp', ou 'winege-remoteapp'
-        self.app_command = app_command  # Comando do app para RemoteApp (ex: 'firefox') ou .exe path para WineGE
-        self.app_args = app_args  # Argumentos do app (ex: '--private-window')
+        self.profiles = profiles or []
+
+        # Se profiles estiver vazio, gera o perfil padrão baseado em session_type
+        if not self.profiles:
+            def_name = "Área de Trabalho" if session_type == 'desktop' else (
+                f"RemoteApp ({app_command})" if session_type == 'remoteapp' else "WineGE App"
+            )
+            self.profiles = [
+                ConnectionProfile(
+                    profile_id="default",
+                    name=def_name,
+                    profile_type=session_type,
+                    desktop_env=desktop_env,
+                    app_command=app_command,
+                    app_args=app_args,
+                    is_default=True
+                )
+            ]
+
+    @property
+    def default_profile(self) -> ConnectionProfile:
+        for p in self.profiles:
+            if p.is_default:
+                return p
+        return self.profiles[0] if self.profiles else ConnectionProfile('default', 'Padrão')
+
+    @property
+    def session_type(self) -> str:
+        return self.default_profile.profile_type
+
+    @session_type.setter
+    def session_type(self, val: str):
+        self.default_profile.profile_type = val
+
+    @property
+    def desktop_env(self) -> str:
+        return self.default_profile.desktop_env
+
+    @desktop_env.setter
+    def desktop_env(self, val: str):
+        self.default_profile.desktop_env = val
+
+    @property
+    def app_command(self) -> str:
+        return self.default_profile.app_command
+
+    @app_command.setter
+    def app_command(self, val: str):
+        self.default_profile.app_command = val
+
+    @property
+    def app_args(self) -> str:
+        return self.default_profile.app_args
+
+    @app_args.setter
+    def app_args(self, val: str):
+        self.default_profile.app_args = val
 
     def to_dict(self) -> Dict:
         """Converte para dicionário"""
@@ -54,13 +146,18 @@ class RDPUser:
             'is_superuser': self.is_superuser,
             'session_type': self.session_type,
             'app_command': self.app_command,
-            'app_args': self.app_args
+            'app_args': self.app_args,
+            'profiles': [p.to_dict() for p in self.profiles]
         }
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'RDPUser':
         """Cria instância a partir de dicionário"""
-        return cls(**data)
+        data_copy = dict(data)
+        profiles_data = data_copy.pop('profiles', None)
+        profiles = [ConnectionProfile.from_dict(p) for p in profiles_data] if profiles_data else None
+        user = cls(**data_copy, profiles=profiles)
+        return user
 
 
 class UserManager:
@@ -246,6 +343,9 @@ class UserManager:
                 app_command=app_command,
                 app_args=app_args
             )
+
+            # Salvar o perfil inicial no arquivo .rdp_profiles.json do usuário
+            self.save_profiles_for_user(username, rdp_user.profiles)
 
             log("")
             log("OK System user created successfully!")
@@ -1106,11 +1206,19 @@ class UserManager:
                     rdp_port = self._detect_rdp_port(user_info.pw_uid)
 
                     # Verificar se usuário está habilitado através de /etc/shadow
-                    # (não requer privilégios para ler se o arquivo tem permissões corretas)
                     is_enabled = self._check_user_enabled_from_shadow(user_info.pw_name)
 
                     # Verificar se usuário tem privilégios sudo
                     has_sudo = self.is_superuser(user_info.pw_name)
+
+                    # Carregar perfis de conexão
+                    profiles = self.load_profiles_for_user(
+                        home_dir=user_info.pw_dir,
+                        default_session_type=session_type,
+                        default_de=desktop_env,
+                        default_cmd=app_command,
+                        default_args=app_args
+                    )
 
                     rdp_user = RDPUser(
                         username=user_info.pw_name,
@@ -1118,12 +1226,13 @@ class UserManager:
                         home_dir=user_info.pw_dir,
                         desktop_env=desktop_env,
                         rdp_port=rdp_port,
-                        active=False,  # TODO: verificar status
+                        active=False,
                         enabled=is_enabled,
                         is_superuser=has_sudo,
                         session_type=session_type,
                         app_command=app_command,
-                        app_args=app_args
+                        app_args=app_args,
+                        profiles=profiles
                     )
                     users.append(rdp_user)
 
@@ -1131,6 +1240,101 @@ class UserManager:
             logger.error(f"Error listing users: {e}")
 
         return users
+
+    def load_profiles_for_user(self, home_dir: str, default_session_type: str = 'desktop',
+                               default_de: str = 'xfce', default_cmd: str = '',
+                               default_args: str = '') -> List[ConnectionProfile]:
+        """Carrega lista de ConnectionProfile da home do usuário ou migra a sessão existente"""
+        profiles_file = Path(home_dir) / '.rdp_profiles.json'
+        if profiles_file.exists():
+            try:
+                with open(profiles_file, 'r') as f:
+                    data = json.load(f)
+                    if isinstance(data, list) and len(data) > 0:
+                        return [ConnectionProfile.from_dict(item) for item in data]
+            except Exception as e:
+                logger.error(f"Erro ao ler .rdp_profiles.json em {home_dir}: {e}")
+
+        # Fallback para perfil legado único
+        def_name = "Área de Trabalho" if default_session_type == 'desktop' else (
+            f"RemoteApp ({default_cmd})" if default_session_type == 'remoteapp' else "WineGE App"
+        )
+        return [
+            ConnectionProfile(
+                profile_id="default",
+                name=def_name,
+                profile_type=default_session_type,
+                desktop_env=default_de,
+                app_command=default_cmd,
+                app_args=default_args,
+                is_default=True
+            )
+        ]
+
+    def save_profiles_for_user(self, username: str, profiles: List[ConnectionProfile]) -> bool:
+        """Salva a lista de fontes de conexão no arquivo .rdp_profiles.json do usuário"""
+        try:
+            user = self.get_user(username)
+            if not user:
+                logger.error(f"Usuário {username} não encontrado ao salvar perfis")
+                return False
+
+            profiles_file = Path(user.home_dir) / '.rdp_profiles.json'
+            data = [p.to_dict() for p in profiles]
+
+            with open(profiles_file, 'w') as f:
+                json.dump(data, f, indent=2)
+
+            logger.info(f"Perfis de conexão atualizados com sucesso para {username}: {len(profiles)} perfil(is)")
+            return True
+        except Exception as e:
+            logger.error(f"Falha ao salvar fontes de conexão para {username}: {e}")
+            return False
+
+    def export_rdp_file(self, username: str, profile_id: str, output_path: str, server_host: str = 'localhost') -> bool:
+        """Gera um arquivo .rdp para uma fonte de conexão específica do usuário"""
+        try:
+            user = self.get_user(username)
+            if not user:
+                return False
+
+            profile = None
+            for p in user.profiles:
+                if p.profile_id == profile_id:
+                    profile = p
+                    break
+
+            if not profile:
+                logger.error(f"Perfil {profile_id} não encontrado para o usuário {username}")
+                return False
+
+            rdp_content = [
+                f"full address:s:{server_host}:{user.rdp_port}",
+                f"username:s:{username}",
+                "prompt for credentials:i:1",
+                "screen mode id:i:2",
+                "use multimon:i:1",
+                "session bpp:i:32",
+                "compression:i:1",
+            ]
+
+            if profile.profile_type in ['remoteapp', 'winege-remoteapp']:
+                rdp_content.extend([
+                    "remoteapplicationmode:i:1",
+                    f"remoteapplicationname:s:{profile.name}",
+                    f"remoteapplicationprogram:s:||{profile.profile_id}",
+                    f"remoteapplicationcmdline:s:{profile.app_args}",
+                    f"alternate shell:s:||{profile.profile_id}",
+                ])
+
+            with open(output_path, 'w') as f:
+                f.write("\r\n".join(rdp_content) + "\r\n")
+
+            logger.info(f"Arquivo RDP exportado com sucesso para {output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao exportar arquivo .rdp: {e}")
+            return False
 
     def get_user(self, username: str) -> Optional[RDPUser]:
         """Obtém informações de um usuário específico"""

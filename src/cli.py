@@ -1052,6 +1052,83 @@ class CLI:
             self.print_error(f"Error setting config: {e}")
             return 1
 
+    # ==================== PROFILE COMMANDS ====================
+
+    def profile_list(self, args):
+        """List connection profiles for a user"""
+        try:
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                self.print_error(f"User '{args.username}' not found")
+                return 1
+
+            if getattr(args, 'format', 'table') == 'json':
+                import json
+                print(json.dumps([p.to_dict() for p in user.profiles], indent=2))
+            else:
+                self.print_header(f"Connection Sources for '{args.username}'")
+                for p in user.profiles:
+                    default_str = " (Default)" if p.is_default else ""
+                    print(f" • ID: {p.profile_id} | Name: {p.name} | Type: {p.profile_type}{default_str}")
+                    if p.profile_type == 'desktop':
+                        print(f"   Desktop Environment: {p.desktop_env}")
+                    else:
+                        print(f"   Command: {p.app_command} {p.app_args}".strip())
+            return 0
+        except Exception as e:
+            self.print_error(f"Error listing profiles: {e}")
+            return 1
+
+    def profile_add(self, args):
+        """Add a connection profile for a user"""
+        try:
+            import uuid
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                self.print_error(f"User '{args.username}' not found")
+                return 1
+
+            profile_id = str(uuid.uuid4())[:8]
+            from core.user_manager import ConnectionProfile
+            new_profile = ConnectionProfile(
+                profile_id=profile_id,
+                name=args.name or "Connection Source",
+                profile_type=args.session_type or "desktop",
+                desktop_env=args.desktop or "xfce",
+                app_command=args.app_command or "",
+                app_args=args.app_args or "",
+                is_default=args.default
+            )
+
+            if args.default:
+                for p in user.profiles:
+                    p.is_default = False
+
+            user.profiles.append(new_profile)
+            if self.user_manager.save_profiles_for_user(args.username, user.profiles):
+                self.print_success(f"Added connection profile '{new_profile.name}' (ID: {profile_id}) for {args.username}")
+                return 0
+            else:
+                self.print_error("Failed to save profiles")
+                return 1
+        except Exception as e:
+            self.print_error(f"Error adding profile: {e}")
+            return 1
+
+    def profile_export(self, args):
+        """Export .rdp file for a connection profile"""
+        try:
+            out_file = args.out or f"{args.username}_{args.profile_id}.rdp"
+            if self.user_manager.export_rdp_file(args.username, args.profile_id, out_file):
+                self.print_success(f"Exported .rdp file for {args.username} ({args.profile_id}) to {out_file}")
+                return 0
+            else:
+                self.print_error("Failed to export .rdp file")
+                return 1
+        except Exception as e:
+            self.print_error(f"Error exporting profile: {e}")
+            return 1
+
     # ==================== DEPENDENCY COMMANDS ====================
 
     def deps_check(self, args):
@@ -1298,20 +1375,33 @@ class CLI:
         config_set.add_argument('value', help='Value')
         config_set.set_defaults(func=self.config_set)
 
-        # Dependencies commands
-        deps_parser = subparsers.add_parser('deps', help='Dependency management')
-        deps_subparsers = deps_parser.add_subparsers(dest='subcommand')
+        # Profile commands
+        profile_parser = subparsers.add_parser('profile', help='Connection profile management')
+        profile_subparsers = profile_parser.add_subparsers(dest='subcommand')
 
-        # deps check
-        deps_check = deps_subparsers.add_parser('check', help='Check system dependencies')
-        deps_check.add_argument('--format', choices=['table', 'json'], default='table',
-                               help='Output format')
-        deps_check.set_defaults(func=self.deps_check)
+        # profile list
+        p_list = profile_subparsers.add_parser('list', help='List connection profiles for a user')
+        p_list.add_argument('username', help='Username')
+        p_list.add_argument('--format', choices=['table', 'json'], default='table', help='Output format')
+        p_list.set_defaults(func=self.profile_list)
 
-        # deps install
-        deps_install = deps_subparsers.add_parser('install', help='Install dependency')
-        deps_install.add_argument('package', help='Package name (xrdp, freerdp)')
-        deps_install.set_defaults(func=self.deps_install)
+        # profile add
+        p_add = profile_subparsers.add_parser('add', help='Add a connection profile')
+        p_add.add_argument('username', help='Username')
+        p_add.add_argument('-n', '--name', required=True, help='Display name for connection source')
+        p_add.add_argument('-s', '--session-type', choices=['desktop', 'remoteapp', 'winege-remoteapp'], default='desktop', help='Session type')
+        p_add.add_argument('-d', '--desktop', default='xfce', help='Desktop environment')
+        p_add.add_argument('--app-command', default='', help='App command or .exe path')
+        p_add.add_argument('--app-args', default='', help='App arguments')
+        p_add.add_argument('--default', action='store_true', help='Set as default connection source')
+        p_add.set_defaults(func=self.profile_add)
+
+        # profile export
+        p_exp = profile_subparsers.add_parser('export', help='Export .rdp file for a connection profile')
+        p_exp.add_argument('username', help='Username')
+        p_exp.add_argument('profile_id', help='Profile ID')
+        p_exp.add_argument('-o', '--out', help='Output .rdp file path')
+        p_exp.set_defaults(func=self.profile_export)
 
         # Parse arguments
         args = parser.parse_args(argv)
