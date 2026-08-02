@@ -104,10 +104,38 @@ OPENBOXEOF
 
 # Start openbox window manager (better for fullscreen apps)
 openbox --config-file $HOME_DIR/.config/openbox/rc.xml &
+OPENBOX_PID=$!
 sleep 1
 
 # Launch RemoteApp
-exec $SESSION_COMMAND $APP_ARGS
+$SESSION_COMMAND $APP_ARGS &
+APP_PID=$!
+
+WINDOW_FOUND=false
+for i in $(seq 1 20); do
+    if xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -q "0x[1-9a-f]"; then
+        WINDOW_FOUND=true
+        break
+    fi
+    sleep 0.5
+done
+
+if [ "$WINDOW_FOUND" = true ]; then
+    while true; do
+        CLIENTS=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep "0x[1-9a-f]" || true)
+        if [ -z "$CLIENTS" ]; then
+            break
+        fi
+        sleep 1
+    done
+else
+    while kill -0 $APP_PID 2>/dev/null || pgrep -u "$USER" -f "$SESSION_COMMAND|electron|code|chrome|firefox|thunderbird|flatpak|snap" >/dev/null 2>&1; do
+        sleep 1
+    done
+fi
+
+kill $OPENBOX_PID 2>/dev/null || true
+exit 0
 EOFSCRIPT
 
     # Replace variables in the script
@@ -168,6 +196,11 @@ fi
 
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
+
+# Create .xinitrc (required for Arch Linux startwm.sh)
+XINITRC_FILE="$HOME_DIR/.xinitrc"
+/usr/bin/ln -sf "$XSESSION_FILE" "$XINITRC_FILE"
+/usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
 
 echo "OK Session type changed successfully to $SESSION_TYPE"
 echo "  - Keyboard layout: $XKBLAYOUT"

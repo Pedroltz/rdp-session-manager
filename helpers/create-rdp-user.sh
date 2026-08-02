@@ -150,8 +150,36 @@ if [ -f "$HOME/.rdp_profiles.json" ] && [ -f "$LAUNCHER" ] && python3 "$LAUNCHER
 </openbox_config>
 OPENBOXEOF
         openbox --config-file $HOME/.config/openbox/rc.xml &
+        OPENBOX_PID=$!
         sleep 1
-        exec $P_CMD $P_ARGS
+        $P_CMD $P_ARGS &
+        APP_PID=$!
+
+        WINDOW_FOUND=false
+        for i in $(seq 1 20); do
+            if xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -q "0x[1-9a-f]"; then
+                WINDOW_FOUND=true
+                break
+            fi
+            sleep 0.5
+        done
+
+        if [ "$WINDOW_FOUND" = true ]; then
+            while true; do
+                CLIENTS=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep "0x[1-9a-f]" || true)
+                if [ -z "$CLIENTS" ]; then
+                    break
+                fi
+                sleep 1
+            done
+        else
+            while kill -0 $APP_PID 2>/dev/null || pgrep -u "$USER" -f "$P_CMD|electron|code|chrome|firefox|thunderbird|flatpak|snap" >/dev/null 2>&1; do
+                sleep 1
+            done
+        fi
+
+        kill $OPENBOX_PID 2>/dev/null || true
+        exit 0
     elif [ "$P_TYPE" = "winege-remoteapp" ]; then
         mkdir -p $HOME/.config/openbox
         cat > $HOME/.config/openbox/rc.xml <<'OPENBOXEOF'
@@ -166,12 +194,40 @@ OPENBOXEOF
 </openbox_config>
 OPENBOXEOF
         openbox --config-file $HOME/.config/openbox/rc.xml &
+        OPENBOX_PID=$!
         sleep 1
         if [ -f "$HOME/.launch_winege_app.sh" ]; then
-            exec $HOME/.launch_winege_app.sh $P_ARGS
+            $HOME/.launch_winege_app.sh $P_ARGS &
         else
-            exec wine "$P_CMD" $P_ARGS
+            wine "$P_CMD" $P_ARGS &
         fi
+        APP_PID=$!
+
+        WINDOW_FOUND=false
+        for i in $(seq 1 20); do
+            if xprop -root _NET_CLIENT_LIST 2>/dev/null | grep -q "0x[1-9a-f]"; then
+                WINDOW_FOUND=true
+                break
+            fi
+            sleep 0.5
+        done
+
+        if [ "$WINDOW_FOUND" = true ]; then
+            while true; do
+                CLIENTS=$(xprop -root _NET_CLIENT_LIST 2>/dev/null | grep "0x[1-9a-f]" || true)
+                if [ -z "$CLIENTS" ]; then
+                    break
+                fi
+                sleep 1
+            done
+        else
+            while kill -0 $APP_PID 2>/dev/null || pgrep -u "$USER" -f "wine|wineserver|$P_CMD" >/dev/null 2>&1; do
+                sleep 1
+            done
+        fi
+
+        kill $OPENBOX_PID 2>/dev/null || true
+        exit 0
     else
         case "$P_DE" in
             gnome)
@@ -179,13 +235,21 @@ OPENBOXEOF
                 export XDG_SESSION_DESKTOP=gnome-flashback-metacity
                 export XDG_SESSION_TYPE=x11
                 export DESKTOP_SESSION=gnome-flashback-metacity
-                exec gnome-session
+                if command -v gnome-flashback >/dev/null 2>&1; then
+                    exec gnome-session --session=gnome-flashback-metacity
+                else
+                    export XDG_CURRENT_DESKTOP=GNOME
+                    export XDG_SESSION_DESKTOP=gnome
+                    export DESKTOP_SESSION=gnome
+                    exec gnome-session --session=gnome
+                fi
                 ;;
             kde)
                 export XDG_CURRENT_DESKTOP=KDE
                 export XDG_SESSION_DESKTOP=KDE
                 export XDG_SESSION_TYPE=x11
                 export DESKTOP_SESSION=plasma
+                export KDE_SESSION_VERSION=6
                 exec startplasma-x11
                 ;;
             *)
@@ -211,7 +275,12 @@ sed -i "s|\$SETXKBMAP_CMD|$SETXKBMAP_CMD|g" "$XSESSION_FILE"
 
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
-echo "  OK .xsession file created"
+
+# Create .xinitrc (required for Arch Linux startwm.sh)
+XINITRC_FILE="$HOME_DIR/.xinitrc"
+/usr/bin/ln -sf "$XSESSION_FILE" "$XINITRC_FILE"
+/usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
+echo "  OK .xsession and .xinitrc files created"
 
 # 6. Se for WineGE RemoteApp, configurar WineGE
 if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then

@@ -69,18 +69,33 @@ class DEInstaller:
                 result = subprocess.run(
                     command, capture_output=True, text=True, timeout=10
                 )
-                return result.returncode == 0
+                if result.returncode == 0:
+                    return True
 
-            command = [
-                "/usr/bin/dpkg-query",
-                "-W",
-                "-f=${db:Status-Abbrev}",
-                info["check_package"],
-            ]
-            result = subprocess.run(
-                command, capture_output=True, text=True, timeout=10
-            )
-            return result.returncode == 0 and result.stdout.startswith("ii")
+                group_command = ["/usr/bin/pacman", "-Qg", info["check_package"]]
+                group_res = subprocess.run(
+                    group_command, capture_output=True, text=True, timeout=10
+                )
+                if group_res.returncode == 0:
+                    return True
+            else:
+                command = [
+                    "/usr/bin/dpkg-query",
+                    "-W",
+                    "-f=${db:Status-Abbrev}",
+                    info["check_package"],
+                ]
+                result = subprocess.run(
+                    command, capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0 and result.stdout.startswith("ii"):
+                    return True
+
+            first_cmd_binary = info["startup_cmd"].split()[0]
+            if first_cmd_binary and shutil.which(first_cmd_binary):
+                return True
+
+            return False
         except (OSError, subprocess.SubprocessError) as exc:
             logger.error("Error checking installation of %s: %s", de_id, exc)
             return False
