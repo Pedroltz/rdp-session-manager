@@ -1105,10 +1105,18 @@ class UserManager:
         """
         try:
             xsession_file = Path(home_dir) / '.xsession'
+            xinitrc_file = Path(home_dir) / '.xinitrc'
 
             if not xsession_file.exists():
                 logger.warning(f".xsession file not found in {home_dir}")
                 return ('desktop', 'unknown', '')
+
+            # Ensure .xinitrc symlink exists for Arch Linux compatibility
+            if not xinitrc_file.exists():
+                try:
+                    os.symlink(str(xsession_file), str(xinitrc_file))
+                except Exception as exc:
+                    logger.debug(f"Could not auto-create .xinitrc symlink: {exc}")
 
             # Ler arquivo .xsession
             with open(xsession_file, 'r') as f:

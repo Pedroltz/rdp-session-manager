@@ -89,6 +89,11 @@ EOF
 /usr/bin/chmod 755 "$XSESSION_FILE"
 /usr/bin/chown "$USERNAME:rdp-users" "$XSESSION_FILE"
 
-echo "OK .xsession file created successfully!"
+# Create .xinitrc (required for Arch Linux startwm.sh)
+XINITRC_FILE="$HOME_DIR/.xinitrc"
+/usr/bin/ln -sf "$XSESSION_FILE" "$XINITRC_FILE"
+/usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
+
+echo "OK .xsession and .xinitrc files created successfully!"
 echo "  - Keyboard layout: $XKBLAYOUT"
 exit 0

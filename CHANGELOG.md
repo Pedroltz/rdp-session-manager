@@ -1,5 +1,13 @@
 # Changelog - RDP Session Manager
 
+## [0.5.1] - 2026-08-01
+
+### Fixed
+- **Arch Linux Desktop Package Detection**: Fixed DE package detection in `DEInstaller.is_de_installed()` on Arch Linux by adding support for `pacman -Qg` package groups and system PATH binary checks (`shutil.which`).
+- **Arch Linux Session Initialization**: Added automatic `.xinitrc` symlink creation pointing to `.xsession` in all session helper scripts and `UserManager._detect_session_info()` fallback, preventing Arch Linux `/etc/xrdp/startwm.sh` from crashing on missing `xterm`/`xclock`.
+- **GNOME & KDE Session Compatibility**: Improved GNOME session launch logic to detect `gnome-flashback` vs standard `gnome-session` and export proper X11 desktop variables (`XDG_CURRENT_DESKTOP`, `XDG_SESSION_DESKTOP`, `KDE_SESSION_VERSION=6`).
+- **RemoteApp Lifecycle & Instant Disconnect**: Implemented EWMH window tracking (`xprop -root _NET_CLIENT_LIST`) in RemoteApp launcher scripts, ensuring forking/Electron applications (Visual Studio Code, Chrome, etc.) remain open during use and **instantly disconnect the RDP session when the window is closed**.
+
 ## [0.5.0] - 2026-07-31
 
 ### Added
