@@ -39,13 +39,14 @@ class ConnectionSourcesDialog(Adw.Dialog):
 
     def load_profiles(self):
         """Loads and renders profile rows"""
-        # Clear existing rows
-        child = self.profiles_group.get_first_child()
-        while child:
-            next_child = child.get_next_sibling()
-            if isinstance(child, Adw.ActionRow):
-                self.profiles_group.remove(child)
-            child = next_child
+        # Cleanly remove previously added rows
+        if hasattr(self, '_added_rows'):
+            for row in self._added_rows:
+                try:
+                    self.profiles_group.remove(row)
+                except Exception as e:
+                    logger.debug(f"Error removing row: {e}")
+        self._added_rows = []
 
         for profile in self.rdp_user.profiles:
             row = Adw.ActionRow()
@@ -66,7 +67,15 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 badge = Gtk.Label(label="Default")
                 badge.add_css_class("accent")
                 badge.add_css_class("caption")
+                badge.set_valign(Gtk.Align.CENTER)
                 row.add_suffix(badge)
+            else:
+                set_def_btn = Gtk.Button()
+                set_def_btn.set_icon_name("emblem-favorite-symbolic")
+                set_def_btn.set_tooltip_text("Make Default")
+                set_def_btn.set_valign(Gtk.Align.CENTER)
+                set_def_btn.connect('clicked', lambda b, p=profile: self.on_set_default_profile(p))
+                row.add_suffix(set_def_btn)
 
             # Export button
             export_btn = Gtk.Button()
@@ -86,6 +95,16 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 row.add_suffix(del_btn)
 
             self.profiles_group.add(row)
+            self._added_rows.append(row)
+
+    def on_set_default_profile(self, target_profile: ConnectionProfile):
+        """Sets target profile as default and unsets others"""
+        for p in self.rdp_user.profiles:
+            p.is_default = (p.profile_id == target_profile.profile_id)
+        self.user_manager.save_profiles_for_user(self.rdp_user.username, self.rdp_user.profiles)
+        self.load_profiles()
+        if hasattr(self.parent, 'load_users'):
+            self.parent.load_users()
 
     def on_export_profile(self, profile: ConnectionProfile):
         """Shows file chooser dialog to save .rdp file"""
@@ -109,6 +128,8 @@ class ConnectionSourcesDialog(Adw.Dialog):
             self.rdp_user.profiles[0].is_default = True
         self.user_manager.save_profiles_for_user(self.rdp_user.username, self.rdp_user.profiles)
         self.load_profiles()
+        if hasattr(self.parent, 'load_users'):
+            self.parent.load_users()
 
     def on_add_profile_clicked(self, button):
         """Shows dialog to create a new profile"""
@@ -117,9 +138,13 @@ class ConnectionSourcesDialog(Adw.Dialog):
         dialog.present(self)
 
     def on_profile_added(self, dialog, profile: ConnectionProfile):
+        if not self.rdp_user.profiles:
+            profile.is_default = True
         self.rdp_user.profiles.append(profile)
         self.user_manager.save_profiles_for_user(self.rdp_user.username, self.rdp_user.profiles)
         self.load_profiles()
+        if hasattr(self.parent, 'load_users'):
+            self.parent.load_users()
 
 
 class ProfileEditDialog(Adw.Dialog):

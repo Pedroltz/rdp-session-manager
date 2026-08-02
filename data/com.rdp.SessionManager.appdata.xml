@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.5.2" date="2026-08-02">
+      <description>
+        <p>Fixes Connection Sources UI rendering glitch when adding new sources, adds Make Default action button, and enables fullscreen RDP connection launching.</p>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-08-01">
       <description>
         <p>Fixes Arch Linux package detection, session startup (.xinitrc), GNOME/KDE X11 session variables, and implements instant RDP disconnect on window close for RemoteApp sessions (VS Code, Electron apps).</p>

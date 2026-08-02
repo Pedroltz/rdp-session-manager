@@ -1,5 +1,14 @@
 # Changelog - RDP Session Manager
 
+## [0.5.2] - 2026-08-02
+
+### Added
+- **Fullscreen RDP Connection Launch**: Configured FreeRDP client launcher in the GTK4 GUI to launch RDP sessions directly in full screen mode (`/f`) with native resolution negotiation.
+
+### Fixed
+- **Connection Sources UI Glitch**: Resolved UI duplication/cloning rendering glitch when adding new connection sources in `ConnectionSourcesDialog` by implementing explicit `_added_rows` tracking.
+- **Connection Sources Actions**: Added "Make Default" action button directly in the profile management list and automatic real-time parent window UI synchronization.
+
 ## [0.5.1] - 2026-08-01
 
 ### Fixed
