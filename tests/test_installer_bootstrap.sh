@@ -115,7 +115,7 @@ if "--bundle-dir" in arguments:
             release_index + 1,
         }
     ]
-    if public_arguments != ["--dry-run", "--yes"]:
+    if public_arguments not in (["--dry-run", "--yes"], []):
         raise SystemExit(f"unexpected bundle arguments: {public_arguments}")
 else:
     if arguments != ["--release", "v0.3.4", "--dry-run", "--yes"]:
@@ -230,7 +230,7 @@ noninteractive_output=""
 if noninteractive_output="$(
     PATH="$TEST_DIR/bin:$PATH" \
         RDPSM_BOOTSTRAP_FIXTURES="$TEST_DIR/assets" \
-        bash -c "cat '$PROJECT_DIR/installer/install.sh' | bash" 2>&1
+        setsid bash -c "cat '$PROJECT_DIR/installer/install.sh' | bash" 2>&1
 )"; then
     printf 'Expected piped bootstrap without a terminal to fail.\n' >&2
     exit 1

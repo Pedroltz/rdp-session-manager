@@ -21,11 +21,16 @@ cd "$PROJECT_DIR"
 ./installer/build_packages.sh
 
 cp installer/install.sh "$OUTPUT_DIR/install.sh"
-python3 -m pip install \
-    --disable-pip-version-check \
-    --no-compile \
-    -r installer/requirements.txt \
-    --target "$WORK_DIR/zipapp"
+if python3 -m pip --version >/dev/null 2>&1; then
+    python3 -m pip install \
+        --disable-pip-version-check \
+        --no-compile \
+        -r installer/requirements.txt \
+        --target "$WORK_DIR/zipapp"
+else
+    mkdir -p "$WORK_DIR/zipapp"
+    python3 -c "import rich, os, shutil; site = os.path.dirname(rich.__file__); shutil.copytree(site, os.path.join('$WORK_DIR/zipapp', 'rich'), dirs_exist_ok=True)"
+fi
 cp installer/core.py "$WORK_DIR/zipapp/__main__.py"
 python3 -m zipapp "$WORK_DIR/zipapp" \
     --output "$WORK_DIR/bundle/installer.pyz" \
@@ -77,6 +82,6 @@ fi
 (cd "$WORK_DIR/validation" && sha256sum --check --strict SHA256SUMS)
 
 RDPSM_RELEASE_ASSETS_DIR="$OUTPUT_DIR" \
-    bash tests/test_installer_bootstrap.sh
+    bash tests/test_installer_bootstrap.sh </dev/null
 
 printf 'Release assets created and validated in %s\n' "$OUTPUT_DIR"

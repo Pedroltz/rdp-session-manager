@@ -50,6 +50,7 @@ meson-private/
 
 # Release
 release/
+release-assets/
 
 # End-to-end test artifacts
 artifacts/
