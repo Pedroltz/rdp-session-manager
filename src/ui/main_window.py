@@ -1371,6 +1371,7 @@ Would you like to continue?"""
                 '+clipboard',
                 '/audio-mode:0',  # Redirect audio
                 '/bpp:32',  # Color depth
+                '/f',  # Fullscreen mode
             ]
 
             # Para RemoteApp e Desktop, sempre usar dynamic-resolution
