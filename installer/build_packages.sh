@@ -87,6 +87,7 @@ if [ -d "helpers" ]; then
     echo "→ Copying helper scripts..."
     cp -r helpers "${BUILD_DIR}/usr/share/${APP_NAME}/"
     chmod +x "${BUILD_DIR}/usr/share/${APP_NAME}/helpers/"*.sh
+    chmod +x "${BUILD_DIR}/usr/share/${APP_NAME}/helpers/"*.py
 fi
 
 # Clean Python cache

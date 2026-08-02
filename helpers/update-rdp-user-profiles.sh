@@ -23,7 +23,7 @@ fi
 PROFILES_DEST="$HOME_DIR/.rdp_profiles.json"
 /usr/bin/cp "$PROFILES_JSON_SRC" "$PROFILES_DEST"
 /usr/bin/chown "$USERNAME:rdp-users" "$PROFILES_DEST"
-/usr/bin/chmod 644 "$PROFILES_DEST"
+/usr/bin/chmod 600 "$PROFILES_DEST"
 
 # 2. Update .xsession dispatcher script
 XSESSION_FILE="$HOME_DIR/.xsession"
@@ -222,5 +222,11 @@ sed -i "s|\$HOME_DIR|$HOME_DIR|g" "$XSESSION_FILE"
 XINITRC_FILE="$HOME_DIR/.xinitrc"
 /usr/bin/ln -sf "$XSESSION_FILE" "$XINITRC_FILE"
 /usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
+
+# Always finish with the shared safe dispatcher. The inline script above is
+# retained only so upgrades from old packages remain recoverable.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/create-session-wrapper.sh" "$USERNAME" "$HOME_DIR"
+/usr/bin/python3 "$SCRIPT_DIR/apply-user-resource.py" "$USERNAME"
 
 echo "OK Profiles and .xsession updated for $USERNAME"

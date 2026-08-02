@@ -5,6 +5,9 @@ core_sources = [
     'rdp_config.py',
     'de_installer.py',
     'session_monitor.py',
+    'server_config.py',
+    'server_manager.py',
+    'windows_runtime.py',
 ]
 
 py_installation.install_sources(

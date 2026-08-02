@@ -60,7 +60,7 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 row.set_icon_name("application-x-executable-symbolic")
             elif profile.profile_type == 'winege-remoteapp':
                 exe_name = Path(profile.app_command).name
-                row.set_subtitle(f"WineGE Windows: {exe_name}")
+                row.set_subtitle(f"Windows (umu): {exe_name}")
                 row.set_icon_name("application-x-executable-symbolic")
 
             if profile.is_default:
@@ -187,7 +187,7 @@ class ProfileEditDialog(Adw.Dialog):
         model = Gtk.StringList()
         model.append("Full Desktop")
         model.append("RemoteApp (Linux)")
-        model.append("WineGE (Windows .exe)")
+        model.append("Windows App (umu)")
         self.type_combo.set_model(model)
         group.add(self.type_combo)
 

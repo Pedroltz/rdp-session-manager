@@ -23,7 +23,7 @@ RDP Session Manager provides a graphical interface for administering RDP access 
 - Create, remove, enable, and disable RDP user accounts.
 - Configure full desktop sessions with KDE Plasma, GNOME, or XFCE.
 - Run Linux applications as RemoteApp sessions.
-- Run Windows applications as WineGE RemoteApp sessions.
+- Run Windows applications through umu, with legacy WineGE prefix compatibility.
 - Check and install required RDP components when needed.
 - Monitor user status and active sessions.
 
@@ -74,7 +74,8 @@ Command-line usage and available commands are documented in the [CLI reference](
 
 - [Installation guide](docs/INSTALL.md)
 - [CLI reference](docs/CLI.md)
-- [WineGE RemoteApp guide](docs/WINEGE_REMOTEAPP.md)
+- [Windows RemoteApp and legacy WineGE guide](docs/WINEGE_REMOTEAPP.md)
+- [Production server mode](docs/SERVER_MODE.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](docs/DEVELOPMENT.md)
 - [Continuous integration and release checks](docs/CI.md)

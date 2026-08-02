@@ -282,10 +282,21 @@ XINITRC_FILE="$HOME_DIR/.xinitrc"
 /usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
 echo "  OK .xsession and .xinitrc files created"
 
-# 6. Se for WineGE RemoteApp, configurar WineGE
+# Replace the legacy inline dispatcher with the versioned, argument-safe launcher.
+SESSION_WRAPPER="$SCRIPT_DIR/create-session-wrapper.sh"
+if [ ! -x "$SESSION_WRAPPER" ]; then
+    echo "  X Error: create-session-wrapper.sh is missing or not executable" >&2
+    exit 1
+fi
+"$SESSION_WRAPPER" "$USERNAME" "$HOME_DIR"
+RESOURCE_PROFILE="linux-light"
+[ "$SESSION_TYPE" = "winege-remoteapp" ] && RESOURCE_PROFILE="windows-standard"
+/usr/bin/python3 "$SCRIPT_DIR/apply-user-resource.py" "$USERNAME" "$RESOURCE_PROFILE"
+
+# 6. Configure the maintained umu runtime for Windows RemoteApp.
 if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
     echo ""
-    echo "→ Configuring WineGE RemoteApp..."
+    echo "→ Configuring Windows RemoteApp (umu)..."
 
     # SESSION_COMMAND contém o caminho do .exe
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -304,7 +315,7 @@ if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
         exit 1
     fi
 
-    echo "  OK WineGE RemoteApp configured successfully"
+    echo "  OK Windows RemoteApp configured successfully"
 fi
 
 echo "OK User $USERNAME created successfully!"

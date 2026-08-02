@@ -92,6 +92,7 @@ xrdp --version >/dev/null 2>&1
 if [[ "$WITH_WINE" == "true" ]]; then
     assert_command wine
     assert_command winetricks
+    assert_command umu-run
     wine --version
     winetricks --version
     if [[ "$DISTRO_FAMILY" == "debian" ]]; then

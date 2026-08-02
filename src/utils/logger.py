@@ -110,7 +110,8 @@ class AuditLogger:
 
 def setup_logger(name: str = 'rdp-session-manager',
                 log_level: int = logging.INFO,
-                log_dir: Optional[str] = None) -> logging.Logger:
+                log_dir: Optional[str] = None,
+                file_logging: bool = True) -> logging.Logger:
     """
     Configura o sistema de logging
 
@@ -141,6 +142,9 @@ def setup_logger(name: str = 'rdp-session-manager',
     console_handler.setLevel(log_level)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
+
+    if not file_logging:
+        return logging.getLogger(name)
 
     # File handler
     if log_dir:

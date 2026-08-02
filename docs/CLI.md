@@ -49,6 +49,21 @@ rdpsm -v <command>
 rdpsm <command> <subcommand> [options]
 ```
 
+## Production server commands
+
+```bash
+rdpsm server preflight
+rdpsm server plan
+rdpsm server capacity --linux 15 --windows 10
+sudo rdpsm server apply --allowed-network 10.20.0.0/16
+rdpsm server status --format json
+rdpsm server benchmark
+rdpsm server migrate
+```
+
+See [Server mode](SERVER_MODE.md) for resource defaults, migration, and
+operational requirements.
+
 ## User Management
 
 ### Create User

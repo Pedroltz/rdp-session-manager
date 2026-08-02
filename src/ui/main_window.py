@@ -72,11 +72,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def update_server_info(self):
         """Update server information"""
-        # Get IP address
+        self.session_monitor.snapshot()
         ip = self.session_monitor.get_ip_address()
         self.ip_row.set_subtitle(ip)
 
-        # Get active sessions count (apenas usuários habilitados)
         all_sessions = self.session_monitor.get_active_sessions()
         enabled_users = [u.username for u in self.user_manager.list_users() if u.enabled]
         sessions_count = sum(1 for session in all_sessions if session.username in enabled_users)
@@ -115,7 +114,9 @@ class MainWindow(Adw.ApplicationWindow):
                     break
                 self.users_listbox.remove(row)
 
-            # Get users
+            # Warm one shared snapshot. Per-row lookups are then served from
+            # the monitor cache instead of rescanning every system process.
+            self.session_monitor.get_active_sessions()
             users = self.user_manager.list_users()
 
             if not users:
@@ -766,7 +767,7 @@ Would you like to continue?"""
         session_string_list = Gtk.StringList()
         session_string_list.append("Full Desktop")
         session_string_list.append("RemoteApp (Linux Application)")
-        session_string_list.append("WineGE RemoteApp (Windows Application)")
+        session_string_list.append("Windows RemoteApp (umu)")
 
         session_type_combo.set_model(session_string_list)
 
@@ -1094,7 +1095,7 @@ Would you like to continue?"""
 
                 # Validar que .exe não está vazio e existe
                 if not new_app_command:
-                    self.show_toast("X Executable path cannot be empty for WineGE RemoteApp")
+                    self.show_toast("X Executable path cannot be empty for Windows RemoteApp")
                     return
 
                 from pathlib import Path

@@ -1,11 +1,11 @@
 # RDP Session Manager - Test Suite Documentation
 
-Complete unit test suite for RDP Session Manager with 109 tests covering the system's core modules.
+Complete unit test suite for RDP Session Manager with 163 tests covering the application, installer, and server-mode modules.
 
 ## Overview
 
-- **Total Tests**: 109
-- **Test Files**: 6
+- **Total Tests**: 163
+- **Test Files**: 12
 - **Framework**: Python `unittest`
 - **Success Rate**: 100%
 
@@ -16,16 +16,18 @@ tests/
 ├── README.md                  # This file
 ├── run_tests.sh              # Script to run tests
 ├── test_backup.py            # 20 tests - Backup system
-├── test_config.py            # 17 tests - Configuration
-├── test_logger.py            # 25 tests - Logging and audit
-├── test_session_monitor.py   # 23 tests - Session monitoring
-├── test_user_manager.py      # 14 tests - User management
-└── test_validator.py         # 20 tests - Input validation
+├── test_config.py            # 16 tests - Configuration
+├── test_logger.py            # 23 tests - Logging and audit
+├── test_server_mode.py       # 9 tests - Server mode and safe launcher
+├── test_session_monitor.py   # 19 tests - Session monitoring
+├── test_user_manager.py      # 12 tests - User management
+├── test_validator.py         # 19 tests - Input validation
+└── ...                       # Installer, PolicyKit, DE, and dialog tests
 ```
 
 ## Test Files
 
-### test_user_manager.py (14 tests)
+### test_user_manager.py (12 tests)
 
 Tests `src/core/user_manager.py` - RDP user management.
 
@@ -40,7 +42,7 @@ Tests `src/core/user_manager.py` - RDP user management.
 
 ---
 
-### test_validator.py (20 tests)
+### test_validator.py (19 tests)
 
 Tests `src/utils/validator.py` - System input validation.
 
@@ -56,7 +58,7 @@ Tests `src/utils/validator.py` - System input validation.
 
 ---
 
-### test_session_monitor.py (23 tests)
+### test_session_monitor.py (19 tests)
 
 Tests `src/core/session_monitor.py` - RDP session monitoring.
 
@@ -73,7 +75,7 @@ Tests `src/core/session_monitor.py` - RDP session monitoring.
 
 ---
 
-### test_config.py (17 tests)
+### test_config.py (16 tests)
 
 Tests `src/core/config.py` - INI configuration system.
 
@@ -89,7 +91,7 @@ Tests `src/core/config.py` - INI configuration system.
 
 ---
 
-### test_logger.py (25 tests)
+### test_logger.py (23 tests)
 
 Tests `src/utils/logger.py` - Logging and audit system.
 
@@ -268,13 +270,15 @@ def test_something(self):
 
 | Module | Tests | Status |
 |--------|--------|--------|
-| user_manager.py | 14 | Complete |
-| validator.py | 20 | Complete |
-| session_monitor.py | 23 | Complete |
-| config.py | 17 | Complete |
-| logger.py | 25 | Complete |
+| user_manager.py | 12 | Complete |
+| validator.py | 19 | Complete |
+| session_monitor.py | 19 | Complete |
+| config.py | 16 | Complete |
+| logger.py | 23 | Complete |
 | backup.py | 20 | Complete |
-| **TOTAL** | **109** | **100%** |
+| server_mode.py | 9 | Complete |
+| installer and integration modules | 45 | Complete |
+| **TOTAL** | **163** | **100%** |
 
 ## Contributing Tests
 
@@ -335,6 +339,6 @@ class TestNewClass(unittest.TestCase):
 
 ---
 
-**Version**: 0.2.2
-**Last Updated**: 2025-10-24
-**Tests**: 109/109 passing
+**Version**: 0.6.0
+**Last Updated**: 2026-08-02
+**Tests**: 163/163 passing

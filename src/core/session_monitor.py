@@ -7,6 +7,7 @@ import subprocess
 import logging
 import psutil
 import socket
+import time
 from typing import List, Dict, Optional
 from datetime import datetime
 
@@ -17,13 +18,18 @@ class SessionInfo:
     """Informações de uma sessão RDP"""
 
     def __init__(self, username: str, session_id: str = "", ip_address: str = "",
-                 port: int = 0, connected: bool = False, start_time: datetime = None):
+                 port: int = 0, connected: bool = False, start_time: datetime = None,
+                 memory_mb: float = 0.0, cpu_percent: float = 0.0,
+                 process_count: int = 0):
         self.username = username
         self.session_id = session_id
         self.ip_address = ip_address
         self.port = port
         self.connected = connected
         self.start_time = start_time or datetime.now()
+        self.memory_mb = memory_mb
+        self.cpu_percent = cpu_percent
+        self.process_count = process_count
 
     def to_dict(self) -> Dict:
         """Converte para dicionário"""
@@ -34,7 +40,10 @@ class SessionInfo:
             'port': self.port,
             'connected': self.connected,
             'start_time': self.start_time.isoformat() if self.start_time else None,
-            'duration': self.get_duration()
+            'duration': self.get_duration(),
+            'memory_mb': round(self.memory_mb, 2),
+            'cpu_percent': round(self.cpu_percent, 2),
+            'process_count': self.process_count,
         }
 
     def get_duration(self) -> int:
@@ -47,11 +56,21 @@ class SessionInfo:
 class SessionMonitor:
     """Monitor de sessões RDP"""
 
-    def __init__(self):
+    def __init__(self, cache_ttl: float = 2.0):
         self.sessions = {}
+        self.cache_ttl = cache_ttl
+        self._sessions_cache = None
+        self._sessions_cache_at = 0.0
+        self._ip_cache = None
 
     def get_active_sessions(self) -> List[SessionInfo]:
         """Retorna lista de sessões ativas"""
+        now = time.monotonic()
+        if (
+            self._sessions_cache is not None
+            and now - self._sessions_cache_at < self.cache_ttl
+        ):
+            return list(self._sessions_cache)
         sessions = []
 
         try:
@@ -59,19 +78,72 @@ class SessionMonitor:
             connections = self._get_rdp_connections()
 
             for conn in connections:
+                previous = self.sessions.get(conn.get('username', 'unknown'))
                 session = SessionInfo(
                     username=conn.get('username', 'unknown'),
                     session_id=conn.get('session_id', ''),
                     ip_address=conn.get('remote_ip', ''),
                     port=conn.get('port', 0),
-                    connected=True
+                    connected=True,
+                    start_time=(
+                        previous.start_time
+                        if previous and previous.session_id == conn.get('session_id', '')
+                        else None
+                    ),
                 )
                 sessions.append(session)
+            usage = self._get_user_usage({session.username for session in sessions})
+            for session in sessions:
+                values = usage.get(session.username, {})
+                session.memory_mb = values.get('memory_mb', 0.0)
+                session.cpu_percent = values.get('cpu_percent', 0.0)
+                session.process_count = values.get('process_count', 0)
 
         except Exception as e:
             logger.error(f"Error getting active sessions: {e}")
 
+        self._sessions_cache = list(sessions)
+        self._sessions_cache_at = now
+        self.sessions = {session.username: session for session in sessions}
         return sessions
+
+    @staticmethod
+    def _get_user_usage(usernames: set) -> Dict[str, Dict]:
+        usage = {
+            username: {'memory_mb': 0.0, 'cpu_percent': 0.0, 'process_count': 0}
+            for username in usernames
+        }
+        if not usernames:
+            return usage
+        for proc in psutil.process_iter(['username', 'memory_info', 'cpu_percent']):
+            try:
+                username = proc.info.get('username')
+                if username not in usage:
+                    continue
+                memory = proc.info.get('memory_info')
+                usage[username]['memory_mb'] += (
+                    memory.rss / (1024 * 1024) if memory else 0.0
+                )
+                usage[username]['cpu_percent'] += proc.info.get('cpu_percent') or 0.0
+                usage[username]['process_count'] += 1
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return usage
+
+    def invalidate(self):
+        """Invalidate cached system state after a mutating session operation."""
+        self._sessions_cache = None
+        self._sessions_cache_at = 0.0
+
+    def snapshot(self) -> Dict:
+        """Return one reusable state snapshot for CLI and GUI consumers."""
+        sessions = self.get_active_sessions()
+        return {
+            'captured_at': datetime.now().isoformat(),
+            'sessions': [session.to_dict() for session in sessions],
+            'active_sessions': len(sessions),
+            'ip_addresses': self.get_all_network_ips(),
+        }
 
     def _get_rdp_connections(self) -> List[Dict]:
         """Obtém conexões RDP ativas do sistema"""
@@ -177,12 +249,15 @@ class SessionMonitor:
 
     def get_ip_address(self) -> str:
         """Obtém endereço IP do servidor"""
+        if self._ip_cache:
+            return self._ip_cache
         try:
             # Criar socket para determinar IP principal
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
             s.close()
+            self._ip_cache = ip
             return ip
 
         except Exception as e:
@@ -191,7 +266,8 @@ class SessionMonitor:
             # Tentar via hostname
             try:
                 hostname = socket.gethostname()
-                return socket.gethostbyname(hostname)
+                self._ip_cache = socket.gethostbyname(hostname)
+                return self._ip_cache
             except:
                 return "127.0.0.1"
 
@@ -224,7 +300,11 @@ class SessionMonitor:
         return ips if ips else ["127.0.0.1"]
 
     def disconnect_user(self, username: str) -> bool:
-        """Desconecta um usuário"""
+        """Request a graceful xrdp session termination.
+
+        xrdp does not expose a stable detach-only CLI. Terminating the login
+        session is safer than pretending a disconnect succeeded.
+        """
         try:
             session = self.get_user_session(username)
 
@@ -232,11 +312,20 @@ class SessionMonitor:
                 logger.warning(f"No active session for {username}")
                 return False
 
-            # Desconectar via comando do sistema
-            # TODO: Implementar desconexão real
-            logger.info(f"Disconnecting user {username}")
-
-            return True
+            if not session.session_id:
+                return False
+            result = subprocess.run(
+                ['loginctl', 'terminate-session', session.session_id],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                self.invalidate()
+                logger.info(f"Session {session.session_id} for {username} terminated")
+                return True
+            logger.error("loginctl failed for %s: %s", username, result.stderr.strip())
+            return False
 
         except Exception as e:
             logger.error(f"Error disconnecting {username}: {e}")
@@ -245,22 +334,27 @@ class SessionMonitor:
     def kill_user_session(self, username: str) -> bool:
         """Encerra forçadamente a sessão de um usuário"""
         try:
-            # Obter processos do usuário
-            killed = False
-
+            processes = []
             for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
                     if proc.info['username'] == username:
-                        proc.kill()
-                        killed = True
+                        proc.terminate()
+                        processes.append(proc)
 
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
 
-            if killed:
+            if processes:
+                _, alive = psutil.wait_procs(processes, timeout=5)
+                for proc in alive:
+                    try:
+                        proc.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                self.invalidate()
                 logger.info(f"Session for {username} terminated")
 
-            return killed
+            return bool(processes)
 
         except Exception as e:
             logger.error(f"Error terminating session for {username}: {e}")

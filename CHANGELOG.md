@@ -1,5 +1,22 @@
 # Changelog - RDP Session Manager
 
+## [0.6.0] - 2026-08-02
+
+### Added
+- Production server mode with headless preflight, plan, apply, capacity,
+  status, benchmark, cgroup quotas, private-network firewall, and rollback.
+- Versioned profile schema 2 and a shared, argument-safe RemoteApp supervisor.
+- Maintained `umu-launcher` support with checksum-verified installation and
+  reversible WineGE metadata migration.
+- Cached session snapshots with per-user CPU, memory, and process metrics.
+- Staged 5/10/25-session end-to-end load test.
+
+### Changed
+- RemoteApp is explicitly a single-application xrdp session, without claiming
+  production RAIL/seamless-window support.
+- New Windows sessions use umu; existing WineGE prefixes remain available as a
+  legacy fallback.
+
 ## [0.5.2] - 2026-08-02
 
 ### Added

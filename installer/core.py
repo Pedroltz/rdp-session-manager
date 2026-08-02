@@ -666,16 +666,16 @@ class Installer:
                 "gir1.2-gtk-4.0", "gir1.2-adw-1", "libadwaita-1-0", "polkitd",
             ]
             if not self.args.without_xrdp:
-                packages += ["xrdp", "xorgxrdp", "xorg", "x11-xserver-utils", "xauth", "openbox", "dbus-x11", "zenity"]
+                packages += ["xrdp", "xorgxrdp", "xorg", "x11-xserver-utils", "xauth", "openbox", "dbus-x11", "zenity", "nftables"]
             if self.args.with_wine:
                 packages += ["wine", "wine64", "wine32", "winetricks", "cabextract", "p7zip-full", "unzip", "curl", "wget"]
             return packages
         packages = ["python", "python-gobject", "python-cairo", "python-psutil", "gtk4", "libadwaita", "polkit"]
         if not self.args.without_xrdp:
-            packages += ["xorg-server", "xorg-xinit", "xorg-xrandr", "xorg-xauth", "openbox", "dbus", "zenity"]
+            packages += ["xorg-server", "xorg-xinit", "xorg-xrandr", "xorg-xauth", "openbox", "dbus", "zenity", "nftables"]
         if self.args.with_wine:
             packages += [
-                "wine", "wine-mono", "wine-gecko", "winetricks",
+                "wine", "wine-mono", "wine-gecko", "winetricks", "umu-launcher",
                 "lib32-gnutls", "lib32-libxinerama", "lib32-libpulse",
                 "lib32-alsa-lib", "lib32-mesa", "vulkan-icd-loader",
                 "lib32-vulkan-icd-loader", "cabextract", "7zip", "unzip",
@@ -768,6 +768,11 @@ class Installer:
                 )
         self.runner.run(prefix + ["apt-get", "update"], timeout=900)
         self.runner.run(prefix + ["apt-get", "install", "-y", "--no-install-recommends", *self.package_names(), str(app_path)], timeout=1800)
+        if self.args.with_wine:
+            umu_helper = Path("/usr/share/rdp-session-manager/helpers/install-umu-launcher.sh")
+            if not self.args.dry_run and not umu_helper.is_file():
+                raise InstallerError(f"umu installer helper was not installed: {umu_helper}")
+            self.runner.run(prefix + [str(umu_helper)], timeout=900)
         if not self.args.without_xrdp:
             self.enable_service("xrdp")
 

@@ -227,9 +227,14 @@ jobs:
               }
             done
           else
+            release_notes="docs/release-notes/${{ needs.build-assets.outputs.version }}.md"
+            if [[ ! -f "$release_notes" ]]; then
+              printf 'Release notes not found: %s\n' "$release_notes" >&2
+              exit 1
+            fi
             gh release create "$GITHUB_REF_NAME" release-assets/* \
               --title "RDP Session Manager $GITHUB_REF_NAME" \
-              --generate-notes \
+              --notes-file "$release_notes" \
               --prerelease \
               --latest=false \
               --verify-tag
