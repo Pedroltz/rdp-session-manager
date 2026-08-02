@@ -77,7 +77,7 @@ class UserDialog(Adw.Dialog):
         string_list = Gtk.StringList()
         string_list.append("Full Desktop")
         string_list.append("RemoteApp (Linux Application)")
-        string_list.append("WineGE RemoteApp (Windows Application)")
+        string_list.append("Windows RemoteApp (umu)")
 
         self.session_type_combo.set_model(string_list)
         self.session_type_combo.set_selected(0)  # Default: Desktop
@@ -503,7 +503,7 @@ class UserDialog(Adw.Dialog):
         # Show progress with terminal log
         # Mensagem especial para WineGE
         if session_type == 'winege-remoteapp':
-            body_text = f"Creating user {username}...\n\nWARNING WineGE RemoteApp requires a ~750 MB download.\nThe first setup may take 10–15 minutes.\nPlease wait and do not close this window!"
+            body_text = f"Creating user {username}...\n\nWARNING The Windows runtime may require a large first download.\nThe first setup may take 10–15 minutes.\nPlease wait and do not close this window!"
         else:
             body_text = f"Creating user {username}..."
 
@@ -603,10 +603,10 @@ class UserDialog(Adw.Dialog):
                     GLib.idle_add(append_log, "Type: RemoteApp (Linux)")
                     GLib.idle_add(append_log, f"Application: {app_command}")
                 elif session_type == 'winege-remoteapp':
-                    GLib.idle_add(append_log, "Type: WineGE RemoteApp (Windows)")
+                    GLib.idle_add(append_log, "Type: Windows RemoteApp (umu)")
                     GLib.idle_add(append_log, f"Executable: {app_command}")
                     GLib.idle_add(append_log, "")
-                    GLib.idle_add(append_log, "WARNING First-time WineGE setup takes 10–15 minutes")
+                    GLib.idle_add(append_log, "WARNING First-time Windows runtime setup may take 10–15 minutes")
                     GLib.idle_add(append_log, "WARNING Download: ~750 MB | Extraction + Setup")
                     GLib.idle_add(append_log, "WARNING Please wait and do not close this window!")
 
@@ -661,7 +661,7 @@ class UserDialog(Adw.Dialog):
         elif user.session_type == 'remoteapp':
             session_info = f"Type: RemoteApp (Linux)\nApplication: {user.app_command}"
         elif user.session_type == 'winege-remoteapp':
-            session_info = f"Type: WineGE RemoteApp (Windows)\nExecutable: {user.app_command}"
+            session_info = f"Type: Windows RemoteApp (umu)\nExecutable: {user.app_command}"
         else:
             session_info = f"Type: {user.session_type}"
 

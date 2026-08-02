@@ -234,7 +234,7 @@ class TestSessionMonitor(unittest.TestCase):
         result = self.monitor.kill_user_session('testuser')
 
         self.assertTrue(result)
-        mock_proc.kill.assert_called_once()
+        mock_proc.terminate.assert_called_once()
 
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')

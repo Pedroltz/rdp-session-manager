@@ -1,12 +1,46 @@
-# WineGE RemoteApp - Guia de Uso
+# Aplicativos Windows RemoteApp: umu e WineGE legado
+
+> **Estado atual:** novas instalações usam `umu-launcher`. O WineGE descrito
+> neste documento é mantido apenas para compatibilidade e migração de prefixes
+> existentes, pois o projeto WineGE original foi arquivado.
 
 Este documento explica como criar RemoteApps que executam aplicativos Windows usando **WineGE** (Wine-GE Custom) no RDP Session Manager.
 
-## O que é WineGE RemoteApp?
+## Fluxo atual: Windows RemoteApp com umu
 
-WineGE RemoteApp permite que você execute aplicativos Windows (.exe) como RemoteApps via RDP, usando o Wine-GE (uma versão melhorada do Wine mantida por GloriousEggroll) em vez do Wine convencional.
+O tipo interno `winege-remoteapp` continua existindo para compatibilidade com
+scripts e perfis antigos, mas novas contas executam o `.exe` com `umu-run`.
+O launcher e o runtime Proton são compartilhados no servidor; cada usuário
+mantém seu próprio prefix em `/opt/rdp-users/USERNAME/.wine`.
 
-### Por que WineGE em vez de Wine?
+Criação pela CLI:
+
+```bash
+rdpsm user create winuser1 \
+    --session-type winege-remoteapp \
+    --app-command /path/to/MyApp.exe \
+    --fullname "Windows App User"
+```
+
+Antes de criar a conta, instale o componente opcional Windows pelo instalador.
+O pacote umu é fixado e verificado por SHA-256. Consulte também o
+[modo servidor](SERVER_MODE.md) para capacidade, cache compartilhado e limites.
+
+Para migrar uma conta existente:
+
+```bash
+rdpsm server migrate
+sudo rdpsm server migrate --username USERNAME --apply
+```
+
+A migração cria um backup reversível e não remove o WineGE nem o prefix antigo.
+
+## Referência legada do WineGE
+
+As seções abaixo documentam instalações antigas. Comandos que baixam
+`GE-Proton8-26` por usuário não devem ser usados em novas implantações.
+
+### Por que o projeto usava WineGE?
 
 - **Melhor compatibilidade** com jogos e aplicativos modernos
 - **Patches adicionais** para DirectX, DXVK, VKD3D

@@ -16,6 +16,8 @@ from core.de_installer import DEInstaller
 from core.desktop_environments import SUPPORTED_DESKTOPS, normalize_desktop_id
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
+from core.server_manager import ServerManager
+from core.windows_runtime import WindowsRuntimeMigrator
 from utils.logger import setup_logger
 from utils.polkit import get_privilege_command, set_cli_mode
 from version import __version__
@@ -30,11 +32,16 @@ class CLI:
     """Command Line Interface for RDP Session Manager"""
 
     def __init__(self):
-        self.app_config = AppConfig()
-        self.user_manager = UserManager(self.app_config)
-        self.session_monitor = SessionMonitor()
-        self.de_installer = DEInstaller()
-        self.system_deps = SystemDependencies()
+        # Keep server diagnostics genuinely headless and read-only. Components
+        # that touch an administrator's home are created only by commands that
+        # actually need them.
+        self._app_config = None
+        self._user_manager = None
+        self._session_monitor = None
+        self._de_installer = None
+        self._system_deps = None
+        self.server_manager = ServerManager()
+        self.windows_migrator = WindowsRuntimeMigrator()
 
         # Colors for terminal output
         self.RESET = '\033[0m'
@@ -49,6 +56,36 @@ class CLI:
         if not sys.stdout.isatty():
             self.RESET = self.RED = self.GREEN = self.YELLOW = ''
             self.BLUE = self.CYAN = self.BOLD = ''
+
+    @property
+    def app_config(self):
+        if self._app_config is None:
+            self._app_config = AppConfig()
+        return self._app_config
+
+    @property
+    def user_manager(self):
+        if self._user_manager is None:
+            self._user_manager = UserManager(self.app_config)
+        return self._user_manager
+
+    @property
+    def session_monitor(self):
+        if self._session_monitor is None:
+            self._session_monitor = SessionMonitor()
+        return self._session_monitor
+
+    @property
+    def de_installer(self):
+        if self._de_installer is None:
+            self._de_installer = DEInstaller()
+        return self._de_installer
+
+    @property
+    def system_deps(self):
+        if self._system_deps is None:
+            self._system_deps = SystemDependencies()
+        return self._system_deps
 
     def print_success(self, message: str):
         """Print success message"""
@@ -104,7 +141,7 @@ class CLI:
             # Validate WineGE RemoteApp parameters
             if session_type == 'winege-remoteapp':
                 if not app_command:
-                    self.print_error("WineGE RemoteApp session requires --app-command parameter with .exe path")
+                    self.print_error("Windows RemoteApp requires --app-command with an .exe path")
                     self.print_info("Example: rdpsm user create USERNAME --session-type winege-remoteapp --app-command /path/to/app.exe")
                     return 1
 
@@ -991,19 +1028,100 @@ class CLI:
             return 1
 
     def server_status(self, args):
-        """Check xrdp server status"""
+        """Show a server health snapshot."""
         try:
-            xrdp_ready = self.system_deps.is_xrdp_ready()
-
-            if xrdp_ready:
-                self.print_success("xrdp server is installed and running")
-                return 0
+            import json
+            data = self.server_manager.status(self.session_monitor)
+            if getattr(args, 'format', 'table') == 'json':
+                print(json.dumps(data, indent=2))
             else:
-                self.print_warning("xrdp server is not installed or not running")
-                return 1
+                self.print_header("Server Status")
+                for service, active in data['services'].items():
+                    print(f"  {service:<14} {'active' if active else 'inactive'}")
+                print(f"  Active sessions: {data.get('active_sessions', 0)}")
+                print(f"  CPU:             {data['cpu_percent']:.1f}%")
+                print(f"  Memory:          {data['memory_percent']:.1f}%")
+            return 0 if data['healthy'] else 1
 
         except Exception as e:
             self.print_error(f"Error checking server status: {e}")
+            return 1
+
+    def server_preflight(self, args):
+        import json
+        data = self.server_manager.preflight()
+        print(json.dumps(data, indent=2))
+        return 0 if data['ready'] else 1
+
+    def server_plan(self, args):
+        import json
+        print(json.dumps(self.server_manager.plan(), indent=2))
+        return 0
+
+    def server_apply(self, args):
+        import json
+        from dataclasses import replace
+        try:
+            settings = self.server_manager.config.load()
+            overrides = {}
+            for name in (
+                'allowed_network', 'max_sessions',
+                'disconnected_timeout_seconds', 'idle_timeout_seconds',
+                'linux_session_slots', 'windows_session_slots',
+            ):
+                value = getattr(args, name, None)
+                if value is not None:
+                    overrides[name] = value
+            settings = replace(settings, **overrides)
+            assignments = {}
+            for user in UserManager(app_config=None).list_users():
+                assignments[user.username] = (
+                    'windows-standard'
+                    if any(p.profile_type == 'winege-remoteapp' for p in user.profiles)
+                    else user.default_profile.resource_profile
+                )
+            print(json.dumps(
+                self.server_manager.apply(
+                    dry_run=args.dry_run,
+                    resource_assignments=assignments,
+                    settings=settings,
+                ),
+                indent=2,
+            ))
+            return 0
+        except Exception as exc:
+            self.print_error(f"Failed to apply server profile: {exc}")
+            return 1
+
+    def server_benchmark(self, args):
+        import json
+        print(json.dumps(self.server_manager.benchmark(args.samples), indent=2))
+        return 0
+
+    def server_capacity(self, args):
+        import json
+        profiles = (
+            ['windows-standard'] * args.windows
+            + ['linux-light'] * args.linux
+        )
+        data = self.server_manager.capacity(profiles)
+        print(json.dumps(data, indent=2))
+        return 0 if data['admissible'] else 1
+
+    def server_migrate(self, args):
+        import json
+        try:
+            if not args.apply and not args.rollback:
+                print(json.dumps(self.windows_migrator.inventory(args.username), indent=2))
+                return 0
+            if not args.username:
+                self.print_error("--username is required with --apply or --rollback")
+                return 2
+            data = self.windows_migrator.migrate(args.username, rollback=args.rollback or "")
+            print(json.dumps(data, indent=2))
+            return 0
+        except Exception as exc:
+            self.print_error(f"Windows runtime migration failed: {exc}")
             return 1
 
     # ==================== CONFIG COMMANDS ====================
@@ -1285,7 +1403,7 @@ class CLI:
         user_create.add_argument('-p', '--password', help='Password (will prompt if not provided)')
         user_create.add_argument('-s', '--session-type', choices=['desktop', 'remoteapp', 'winege-remoteapp'], default='desktop',
                                 help='Session type: desktop (full DE), remoteapp (single app), or winege-remoteapp (Windows app via WineGE)')
-        user_create.add_argument('--app-command', help='Application command for RemoteApp (e.g., firefox) or .exe path for WineGE RemoteApp')
+        user_create.add_argument('--app-command', help='Application command for RemoteApp or .exe path for Windows RemoteApp')
         user_create.add_argument('--app-args', default='', help='Application arguments for RemoteApp/WineGE (e.g., --private-window)')
         user_create.set_defaults(func=self.user_create)
 
@@ -1349,7 +1467,7 @@ class CLI:
         user_sudo_revoke.set_defaults(func=self.user_sudo_revoke)
 
         # user winege (sub-subcommand)
-        user_winege = user_subparsers.add_parser('winege', help='Manage WineGE RemoteApp executables')
+        user_winege = user_subparsers.add_parser('winege', help='Manage Windows RemoteApp executables (legacy command name)')
         user_winege_subparsers = user_winege.add_subparsers(dest='winege_action')
 
         # user winege list
@@ -1420,7 +1538,39 @@ class CLI:
 
         # server status
         server_status = server_subparsers.add_parser('status', help='Check xrdp server status')
+        server_status.add_argument('--format', choices=['table', 'json'], default='table')
         server_status.set_defaults(func=self.server_status)
+
+        server_preflight = server_subparsers.add_parser('preflight', help='Validate production readiness')
+        server_preflight.set_defaults(func=self.server_preflight)
+
+        server_plan = server_subparsers.add_parser('plan', help='Show production profile changes')
+        server_plan.set_defaults(func=self.server_plan)
+
+        server_apply = server_subparsers.add_parser('apply', help='Apply the production server profile')
+        server_apply.add_argument('--dry-run', action='store_true')
+        server_apply.add_argument('--allowed-network', help='Private/VPN CIDR allowed to reach RDP')
+        server_apply.add_argument('--max-sessions', type=int)
+        server_apply.add_argument('--disconnected-timeout-seconds', type=int)
+        server_apply.add_argument('--idle-timeout-seconds', type=int)
+        server_apply.add_argument('--linux-session-slots', type=int)
+        server_apply.add_argument('--windows-session-slots', type=int)
+        server_apply.set_defaults(func=self.server_apply)
+
+        server_benchmark = server_subparsers.add_parser('benchmark', help='Measure status collection overhead')
+        server_benchmark.add_argument('--samples', type=int, default=5)
+        server_benchmark.set_defaults(func=self.server_benchmark)
+
+        server_capacity = server_subparsers.add_parser('capacity', help='Validate a proposed session mix')
+        server_capacity.add_argument('--linux', type=int, default=0)
+        server_capacity.add_argument('--windows', type=int, default=0)
+        server_capacity.set_defaults(func=self.server_capacity)
+
+        server_migrate = server_subparsers.add_parser('migrate', help='Inventory or migrate legacy WineGE users')
+        server_migrate.add_argument('--username')
+        server_migrate.add_argument('--apply', action='store_true')
+        server_migrate.add_argument('--rollback', metavar='BACKUP_DIR')
+        server_migrate.set_defaults(func=self.server_migrate)
 
         # Config commands
         config_parser = subparsers.add_parser('config', help='Configuration management')
@@ -1481,10 +1631,11 @@ class CLI:
         args = parser.parse_args(argv)
 
         # Setup logging
+        file_logging = args.command != 'server'
         if args.verbose:
-            setup_logger(log_level=logging.DEBUG)
+            setup_logger(log_level=logging.DEBUG, file_logging=file_logging)
         else:
-            setup_logger(log_level=logging.WARNING)
+            setup_logger(log_level=logging.WARNING, file_logging=file_logging)
 
         # Execute command
         if hasattr(args, 'func'):

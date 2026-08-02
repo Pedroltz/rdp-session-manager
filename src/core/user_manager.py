@@ -7,6 +7,7 @@ import os
 import pwd
 import grp
 import json
+import shlex
 import subprocess
 import logging
 from pathlib import Path
@@ -27,7 +28,10 @@ class ConnectionProfile:
 
     def __init__(self, profile_id: str, name: str, profile_type: str = 'desktop',
                  desktop_env: str = 'xfce', app_command: str = '',
-                 app_args: str = '', is_default: bool = False):
+                 app_args: str = '', is_default: bool = False,
+                 command_argv: Optional[List[str]] = None,
+                 working_directory: str = '', environment: Optional[Dict[str, str]] = None,
+                 runtime: str = '', resource_profile: str = ''):
         self.profile_id = profile_id
         self.name = name
         self.profile_type = profile_type  # 'desktop', 'remoteapp', 'winege-remoteapp'
@@ -35,6 +39,22 @@ class ConnectionProfile:
         self.app_command = app_command
         self.app_args = app_args
         self.is_default = is_default
+        self.command_argv = command_argv or self._legacy_argv(app_command, app_args)
+        self.working_directory = working_directory
+        self.environment = environment or {}
+        self.runtime = runtime or ('umu' if profile_type == 'winege-remoteapp' else 'native')
+        self.resource_profile = resource_profile or (
+            'windows-standard' if profile_type == 'winege-remoteapp' else 'linux-light'
+        )
+
+    @staticmethod
+    def _legacy_argv(app_command: str, app_args: str) -> List[str]:
+        if not app_command:
+            return []
+        try:
+            return [app_command] + shlex.split(app_args)
+        except ValueError:
+            return [app_command]
 
     def to_dict(self) -> Dict:
         return {
@@ -45,6 +65,11 @@ class ConnectionProfile:
             'app_command': self.app_command,
             'app_args': self.app_args,
             'is_default': self.is_default,
+            'command_argv': self.command_argv,
+            'working_directory': self.working_directory,
+            'environment': self.environment,
+            'runtime': self.runtime,
+            'resource_profile': self.resource_profile,
         }
 
     @classmethod
@@ -56,7 +81,12 @@ class ConnectionProfile:
             desktop_env=data.get('desktop_env', 'xfce'),
             app_command=data.get('app_command', ''),
             app_args=data.get('app_args', ''),
-            is_default=data.get('is_default', False)
+            is_default=data.get('is_default', False),
+            command_argv=data.get('command_argv'),
+            working_directory=data.get('working_directory', ''),
+            environment=data.get('environment', {}),
+            runtime=data.get('runtime', ''),
+            resource_profile=data.get('resource_profile', ''),
         )
 
 
@@ -80,7 +110,7 @@ class RDPUser:
         # Se profiles estiver vazio, gera o perfil padrão baseado em session_type
         if not self.profiles:
             def_name = "Área de Trabalho" if session_type == 'desktop' else (
-                f"RemoteApp ({app_command})" if session_type == 'remoteapp' else "WineGE App"
+                f"RemoteApp ({app_command})" if session_type == 'remoteapp' else "Windows App (umu)"
             )
             self.profiles = [
                 ConnectionProfile(
@@ -264,7 +294,7 @@ class UserManager:
             logger.info(f"  - Desktop ENV: {desktop_env}")
         else:
             logger.info(f"  - App Command: {app_command}")
-            logger.info(f"  - App Args: {app_args}")
+            logger.info("  - App Args: [redacted]")
         logger.info(f"  - Full name: {full_name}")
         logger.info("=" * 70)
 
@@ -518,7 +548,7 @@ class UserManager:
             # para máquinas de CI e também para hosts mais lentos.
             timeout_seconds = 1200 if session_type == 'winege-remoteapp' else 120
             if session_type == 'winege-remoteapp':
-                logger.info("  WARNING WineGE may take 10–15 minutes to download and install")
+                logger.info("  WARNING The umu/Proton runtime may take 10–15 minutes to download")
 
             try:
                 result = subprocess.run(
@@ -1273,6 +1303,8 @@ class UserManager:
         if content:
             try:
                 data = json.loads(content)
+                if isinstance(data, dict):
+                    data = data.get('profiles', [])
                 if isinstance(data, list) and len(data) > 0:
                     return [ConnectionProfile.from_dict(item) for item in data]
             except Exception as e:
@@ -1280,7 +1312,7 @@ class UserManager:
 
         # Fallback para perfil legado único
         def_name = "Área de Trabalho" if default_session_type == 'desktop' else (
-            f"RemoteApp ({default_cmd})" if default_session_type == 'remoteapp' else "WineGE App"
+            f"RemoteApp ({default_cmd})" if default_session_type == 'remoteapp' else "Windows App (umu)"
         )
         return [
             ConnectionProfile(
@@ -1298,7 +1330,10 @@ class UserManager:
         """Salva a lista de fontes de conexão no arquivo .rdp_profiles.json do usuário usando o helper script elevado"""
         import tempfile
         try:
-            data = [p.to_dict() for p in profiles]
+            data = {
+                'schema_version': 2,
+                'profiles': [p.to_dict() for p in profiles],
+            }
 
             # Salvar dados em arquivo temporário
             with tempfile.NamedTemporaryFile('w', delete=False, suffix='.json') as temp_file:
@@ -1359,11 +1394,11 @@ class UserManager:
 
             if profile.profile_type in ['remoteapp', 'winege-remoteapp']:
                 rdp_content.extend([
-                    "remoteapplicationmode:i:1",
-                    f"remoteapplicationname:s:{profile.name}",
-                    f"remoteapplicationprogram:s:||{profile.profile_id}",
-                    f"remoteapplicationcmdline:s:{profile.app_args}",
-                    f"alternate shell:s:||{profile.profile_id}",
+                    # xrdp RAIL is not treated as production-ready. The
+                    # alternate shell selects a profile while the client keeps
+                    # a normal full-screen single-application session.
+                    "remoteapplicationmode:i:0",
+                    f"alternate shell:s:{profile.profile_id}",
                 ])
 
             with open(output_path, 'w') as f:
@@ -1689,6 +1724,28 @@ class UserManager:
             if result.returncode != 0:
                 logger.error(f"Failed to change session type: {result.stderr}")
                 return False
+
+            user = self.get_user(username)
+            if user:
+                profile = user.default_profile
+                profile.profile_type = session_type
+                if session_type == 'desktop':
+                    profile.desktop_env = normalize_desktop_id(session_command)
+                    profile.app_command = ''
+                    profile.app_args = ''
+                else:
+                    profile.app_command = session_command
+                    profile.app_args = app_args
+                profile.command_argv = ConnectionProfile._legacy_argv(
+                    profile.app_command, profile.app_args
+                )
+                profile.runtime = 'umu' if session_type == 'winege-remoteapp' else 'native'
+                profile.resource_profile = (
+                    'windows-standard' if session_type == 'winege-remoteapp' else 'linux-light'
+                )
+                if not self.save_profiles_for_user(username, user.profiles):
+                    logger.error("Session changed but profile schema update failed")
+                    return False
 
             logger.info(f"OK Session type for {username} changed to {session_type}")
             return True

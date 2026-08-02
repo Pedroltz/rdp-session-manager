@@ -202,6 +202,12 @@ XINITRC_FILE="$HOME_DIR/.xinitrc"
 /usr/bin/ln -sf "$XSESSION_FILE" "$XINITRC_FILE"
 /usr/bin/chown -h "$USERNAME:rdp-users" "$XINITRC_FILE"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$HOME_DIR/.rdp_profiles.json" ]; then
+    "$SCRIPT_DIR/create-session-wrapper.sh" "$USERNAME" "$HOME_DIR"
+    /usr/bin/python3 "$SCRIPT_DIR/apply-user-resource.py" "$USERNAME"
+fi
+
 echo "OK Session type changed successfully to $SESSION_TYPE"
 echo "  - Keyboard layout: $XKBLAYOUT"
 exit 0

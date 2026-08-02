@@ -12,7 +12,7 @@ import re
 VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', Path('src/version.py').read_text()).group(1)
 
 # Get all helper scripts
-helper_scripts = glob.glob('helpers/*.sh')
+helper_scripts = glob.glob('helpers/*.sh') + glob.glob('helpers/*.py')
 
 setup(
     name='rdp-session-manager',
@@ -30,6 +30,7 @@ setup(
     install_requires=[
         'PyGObject>=3.42.0',
         'pycairo>=1.20.0',
+        'psutil>=5.8.0',
     ],
     python_requires='>=3.9',
     entry_points={

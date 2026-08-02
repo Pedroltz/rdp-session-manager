@@ -353,12 +353,14 @@ class InstallerHelpersTest(unittest.TestCase):
                     Mock(stdout="", returncode=0),
                     Mock(stdout="", returncode=0),
                     Mock(stdout="", returncode=0),
+                    Mock(stdout="", returncode=0),
                 ]
                 instance.install_debian(app_path)
             commands = [call.args[0] for call in run.call_args_list]
             self.assertEqual(commands[0], ["dpkg", "--print-foreign-architectures"])
             self.assertEqual(commands[1][-3:], ["dpkg", "--add-architecture", "i386"])
             self.assertEqual(commands[2][-2:], ["apt-get", "update"])
+            self.assertTrue(commands[4][-1].endswith("install-umu-launcher.sh"))
         finally:
             instance.close()
 

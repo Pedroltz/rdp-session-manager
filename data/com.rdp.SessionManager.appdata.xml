@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.6.0" date="2026-08-02">
+      <description>
+        <p>Adds production server provisioning, resource limits, secure RemoteApp supervision, cached metrics, and reversible migration from legacy WineGE to umu.</p>
+      </description>
+    </release>
     <release version="0.5.2" date="2026-08-02">
       <description>
         <p>Fixes Connection Sources UI rendering glitch when adding new sources, adds Make Default action button, and enables fullscreen RDP connection launching.</p>
