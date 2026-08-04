@@ -63,23 +63,12 @@ if [ "$ASSET_TYPE" = "deb" ]; then
     apt-get install -y "$TMP_DIR/$ASSET"
 else
     DESTINATION="/opt/rdp-session-manager/umu-launcher-$VERSION"
-    python3 - "$TMP_DIR/$ASSET" "$TMP_DIR/extracted" <<'PY'
-import sys
-import tarfile
-from pathlib import Path
-
-archive, destination = Path(sys.argv[1]), Path(sys.argv[2])
-destination.mkdir()
-with tarfile.open(archive) as handle:
-    for member in handle.getmembers():
-        target = (destination / member.name).resolve()
-        if (
-            target != destination.resolve()
-            and destination.resolve() not in target.parents
-        ) or not (member.isfile() or member.isdir()):
-            raise SystemExit(f"unsafe archive member: {member.name}")
-    handle.extractall(destination)
-PY
+    SAFE_EXTRACTOR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/extract-safe-tar.py"
+    [ -f "$SAFE_EXTRACTOR" ] || {
+        echo "Safe tar extractor is missing: $SAFE_EXTRACTOR" >&2
+        exit 1
+    }
+    python3 "$SAFE_EXTRACTOR" "$TMP_DIR/$ASSET" "$TMP_DIR/extracted"
     case "$DESTINATION" in
         /opt/rdp-session-manager/umu-launcher-*) rm -rf "$DESTINATION" ;;
         *) echo "Refusing unsafe destination: $DESTINATION" >&2; exit 1 ;;

@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.6.3" date="2026-08-04">
+      <description>
+        <p>Fixes secure extraction of the official UMU zipapp on newer Ubuntu and Debian releases while retaining path-traversal protections.</p>
+      </description>
+    </release>
     <release version="0.6.2" date="2026-08-04">
       <description>
         <p>Fixes Windows RemoteApp account provisioning, automatic UMU installation, safe executable staging, rollback, and installer defaults across Arch, Ubuntu, and Debian.</p>

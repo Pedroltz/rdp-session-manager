@@ -1,5 +1,13 @@
 # Changelog - RDP Session Manager
 
+## [0.6.3] - 2026-08-04
+
+- Fixed UMU installation from the official zipapp on newer Ubuntu/Debian
+  releases by safely accepting its internal relative symbolic link.
+- Kept archive extraction protected against absolute links, links escaping the
+  destination, parent-path traversal, and unsupported archive member types.
+- Added focused tests using the same archive layout published by UMU.
+
 ## [0.6.2] - 2026-08-04
 
 - Fixed Windows RemoteApp account creation when `umu-run` was not installed:
