@@ -135,6 +135,7 @@ if [ -f "$HOME/.rdp_profiles.json" ] && [ -f "$LAUNCHER" ] && python3 "$LAUNCHER
     P_DE=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('desktop_env','xfce'))")
     P_CMD=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('app_command',''))")
     P_ARGS=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('app_args',''))")
+    P_APP_ID=$(echo "$PROFILE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('windows_app_id',''))")
 
     if [ "$P_TYPE" = "remoteapp" ]; then
         mkdir -p $HOME/.config/openbox
@@ -196,7 +197,10 @@ OPENBOXEOF
         openbox --config-file $HOME/.config/openbox/rc.xml &
         OPENBOX_PID=$!
         sleep 1
-        if [ -f "$HOME/.launch_winege_app.sh" ]; then
+        WINDOWS_LAUNCHER="/usr/share/rdp-session-manager/helpers/launch-windows-app.py"
+        if [ -n "$P_APP_ID" ] && [ -f "$WINDOWS_LAUNCHER" ]; then
+            python3 "$WINDOWS_LAUNCHER" "$P_APP_ID" &
+        elif [ -f "$HOME/.launch_winege_app.sh" ]; then
             $HOME/.launch_winege_app.sh $P_ARGS &
         else
             wine "$P_CMD" $P_ARGS &

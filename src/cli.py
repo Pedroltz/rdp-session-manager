@@ -6,6 +6,11 @@ RDP Session Manager - Command Line Interface
 import sys
 import argparse
 import logging
+import json
+import os
+import pwd
+import shutil
+import subprocess
 import time
 from typing import Optional
 from pathlib import Path
@@ -18,6 +23,13 @@ from core.system_deps import SystemDependencies
 from core.config import AppConfig
 from core.server_manager import ServerManager
 from core.windows_runtime import WindowsRuntimeMigrator
+from core.windows_app import (
+    InstallRecipe,
+    RecipeCatalog,
+    WindowsAppError,
+    WindowsAppManager,
+    safe_app_id,
+)
 from utils.logger import setup_logger
 from utils.polkit import get_privilege_command, set_cli_mode
 from version import __version__
@@ -107,6 +119,277 @@ class CLI:
         """Print header"""
         print(f"\n{self.BOLD}{self.CYAN}{message}{self.RESET}")
         print(f"{self.CYAN}{'=' * len(message)}{self.RESET}")
+
+    def _windows_manager(self, username: str) -> WindowsAppManager:
+        try:
+            home = Path(pwd.getpwnam(username).pw_dir)
+        except KeyError as exc:
+            raise WindowsAppError(f"User not found: {username}") from exc
+        return WindowsAppManager(home)
+
+    def windows_catalog_list(self, args):
+        try:
+            recipes = RecipeCatalog().list()
+            if args.format == "json":
+                print(json.dumps([item.to_dict() for item in recipes], indent=2))
+            else:
+                self.print_header("Windows application recipes")
+                if not recipes:
+                    print("No recipes installed.")
+                for recipe in recipes:
+                    print(
+                        f"{recipe.recipe_id:24} {recipe.name} "
+                        f"({recipe.installer_type}, {recipe.runner})"
+                    )
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_install(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                raise WindowsAppError(f"User not found: {args.username}")
+            from core.user_manager import ConnectionProfile
+            import uuid
+
+            if args.profile_id:
+                profile = next(
+                    (item for item in user.profiles if item.profile_id == args.profile_id), None
+                )
+                if not profile:
+                    raise WindowsAppError(f"Profile not found: {args.profile_id}")
+                profile_id = profile.profile_id
+            else:
+                profile_id = uuid.uuid4().hex[:8]
+                profile = ConnectionProfile(
+                    profile_id=profile_id,
+                    name=args.name or "Windows Application",
+                    profile_type="winege-remoteapp",
+                    is_default=False,
+                )
+                user.profiles.append(profile)
+            if args.recipe:
+                recipe = manager.catalog.get(args.recipe)
+                if args.runner != "auto":
+                    recipe.runner = args.runner
+                elif recipe.runner == "umu-proton" and not shutil.which("umu-run"):
+                    recipe.runner = "winege-legacy"
+                    self.print_warning(
+                        "UMU is unavailable; using the WineGE/system Wine compatibility runner"
+                    )
+            else:
+                if not args.source:
+                    raise WindowsAppError("--source is required without --recipe")
+                source = Path(args.source)
+                installer_type = "portable" if source.is_dir() else source.suffix.lower().lstrip(".")
+                if installer_type not in {"exe", "msi", "portable"}:
+                    installer_type = "exe"
+                silent_args = list(args.installer_arg or [])
+                if installer_type == "msi" and not silent_args:
+                    silent_args = ["/qn", "/norestart"]
+                recipe = InstallRecipe(
+                    recipe_id=safe_app_id(args.app_id or source.stem),
+                    name=args.name or source.stem,
+                    installer_type=installer_type,
+                    silent_args=silent_args,
+                    executable_patterns=list(args.executable_pattern or []),
+                    runner=(
+                        args.runner
+                        if args.runner != "auto"
+                        else ("umu-proton" if shutil.which("umu-run") else "winege-legacy")
+                    ),
+                    architecture=args.architecture,
+                )
+            source = Path(args.source) if args.source else None
+            app_id = manager.stage(
+                recipe,
+                source=source,
+                app_id=args.app_id,
+                profile_id=profile_id,
+            )
+            state = manager.install(app_id, args.mode)
+
+            profile.name = args.name or recipe.name
+            profile.profile_type = "winege-remoteapp"
+            profile.windows_app_id = app_id
+            profile.app_command = manager.load_manifest(app_id).get("executable", "")
+            if not self.user_manager.save_profiles_for_user(args.username, user.profiles):
+                raise WindowsAppError("Application installed but profile update failed")
+
+            self.print_success(f"Windows application prepared: {app_id}")
+            self.print_info(f"State: {state['state']} - {state.get('message', '')}")
+            if state["state"] == "awaiting_assisted_install":
+                self.print_info("Connect to this RDP profile to complete the installer.")
+            elif state["state"] == "selection_required":
+                self.print_info(f"Use: rdpsm windows-app select {args.username} {app_id}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_status(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            if args.app_id:
+                rows = [(manager.load_manifest(args.app_id), manager.load_state(args.app_id))]
+            else:
+                rows = manager.list_apps()
+            if args.format == "json":
+                print(json.dumps([{"manifest": manifest, "status": state} for manifest, state in rows], indent=2))
+            else:
+                self.print_header(f"Windows applications for {args.username}")
+                for manifest, state in rows:
+                    print(
+                        f"{manifest['app_id']:24} {state['state']:28} "
+                        f"{manifest.get('name', '')}"
+                    )
+                    if state.get("message"):
+                        print(f"  {state['message']}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_select(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            state = manager.load_state(args.app_id)
+            candidates = state.get("candidates") or manager.discover(args.app_id)
+            if args.executable:
+                selected = args.executable
+            else:
+                if not candidates:
+                    raise WindowsAppError("No executable candidates were found")
+                for index, candidate in enumerate(candidates, 1):
+                    print(f"{index}. {candidate['path']} (score {candidate['score']})")
+                selected_index = int(input("Select executable: ")) - 1
+                selected = candidates[selected_index]["path"]
+            manager.select_executable(args.app_id, selected)
+            manager.set_state(
+                args.app_id, "awaiting_rdp_validation", "Executable selected; RDP validation pending"
+            )
+            self.print_success(f"Selected executable for {args.app_id}: {selected}")
+            return 0
+        except (OSError, ValueError, IndexError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_resume(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            state = manager.load_state(args.app_id)
+            if state["state"] == "awaiting_assisted_install":
+                self.print_info("Connect through RDP; the installer will resume automatically.")
+                return 0
+            if state["state"] in {"selection_required", "validating", "awaiting_rdp_validation"}:
+                self.print_info(f"Current state: {state['state']}")
+                return 0
+            result = manager.install(args.app_id, args.mode)
+            self.print_info(f"State: {result['state']} - {result.get('message', '')}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_logs(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            log_dir = manager.app_dir(args.app_id) / "logs"
+            if not log_dir.is_dir():
+                raise WindowsAppError("No logs found")
+            for path in sorted(log_dir.glob("*.log")):
+                print(f"===== {path.name} =====")
+                print(path.read_text(encoding="utf-8", errors="replace"))
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_validate(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            state = manager.validate_local(args.app_id, args.grace)
+            self.print_success(state["message"])
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_retry(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            if args.clean:
+                if not args.yes:
+                    answer = input(
+                        f"Delete and recreate the prefix for {args.app_id}? [y/N]: "
+                    ).strip().lower()
+                    if answer not in {"y", "yes"}:
+                        self.print_info("Retry canceled.")
+                        return 0
+                prefix = Path(manager.load_manifest(args.app_id)["prefix"])
+                if prefix.is_dir():
+                    import shutil
+                    shutil.rmtree(prefix)
+                prefix.mkdir(parents=True, exist_ok=True)
+            result = manager.install(args.app_id, args.mode)
+            self.print_info(f"State: {result['state']} - {result.get('message', '')}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_remove(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            if not args.yes:
+                answer = input(
+                    f"Remove application {args.app_id} and its isolated prefix? [y/N]: "
+                ).strip().lower()
+                if answer not in {"y", "yes"}:
+                    self.print_info("Removal canceled.")
+                    return 0
+            manager.remove(args.app_id)
+            user = self.user_manager.get_user(args.username)
+            if user:
+                for profile in user.profiles:
+                    if profile.windows_app_id == args.app_id:
+                        profile.windows_app_id = ""
+                        profile.app_command = ""
+                self.user_manager.save_profiles_for_user(args.username, user.profiles)
+            self.print_success(f"Removed Windows application {args.app_id}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
+
+    def windows_migrate(self, args):
+        try:
+            manager = self._windows_manager(args.username)
+            user = self.user_manager.get_user(args.username)
+            if not user:
+                raise WindowsAppError(f"User not found: {args.username}")
+            profile = next((item for item in user.profiles if item.profile_id == args.profile_id), None)
+            if not profile:
+                raise WindowsAppError(f"Profile not found: {args.profile_id}")
+            if profile.windows_app_id:
+                raise WindowsAppError("Profile already uses an isolated Windows application")
+            app_id = manager.migrate_legacy(
+                safe_app_id(profile.name),
+                profile.name,
+                Path(profile.app_command),
+                profile.profile_id,
+            )
+            profile.windows_app_id = app_id
+            if not self.user_manager.save_profiles_for_user(args.username, user.profiles):
+                raise WindowsAppError("Migration completed but profile update failed")
+            self.print_success(f"Migrated {args.profile_id} to {app_id}")
+            return 0
+        except (OSError, ValueError, WindowsAppError) as exc:
+            self.print_error(str(exc))
+            return 1
 
     # ==================== USER COMMANDS ====================
 
@@ -1480,6 +1763,100 @@ class CLI:
         user_winege_select.add_argument('username', help='Username')
         user_winege_select.set_defaults(func=self.user_winege_select)
 
+        # Windows application lifecycle commands
+        windows_parser = subparsers.add_parser(
+            'windows-app', help='Install and validate isolated Windows applications'
+        )
+        windows_subparsers = windows_parser.add_subparsers(dest='subcommand')
+
+        windows_catalog = windows_subparsers.add_parser('catalog', help='Recipe catalog')
+        windows_catalog_sub = windows_catalog.add_subparsers(dest='catalog_action')
+        windows_catalog_list = windows_catalog_sub.add_parser('list', help='List recipes')
+        windows_catalog_list.add_argument('--format', choices=['table', 'json'], default='table')
+        windows_catalog_list.set_defaults(func=self.windows_catalog_list)
+
+        windows_install = windows_subparsers.add_parser(
+            'install', help='Stage and install a Windows application'
+        )
+        windows_install.add_argument('username')
+        windows_install.add_argument('--source', help='Local EXE, MSI, or portable directory')
+        windows_install.add_argument('--recipe', help='Catalog recipe ID or JSON recipe file')
+        windows_install.add_argument('--profile-id', help='Connection profile to associate')
+        windows_install.add_argument('--app-id', help='Stable application identifier')
+        windows_install.add_argument('--name', help='Application display name')
+        windows_install.add_argument(
+            '--mode', choices=['auto', 'portable', 'assisted'], default='auto'
+        )
+        windows_install.add_argument(
+            '--runner', choices=['auto', 'umu-proton', 'winege-legacy'], default='auto'
+        )
+        windows_install.add_argument(
+            '--architecture', choices=['win32', 'win64'], default='win64'
+        )
+        windows_install.add_argument(
+            '--installer-arg', action='append', help='Unattended installer argument (repeatable)'
+        )
+        windows_install.add_argument(
+            '--executable-pattern', action='append', help='Expected installed EXE glob'
+        )
+        windows_install.set_defaults(func=self.windows_install)
+
+        windows_status = windows_subparsers.add_parser('status', help='Show lifecycle state')
+        windows_status.add_argument('username')
+        windows_status.add_argument('app_id', nargs='?')
+        windows_status.add_argument('--format', choices=['table', 'json'], default='table')
+        windows_status.set_defaults(func=self.windows_status)
+
+        windows_select = windows_subparsers.add_parser('select', help='Select final executable')
+        windows_select.add_argument('username')
+        windows_select.add_argument('app_id')
+        windows_select.add_argument('--executable', help='Candidate path (otherwise prompt)')
+        windows_select.set_defaults(func=self.windows_select)
+
+        windows_resume = windows_subparsers.add_parser('resume', help='Resume installation')
+        windows_resume.add_argument('username')
+        windows_resume.add_argument('app_id')
+        windows_resume.add_argument(
+            '--mode', choices=['auto', 'portable', 'assisted'], default='auto'
+        )
+        windows_resume.set_defaults(func=self.windows_resume)
+
+        windows_logs = windows_subparsers.add_parser('logs', help='Print application logs')
+        windows_logs.add_argument('username')
+        windows_logs.add_argument('app_id')
+        windows_logs.set_defaults(func=self.windows_logs)
+
+        windows_validate = windows_subparsers.add_parser(
+            'validate', help='Run local startup validation'
+        )
+        windows_validate.add_argument('username')
+        windows_validate.add_argument('app_id')
+        windows_validate.add_argument('--grace', type=int, default=5)
+        windows_validate.set_defaults(func=self.windows_validate)
+
+        windows_retry = windows_subparsers.add_parser('retry', help='Retry installation')
+        windows_retry.add_argument('username')
+        windows_retry.add_argument('app_id')
+        windows_retry.add_argument(
+            '--mode', choices=['auto', 'portable', 'assisted'], default='auto'
+        )
+        windows_retry.add_argument('--clean', action='store_true')
+        windows_retry.add_argument('--yes', action='store_true')
+        windows_retry.set_defaults(func=self.windows_retry)
+
+        windows_remove = windows_subparsers.add_parser('remove', help='Remove application')
+        windows_remove.add_argument('username')
+        windows_remove.add_argument('app_id')
+        windows_remove.add_argument('--yes', action='store_true')
+        windows_remove.set_defaults(func=self.windows_remove)
+
+        windows_migrate = windows_subparsers.add_parser(
+            'migrate', help='Clone a legacy WineGE profile into an isolated prefix'
+        )
+        windows_migrate.add_argument('username')
+        windows_migrate.add_argument('profile_id')
+        windows_migrate.set_defaults(func=self.windows_migrate)
+
         # Session commands
         session_parser = subparsers.add_parser('session', help='Session management')
         session_subparsers = session_parser.add_subparsers(dest='subcommand')
@@ -1629,6 +2006,16 @@ class CLI:
 
         # Parse arguments
         args = parser.parse_args(argv)
+
+        # Windows application data normally belongs to an RDP user under
+        # /opt/rdp-users. In CLI/headless mode privilege escalation must happen
+        # in the terminal, never through a graphical authentication agent.
+        original_argv = list(argv) if argv is not None else sys.argv[1:]
+        if args.command == 'windows-app' and args.subcommand != 'catalog' and os.geteuid() != 0:
+            _, privilege_command = get_privilege_command()
+            return subprocess.call(
+                privilege_command + [sys.executable, str(Path(__file__).resolve())] + original_argv
+            )
 
         # Setup logging
         file_logging = args.command != 'server'

@@ -8,6 +8,7 @@ core_sources = [
     'server_config.py',
     'server_manager.py',
     'windows_runtime.py',
+    'windows_app.py',
 ]
 
 py_installation.install_sources(

@@ -32,6 +32,11 @@ install_data(
     install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
 )
 
+install_subdir(
+    'windows-app-recipes',
+    install_dir: join_paths(get_option('datadir'), 'rdp-session-manager')
+)
+
 # UI files
 subdir('ui')
 subdir('icons')
