@@ -1,5 +1,20 @@
 # Changelog - RDP Session Manager
 
+## [0.6.2] - 2026-08-04
+
+- Fixed Windows RemoteApp account creation when `umu-run` was not installed:
+  the maintained runtime is now provisioned before creating the system user.
+- Added automatic rollback for partially created RDP accounts.
+- Copy only the selected Windows executable into the RDP user's application
+  directory instead of copying its entire source directory.
+- Enable Windows RemoteApp dependencies by default in interactive and
+  unattended installations, with `--without-wine` as an explicit opt-out.
+- Added UMU provisioning support for Arch, newer Ubuntu/Debian releases and
+  compatible derivatives.
+- Fixed current profile dispatcher detection and surfaced detailed helper
+  failures in the UI.
+- Removed the obsolete quality-check badge from the README.
+
 ## [0.6.1] - 2026-08-04
 
 - Added isolated per-application Windows prefixes and profile-specific launchers.
