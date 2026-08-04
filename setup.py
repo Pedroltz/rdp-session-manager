@@ -26,6 +26,8 @@ setup(
     data_files=[
         # Install helper scripts to /usr/share/rdp-session-manager/helpers
         ('share/rdp-session-manager/helpers', helper_scripts),
+        ('share/rdp-session-manager/windows-app-recipes',
+         glob.glob('data/windows-app-recipes/*.json')),
     ],
     install_requires=[
         'PyGObject>=3.42.0',

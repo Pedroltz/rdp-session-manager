@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "generic-nsis",
+  "name": "Generic NSIS installer",
+  "source": {
+    "url": "",
+    "sha256": "",
+    "filename": ""
+  },
+  "installer": {
+    "type": "exe",
+    "silent_args": [
+      "/S"
+    ],
+    "success_codes": [
+      0
+    ],
+    "timeout": 900
+  },
+  "runtime": {
+    "runner": "umu-proton",
+    "architecture": "win64"
+  },
+  "winetricks": [],
+  "executable": {
+    "patterns": [],
+    "args": []
+  }
+}

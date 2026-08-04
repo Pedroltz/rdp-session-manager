@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "notepad-plus-plus",
+  "name": "Notepad++ 8.9.6.1",
+  "source": {
+    "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.6.1/npp.8.9.6.1.Installer.x64.msi",
+    "sha256": "e3b092b8d7a6113f134634aa4d07a53766a90d939b3ce8b0135f4f9e267b5449",
+    "filename": "npp.8.9.6.1.Installer.x64.msi"
+  },
+  "installer": {
+    "type": "msi",
+    "silent_args": [
+      "/qn",
+      "/norestart"
+    ],
+    "success_codes": [
+      0,
+      1641,
+      3010
+    ],
+    "timeout": 600
+  },
+  "runtime": {
+    "runner": "umu-proton",
+    "architecture": "win64"
+  },
+  "winetricks": [],
+  "executable": {
+    "patterns": [
+      "*/Notepad++/notepad++.exe"
+    ],
+    "args": []
+  }
+}

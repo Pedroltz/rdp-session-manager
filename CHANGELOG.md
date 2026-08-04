@@ -1,5 +1,16 @@
 # Changelog - RDP Session Manager
 
+## [0.6.1] - 2026-08-04
+
+- Added isolated per-application Windows prefixes and profile-specific launchers.
+- Added automated MSI/EXE/portable staging, assisted installation, executable
+  discovery, local validation, RDP readiness tracking, logs and legacy migration.
+- Added the `rdpsm windows-app` CLI and versioned JSON recipe catalog.
+- Prefer maintained UMU/Proton for new applications while retaining the archived
+  WineGE runner for backward compatibility.
+- Reduced GitHub Actions on `develop` and `master` to installer build and
+  installation validation only.
+
 ## [0.6.0] - 2026-08-02
 
 ### Added

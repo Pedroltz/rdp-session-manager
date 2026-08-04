@@ -4,6 +4,12 @@
 > neste documento é mantido apenas para compatibilidade e migração de prefixes
 > existentes, pois o projeto WineGE original foi arquivado.
 
+> **Aviso de compatibilidade:** WineGE foi arquivado pelo mantenedor. O novo
+> fluxo isolado e automatizado usa UMU/Proton quando disponível e preserva
+> WineGE apenas para perfis legados. Consulte
+> [WINDOWS_APPS.md](WINDOWS_APPS.md). Este documento descreve também o fluxo
+> legado e não deve ser usado como referência para novas instalações.
+
 Este documento explica como criar RemoteApps que executam aplicativos Windows usando **WineGE** (Wine-GE Custom) no RDP Session Manager.
 
 ## Fluxo atual: Windows RemoteApp com umu

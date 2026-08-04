@@ -31,7 +31,8 @@ class ConnectionProfile:
                  app_args: str = '', is_default: bool = False,
                  command_argv: Optional[List[str]] = None,
                  working_directory: str = '', environment: Optional[Dict[str, str]] = None,
-                 runtime: str = '', resource_profile: str = ''):
+                 runtime: str = '', resource_profile: str = '',
+                 windows_app_id: str = ''):
         self.profile_id = profile_id
         self.name = name
         self.profile_type = profile_type  # 'desktop', 'remoteapp', 'winege-remoteapp'
@@ -46,6 +47,7 @@ class ConnectionProfile:
         self.resource_profile = resource_profile or (
             'windows-standard' if profile_type == 'winege-remoteapp' else 'linux-light'
         )
+        self.windows_app_id = windows_app_id
 
     @staticmethod
     def _legacy_argv(app_command: str, app_args: str) -> List[str]:
@@ -70,6 +72,7 @@ class ConnectionProfile:
             'environment': self.environment,
             'runtime': self.runtime,
             'resource_profile': self.resource_profile,
+            'windows_app_id': self.windows_app_id,
         }
 
     @classmethod
@@ -87,6 +90,7 @@ class ConnectionProfile:
             environment=data.get('environment', {}),
             runtime=data.get('runtime', ''),
             resource_profile=data.get('resource_profile', ''),
+            windows_app_id=data.get('windows_app_id', '')
         )
 
 

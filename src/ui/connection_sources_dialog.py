@@ -6,14 +6,19 @@ Allows adding, editing, deleting, and exporting connection profiles for an RDP u
 
 import uuid
 import logging
+import shutil
+import subprocess
+import sys
+import threading
 from pathlib import Path
 
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GObject
+from gi.repository import Gtk, Adw, GObject, GLib
 
 from core.user_manager import ConnectionProfile, RDPUser
+from utils.polkit import get_privilege_command
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +65,12 @@ class ConnectionSourcesDialog(Adw.Dialog):
                 row.set_icon_name("application-x-executable-symbolic")
             elif profile.profile_type == 'winege-remoteapp':
                 exe_name = Path(profile.app_command).name
-                row.set_subtitle(f"Windows (umu): {exe_name}")
+                if profile.windows_app_id:
+                    row.set_subtitle(
+                        f"Windows (UMU/WineGE): {exe_name or profile.windows_app_id}"
+                    )
+                else:
+                    row.set_subtitle(f"WineGE legacy: {exe_name}")
                 row.set_icon_name("application-x-executable-symbolic")
 
             if profile.is_default:
@@ -141,10 +151,70 @@ class ConnectionSourcesDialog(Adw.Dialog):
         if not self.rdp_user.profiles:
             profile.is_default = True
         self.rdp_user.profiles.append(profile)
-        self.user_manager.save_profiles_for_user(self.rdp_user.username, self.rdp_user.profiles)
+        self.user_manager.save_profiles_for_user(
+            self.rdp_user.username, self.rdp_user.profiles
+        )
         self.load_profiles()
         if hasattr(self.parent, 'load_users'):
             self.parent.load_users()
+        if profile.profile_type == 'winege-remoteapp' and profile.app_command:
+            self._install_windows_profile(profile)
+
+    def _install_windows_profile(self, profile: ConnectionProfile):
+        """Start staging outside the GTK thread; authorization remains graphical."""
+        rdpsm = shutil.which("rdpsm")
+        if rdpsm:
+            command = [
+                rdpsm, "windows-app", "install", self.rdp_user.username,
+                "--profile-id", profile.profile_id,
+                "--source", profile.app_command,
+                "--name", profile.name,
+            ]
+        else:
+            cli = Path(__file__).resolve().parents[1] / "cli.py"
+            command = [sys.executable, str(cli), "windows-app", "install",
+                       self.rdp_user.username, "--profile-id", profile.profile_id,
+                       "--source", profile.app_command, "--name", profile.name]
+        _, privilege = get_privilege_command()
+
+        def worker():
+            result = subprocess.run(
+                privilege + command, capture_output=True, text=True, timeout=1800
+            )
+            GLib.idle_add(self._windows_install_finished, profile, result)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _windows_install_finished(self, profile, result):
+        if result.returncode == 0:
+            refreshed = self.user_manager.get_user(self.rdp_user.username)
+            if refreshed:
+                self.rdp_user = refreshed
+                self.load_profiles()
+            logger.info("Windows application prepared for profile %s", profile.profile_id)
+            message = Adw.MessageDialog(
+                transient_for=self.get_root(),
+                heading="Windows application prepared",
+                body=(
+                    "The isolated prefix and connection profile were created.\n\n"
+                    "If the installer needs interaction, connect through this RDP "
+                    "profile to finish it."
+                ),
+            )
+        else:
+            logger.error(
+                "Windows application setup failed for %s: %s",
+                profile.profile_id,
+                result.stderr.strip(),
+            )
+            message = Adw.MessageDialog(
+                transient_for=self.get_root(),
+                heading="Windows application setup failed",
+                body=result.stderr.strip() or "See the RDPSM logs for details.",
+            )
+        message.add_response("ok", "OK")
+        message.present()
+        return False
 
 
 class ProfileEditDialog(Adw.Dialog):
@@ -201,7 +271,7 @@ class ProfileEditDialog(Adw.Dialog):
         group.add(self.de_combo)
 
         # App Command
-        self.cmd_row = Adw.EntryRow(title="App Command / .exe Path")
+        self.cmd_row = Adw.EntryRow(title="App Command / Windows Installer")
         group.add(self.cmd_row)
 
         # App Args

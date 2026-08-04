@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "generic-msi",
+  "name": "Generic MSI package",
+  "source": {
+    "url": "",
+    "sha256": "",
+    "filename": ""
+  },
+  "installer": {
+    "type": "msi",
+    "silent_args": [
+      "/qn",
+      "/norestart"
+    ],
+    "success_codes": [
+      0,
+      1641,
+      3010
+    ],
+    "timeout": 900
+  },
+  "runtime": {
+    "runner": "umu-proton",
+    "architecture": "win64"
+  },
+  "winetricks": [],
+  "executable": {
+    "patterns": [],
+    "args": []
+  }
+}

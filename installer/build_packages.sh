@@ -78,6 +78,7 @@ echo "→ Copying files..."
 cp -r src "${BUILD_DIR}/usr/share/${APP_NAME}/"
 mkdir -p "${BUILD_DIR}/usr/share/${APP_NAME}/data"
 cp -r data/ui "${BUILD_DIR}/usr/share/${APP_NAME}/data/"
+cp -r data/windows-app-recipes "${BUILD_DIR}/usr/share/${APP_NAME}/"
 
 # Copy scripts if exist
 [ -d "scripts" ] && cp -r scripts "${BUILD_DIR}/usr/share/${APP_NAME}/"

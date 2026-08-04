@@ -668,7 +668,10 @@ class Installer:
             if not self.args.without_xrdp:
                 packages += ["xrdp", "xorgxrdp", "xorg", "x11-xserver-utils", "xauth", "openbox", "dbus-x11", "zenity", "nftables"]
             if self.args.with_wine:
-                packages += ["wine", "wine64", "wine32", "winetricks", "cabextract", "p7zip-full", "unzip", "curl", "wget"]
+                packages += [
+                    "wine", "wine64", "wine32", "winetricks", "cabextract",
+                    "p7zip-full", "unzip", "curl", "wget", "xvfb", "xdotool",
+                ]
             return packages
         packages = ["python", "python-gobject", "python-cairo", "python-psutil", "gtk4", "libadwaita", "polkit"]
         if not self.args.without_xrdp:
@@ -679,7 +682,7 @@ class Installer:
                 "lib32-gnutls", "lib32-libxinerama", "lib32-libpulse",
                 "lib32-alsa-lib", "lib32-mesa", "vulkan-icd-loader",
                 "lib32-vulkan-icd-loader", "cabextract", "7zip", "unzip",
-                "curl", "wget", "tar",
+                "curl", "wget", "tar", "xorg-server-xvfb", "xdotool",
             ]
         return packages
 

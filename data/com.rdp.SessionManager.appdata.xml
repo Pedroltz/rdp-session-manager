@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.6.1" date="2026-08-04">
+      <description>
+        <p>Adds automated, isolated Windows application installation and validation with UMU/WineGE, including a verified Notepad++ recipe.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-08-02">
       <description>
         <p>Adds production server provisioning, resource limits, secure RemoteApp supervision, cached metrics, and reversible migration from legacy WineGE to umu.</p>
