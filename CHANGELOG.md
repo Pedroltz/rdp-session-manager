@@ -8,8 +8,8 @@
 - Added the `rdpsm windows-app` CLI and versioned JSON recipe catalog.
 - Prefer maintained UMU/Proton for new applications while retaining the archived
   WineGE runner for backward compatibility.
-- Reduced GitHub Actions on `develop` and `master` to installer build and
-  installation validation only.
+- Removed GitHub Actions checks from `develop` and `master`; tagged releases
+  retain only installer asset generation and publication.
 
 ## [0.6.0] - 2026-08-02
 
