@@ -7,11 +7,19 @@ if command -v umu-run >/dev/null 2>&1; then
 fi
 
 . /etc/os-release
-ARCH="$(dpkg --print-architecture)"
+case "$(uname -m)" in
+    x86_64) ARCH="amd64" ;;
+    aarch64) ARCH="arm64" ;;
+    *) ARCH="$(uname -m)" ;;
+esac
 VERSION="1.4.0"
 BASE_URL="https://github.com/Open-Wine-Components/umu-launcher/releases/download/$VERSION"
 
 case "${ID}:${VERSION_ID}:${ARCH}" in
+    arch:*:amd64)
+        pacman -S --needed --noconfirm umu-launcher
+        exit 0
+        ;;
     ubuntu:22.04:amd64)
         ASSET="umu-launcher-${VERSION}-zipapp.tar"
         SHA256="138ce4b8843608a257d4bee88191ca78a989778bcefd8abb3c1d1aaac3ac6fb8"
@@ -31,6 +39,14 @@ case "${ID}:${VERSION_ID}:${ARCH}" in
         ASSET="python3-umu-launcher_${VERSION}-1_amd64_debian-13.deb"
         SHA256="3de80fdcffdc5daabd65e7c9567aff4b8beeecc238eae11529fe737c0b4083f7"
         ASSET_TYPE="deb"
+        ;;
+    *:amd64)
+        # The official zipapp is distribution-independent. It also covers
+        # newer Ubuntu/Debian releases and supported derivatives for which the
+        # upstream project does not publish a release-specific .deb.
+        ASSET="umu-launcher-${VERSION}-zipapp.tar"
+        SHA256="138ce4b8843608a257d4bee88191ca78a989778bcefd8abb3c1d1aaac3ac6fb8"
+        ASSET_TYPE="zipapp"
         ;;
     *)
         echo "No verified umu-launcher package is available for ${ID} ${VERSION_ID} ${ARCH}." >&2

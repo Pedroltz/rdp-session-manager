@@ -11,6 +11,25 @@ from installer import core as installer
 
 
 class InstallerHelpersTest(unittest.TestCase):
+    def test_automatic_install_includes_windows_support_by_default(self):
+        args = installer.parser().parse_args(["--yes", "--dry-run"])
+        instance = object.__new__(installer.Installer)
+        instance.args = args
+
+        instance.choose_components()
+
+        self.assertTrue(instance.args.with_wine)
+        self.assertFalse(instance.args.without_xrdp)
+
+    def test_automatic_install_can_explicitly_skip_windows_support(self):
+        args = installer.parser().parse_args(["--yes", "--dry-run", "--without-wine"])
+        instance = object.__new__(installer.Installer)
+        instance.args = args
+
+        instance.choose_components()
+
+        self.assertFalse(instance.args.with_wine)
+
     @patch.dict("installer.core.os.environ", {}, clear=True)
     def test_headless_installer_uses_terminal_sudo(self):
         instance = object.__new__(installer.Installer)

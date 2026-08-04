@@ -29,6 +29,24 @@ SESSION_COMMAND="${SESSION_COMMAND:-startxfce4}"
 
 echo "Creating RDP user: $USERNAME"
 
+# A Windows account must not be created partially when the optional runtime
+# was omitted during the original RDPSM installation. Install it before
+# useradd so failures leave no orphan account or home directory behind.
+if [ "$SESSION_TYPE" = "winege-remoteapp" ] && ! command -v umu-run >/dev/null 2>&1; then
+    UMU_INSTALLER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/install-umu-launcher.sh"
+    if [ ! -x "$UMU_INSTALLER" ]; then
+        echo "Error: umu-run is unavailable and $UMU_INSTALLER is missing." >&2
+        exit 1
+    fi
+    step "→ Installing the required umu-launcher runtime..."
+    "$UMU_INSTALLER"
+fi
+
+[ "$SESSION_TYPE" != "winege-remoteapp" ] || [ -f "$SESSION_COMMAND" ] || {
+    echo "Error: Windows executable not found: $SESSION_COMMAND" >&2
+    exit 1
+}
+
 # Detectar layout de teclado do sistema
 XKBLAYOUT="us"
 XKBVARIANT=""
@@ -75,6 +93,22 @@ else
     /usr/sbin/useradd -u "$USER_UID" -d "$HOME_DIR" -m -g rdp-users -s /bin/bash "$USERNAME"
 fi
 step "  OK System user created"
+
+USER_CREATED=true
+cleanup_partial_user() {
+    status=$?
+    if [ "$status" -ne 0 ] && [ "${USER_CREATED:-false}" = true ]; then
+        echo "→ Rolling back partially created user $USERNAME..." >&2
+        /usr/sbin/userdel -r "$USERNAME" >/dev/null 2>&1 || {
+            /usr/sbin/userdel "$USERNAME" >/dev/null 2>&1 || true
+            case "$HOME_DIR" in
+                /opt/rdp-users/*) /usr/bin/rm -rf -- "$HOME_DIR" ;;
+            esac
+        }
+    fi
+    exit "$status"
+}
+trap cleanup_partial_user EXIT
 
 # 4. Ajustar permissões do home directory (751 para permitir leitura do .xsession)
 step "→ Adjusting home directory permissions..."
@@ -324,4 +358,5 @@ fi
 
 echo "OK User $USERNAME created successfully!"
 echo "  - Keyboard layout: $XKBLAYOUT"
+trap - EXIT
 exit 0

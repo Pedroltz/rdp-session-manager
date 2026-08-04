@@ -30,7 +30,9 @@ APPS_DIR="$HOME_DIR/WindowsApps"
 EXE_BASENAME="$(basename "$EXE_PATH")"
 TARGET_EXE="$APPS_DIR/$EXE_BASENAME"
 /usr/bin/mkdir -p "$APPS_DIR" "$WINE_PREFIX"
-/usr/bin/cp -a "$(dirname "$EXE_PATH")/." "$APPS_DIR/"
+# Copy only the selected executable. Copying its entire source directory could
+# unintentionally import every file from locations such as ~/Downloads.
+/usr/bin/cp -a "$EXE_PATH" "$TARGET_EXE"
 /usr/bin/chown -R "$USERNAME:rdp-users" "$APPS_DIR" "$WINE_PREFIX"
 /usr/bin/chmod 755 "$TARGET_EXE"
 

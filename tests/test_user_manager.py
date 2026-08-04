@@ -5,6 +5,8 @@ Tests for UserManager module
 
 import unittest
 import sys
+import json
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -123,6 +125,41 @@ class TestUserManager(unittest.TestCase):
         # _detect_rdp_port agora recebe UID e retorna a porta baseada na config global
         port = self.user_manager._detect_rdp_port(5001)
         self.assertEqual(port, 3389)  # Deve retornar a porta padrão
+
+    def test_detects_session_from_current_dispatcher_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            (home / ".xsession").write_text(
+                'exec /usr/bin/python3 "/opt/rdp-users/rdpsm-session.py" "${1:-}"\n',
+                encoding="utf-8",
+            )
+            (home / ".rdp_profiles.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "profiles": [
+                            {
+                                "profile_type": "winege-remoteapp",
+                                "app_command": "/opt/rdp-users/note/WindowsApps/nppp.exe",
+                                "app_args": "",
+                                "is_default": True,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            session = self.user_manager._detect_session_info(str(home))
+
+        self.assertEqual(
+            session,
+            (
+                "winege-remoteapp",
+                "/opt/rdp-users/note/WindowsApps/nppp.exe",
+                "",
+            ),
+        )
 
     def test_rdp_user_defaults(self):
         """Test RDPUser default values"""

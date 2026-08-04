@@ -597,7 +597,7 @@ class Installer:
             if self.args.without_xrdp is None:
                 self.args.without_xrdp = False
             if self.args.with_wine is None:
-                self.args.with_wine = False
+                self.args.with_wine = True
             return
 
         self.ui.console.print(
@@ -623,7 +623,7 @@ class Installer:
                 "WineGE RemoteApp",
                 "Adds the libraries required to run Windows applications in RDP sessions. "
                 "This can significantly increase the installation time and size.",
-                default=False,
+                default=True,
             )
 
     def asset_url(self, name: str) -> str:
@@ -987,7 +987,20 @@ class Installer:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description="Transparent RDP Session Manager installer")
     result.add_argument("--yes", action="store_true", help="do not ask for confirmation")
-    result.add_argument("--with-wine", action="store_true", default=None, help="install optional WineGE dependencies")
+    wine = result.add_mutually_exclusive_group()
+    wine.add_argument(
+        "--with-wine",
+        action="store_true",
+        dest="with_wine",
+        default=None,
+        help="install Windows RemoteApp dependencies (default)",
+    )
+    wine.add_argument(
+        "--without-wine",
+        action="store_false",
+        dest="with_wine",
+        help="skip Windows RemoteApp dependencies",
+    )
     result.add_argument("--without-xrdp", action="store_true", default=None, help="do not install or enable xrdp")
     result.add_argument("--release", help="pin a release, for example v0.4.0")
     result.add_argument("--local", action="store_true", help="install the package built in this clone")

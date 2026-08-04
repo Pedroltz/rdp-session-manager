@@ -363,7 +363,11 @@ class UserManager:
                                                session_type, app_command, app_args, log_callback=log)
 
             if not success:
-                raise Exception("Failed to create system user")
+                detail = getattr(self, '_last_create_error', '')
+                message = "Failed to create system user"
+                if detail:
+                    message += f": {detail}"
+                raise Exception(message)
 
             rdp_user = RDPUser(
                 username=username,
@@ -508,6 +512,7 @@ class UserManager:
                            app_args: str = '', log_callback=None) -> bool:
         """Cria usuário no sistema via pkexec/sudo usando script helper"""
         try:
+            self._last_create_error = ''
             # Obter caminho do script helper
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             create_script = script_dir / "create-rdp-user.sh"
@@ -593,6 +598,7 @@ class UserManager:
                     error_msg = f"Exit code: {result.returncode}, Error: {result.stderr.strip()}"
 
                 logger.error(f"User creation failed: {error_msg}")
+                self._last_create_error = error_msg
                 if log_callback:
                     log_callback(f"  X Creation error: {error_msg}")
                 return False
@@ -634,6 +640,7 @@ class UserManager:
                     error_msg = f"Exit code: {passwd_proc.returncode}, stderr: {stderr.decode().strip()}"
 
                 logger.error(f"Password setup failed: {error_msg}")
+                self._last_create_error = error_msg
                 if log_callback:
                     log_callback(f"  X Error setting password: {error_msg}")
                 return False
@@ -645,6 +652,7 @@ class UserManager:
             return True
 
         except Exception as e:
+            self._last_create_error = str(e)
             logger.error(f"Error creating system user: {e}")
             if log_callback:
                 log_callback(f"  X Error: {e}")
@@ -1155,6 +1163,32 @@ class UserManager:
             # Ler arquivo .xsession
             with open(xsession_file, 'r') as f:
                 content = f.read()
+
+            # Current installations use a stable Python dispatcher. Determine
+            # the visible session from its default profile instead of treating
+            # the wrapper as an unknown desktop command.
+            if 'rdpsm-session.py' in content:
+                profiles_file = Path(home_dir) / '.rdp_profiles.json'
+                if profiles_file.is_file():
+                    try:
+                        profiles = json.loads(profiles_file.read_text(encoding='utf-8'))
+                        if isinstance(profiles, dict):
+                            profiles = profiles.get('profiles', [])
+                        if isinstance(profiles, list) and profiles:
+                            profile = next(
+                                (item for item in profiles if item.get('is_default')),
+                                profiles[0],
+                            )
+                            profile_type = profile.get('profile_type', 'desktop')
+                            if profile_type == 'desktop':
+                                return ('desktop', profile.get('desktop_env', 'xfce'), '')
+                            return (
+                                profile_type,
+                                profile.get('app_command', 'unknown'),
+                                profile.get('app_args', ''),
+                            )
+                    except (OSError, ValueError, TypeError) as exc:
+                        logger.debug(f"Could not read profiles from {profiles_file}: {exc}")
 
             # Detectar se é WineGE RemoteApp
             if 'Mode: WineGE RemoteApp' in content or '.launch_winege_app.sh' in content:
