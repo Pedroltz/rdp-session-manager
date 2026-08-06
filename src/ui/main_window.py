@@ -260,6 +260,28 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu_box.append(settings_row)
 
+        repair_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        repair_row.set_margin_top(6)
+        repair_row.set_margin_bottom(6)
+        repair_row.set_margin_start(12)
+        repair_row.set_margin_end(12)
+
+        repair_label = Gtk.Label(label="Diagnose / Repair")
+        repair_label.set_halign(Gtk.Align.START)
+        repair_label.set_hexpand(True)
+        repair_icon = Gtk.Image.new_from_icon_name("system-run-symbolic")
+        repair_row.append(repair_label)
+        repair_row.append(repair_icon)
+
+        repair_gesture = Gtk.GestureClick.new()
+        repair_gesture.connect(
+            "released",
+            lambda g, n, x, y: self.on_repair_user(user, popover),
+        )
+        repair_row.add_controller(repair_gesture)
+        repair_row.set_cursor_from_name("pointer")
+        menu_box.append(repair_row)
+
         # Separator
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         separator.set_margin_top(6)
@@ -462,6 +484,88 @@ class MainWindow(Adw.ApplicationWindow):
         from .connection_sources_dialog import ConnectionSourcesDialog
         dialog = ConnectionSourcesDialog(self, self.user_manager, user)
         dialog.present(self)
+
+    def on_repair_user(self, user, popover):
+        """Show diagnosis and collect a new RDP password for repair."""
+        popover.popdown()
+        diagnosis = self.user_manager.diagnose_user(user.username)
+        issues = diagnosis.get('issues') or [
+            "Managed files look healthy; the RDP password will be reset."
+        ]
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading=f"Diagnose / Repair {user.username}",
+            body="\n".join(f"• {issue}" for issue in issues)
+            + "\n\nRepair uses one administrator authentication.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("repair", "Repair")
+        dialog.set_response_appearance(
+            "repair", Adw.ResponseAppearance.SUGGESTED
+        )
+        dialog.set_default_response("repair")
+        dialog.set_close_response("cancel")
+
+        fields = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        fields.set_margin_top(12)
+        fields.set_margin_bottom(12)
+        fields.set_margin_start(12)
+        fields.set_margin_end(12)
+        password = Gtk.Entry()
+        password.set_placeholder_text("New RDP password")
+        password.set_visibility(False)
+        confirmation = Gtk.Entry()
+        confirmation.set_placeholder_text("Confirm RDP password")
+        confirmation.set_visibility(False)
+        password.connect("activate", lambda entry: confirmation.grab_focus())
+        confirmation.connect(
+            "activate", lambda entry: dialog.response("repair")
+        )
+        fields.append(password)
+        fields.append(confirmation)
+        dialog.set_extra_child(fields)
+        dialog._repair_user = user
+        dialog._repair_password = password
+        dialog._repair_confirmation = confirmation
+        dialog.connect("response", self.on_repair_user_response)
+        dialog.present()
+
+    def on_repair_user_response(self, dialog, response):
+        if response != "repair":
+            return
+        password = dialog._repair_password.get_text()
+        confirmation = dialog._repair_confirmation.get_text()
+        if not password:
+            self.show_toast("X RDP password cannot be empty")
+            return
+        if password != confirmation:
+            self.show_toast("X Passwords do not match")
+            return
+
+        username = dialog._repair_user.username
+        profiles = dialog._repair_user.profiles
+        self.show_toast(f"Repairing {username}; authenticate once...")
+
+        def repair():
+            success, message = self.user_manager.repair_user(
+                username, password, profiles=profiles
+            )
+            if success:
+                GLib.idle_add(
+                    self.show_toast,
+                    f"OK User {username} repaired; try connecting again",
+                )
+                GLib.idle_add(self.load_users)
+            else:
+                logger.error("Repair failed for %s: %s", username, message)
+                GLib.idle_add(
+                    self.show_toast,
+                    f"X Repair failed: {message}",
+                )
+
+        import threading
+        thread = threading.Thread(target=repair, daemon=True)
+        thread.start()
 
     def on_sudo_toggle(self, username, new_state, switch):
         """Handle sudo privilege toggle"""
@@ -909,9 +1013,10 @@ Would you like to continue?"""
                 self.show_toast("X No executables found")
                 return
 
-            # Criar dialog de seleção
-            list_dialog = Adw.MessageDialog(
-                transient_for=dialog,
+            # Adw.MessageDialog is a Gtk.Window and cannot use an Adw.Dialog
+            # as transient_for. AlertDialog is itself an Adw.Dialog, so it can
+            # be presented safely on top of this settings dialog.
+            list_dialog = Adw.AlertDialog(
                 heading="Available Executables",
                 body=f"Select the executable for {user.username}:"
             )
@@ -935,8 +1040,9 @@ Would you like to continue?"""
 
                 # Nome do arquivo
                 label_name = Gtk.Label()
-                label_name.set_markup(f"<b>{Path(exe_path).name}</b>")
+                label_name.set_label(Path(exe_path).name)
                 label_name.set_halign(Gtk.Align.START)
+                label_name.add_css_class("heading")
                 box.append(label_name)
 
                 # Caminho e fonte
@@ -972,7 +1078,7 @@ Would you like to continue?"""
                         self.show_toast("OK Executable selected")
 
             list_dialog.connect('response', on_list_dialog_response)
-            list_dialog.present()
+            list_dialog.present(dialog)
 
         winege_list_button.connect('clicked', on_list_winege_exes)
         winege_buttons_box.append(winege_list_button)

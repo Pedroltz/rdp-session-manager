@@ -28,6 +28,29 @@ rdpsm user create winuser1 \
     --fullname "Windows App User"
 ```
 
+Criação de usuário, senha, perfil e runtime acontece em uma única operação
+privilegiada. O Proton e o Steam Runtime são baixados e validados antes de a
+conta ser liberada para o primeiro login, evitando uma tela preta durante o
+download. Se `repo.steampowered.com` estiver indisponível, a conta é criada com
+o Wine instalado no sistema e essa escolha fica registrada em
+`.windows_runtime.json`. Assim o aplicativo continua utilizável; um reparo
+posterior tenta novamente o UMU/Proton. Se uma conta existente ficou
+incompleta, desconecte-a e execute:
+
+```bash
+rdpsm user repair USERNAME
+```
+
+O reparo preserva o prefixo Wine e os aplicativos existentes, redefine a senha
+RDP e solicita autenticação administrativa uma única vez.
+
+Quando o `.exe` selecionado é um instalador interativo, a sessão registra os
+executáveis existentes antes de iniciá-lo. Ao concluir a instalação, o RDPSM
+procura o novo programa em `Program Files`, ignora instaladores,
+desinstaladores e atualizadores, atualiza automaticamente o perfil e abre o
+programa na mesma conexão. Nas conexões seguintes, o aplicativo instalado é
+aberto diretamente; não é necessário alterar o caminho nas configurações.
+
 Antes de criar a conta, instale o componente opcional Windows pelo instalador.
 O pacote umu é fixado e verificado por SHA-256. Consulte também o
 [modo servidor](SERVER_MODE.md) para capacidade, cache compartilhado e limites.

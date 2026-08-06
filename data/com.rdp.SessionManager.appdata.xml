@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.6.4" date="2026-08-05">
+      <description>
+        <p>Stabilizes Windows RemoteApp user provisioning, automatic installed-application detection, Wine fallback, executable selection, and current libadwaita compatibility.</p>
+      </description>
+    </release>
     <release version="0.6.3" date="2026-08-04">
       <description>
         <p>Fixes secure extraction of the official UMU zipapp on newer Ubuntu and Debian releases while retaining path-traversal protections.</p>

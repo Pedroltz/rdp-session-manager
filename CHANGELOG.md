@@ -1,5 +1,17 @@
 # Changelog - RDP Session Manager
 
+## [0.6.4] - 2026-08-05
+
+- Reduced Windows RemoteApp provisioning to one administrative authentication.
+- Added reliable rollback for partially created RDP users.
+- Added UMU runtime prewarming with a system Wine fallback when the Steam
+  runtime repository is unavailable.
+- Automatically detects an executable created by an interactive Windows
+  installer, updates the connection profile, and launches the installed app.
+- Fixed stale compatibility wrappers reopening the installer on later logins.
+- Fixed Notepad++ being hidden from the Available Executables list.
+- Fixed the executable selection dialog on current libadwaita releases.
+
 ## [0.6.3] - 2026-08-04
 
 - Fixed UMU installation from the official zipapp on newer Ubuntu/Debian

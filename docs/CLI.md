@@ -332,6 +332,24 @@ rdpsm user password john
 
 ---
 
+### Diagnose and Repair User
+
+Repair a managed account whose password, profile, session wrapper, or Windows
+runtime was left incomplete. The command refuses active or unmanaged accounts,
+prompts for a new RDP password, and requests administrator authentication once.
+
+```bash
+rdpsm user repair USERNAME
+rdpsm -v user repair USERNAME
+```
+
+The password is sent directly to the single privileged helper through standard
+input and is never included in its command line or logs.
+
+**GUI Equivalent:** User menu (…) → Diagnose / Repair
+
+---
+
 ### List User Processes
 
 Show all running processes for a user.

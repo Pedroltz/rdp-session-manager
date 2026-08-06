@@ -136,6 +136,150 @@ class SessionDispatcherTest(unittest.TestCase):
         self.assertEqual(result["migration_state"], "validated")
         self.assertIn("validated_at", result)
 
+    def test_umu_runtime_requires_marker_platform_and_proton(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "umu" / "steamrt3"
+            proton = root / "Steam" / "compatibilitytools.d" / "UMU-Proton"
+            runtime.mkdir(parents=True)
+            proton.mkdir(parents=True)
+
+            self.assertFalse(self.session.umu_runtime_ready(root))
+            (runtime / ".installed.ok").touch()
+            (runtime / "sniper_platform_123").mkdir()
+            (proton / "toolmanifest.vdf").touch()
+
+            self.assertTrue(self.session.umu_runtime_ready(root))
+
+    def test_runtime_manifest_selects_system_wine_fallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            executable = home / "notepad.exe"
+            executable.touch()
+            (home / ".windows_runtime.json").write_text(
+                json.dumps({"runtime": "wine"}),
+                encoding="utf-8",
+            )
+            profile = {
+                "profile_type": "winege-remoteapp",
+                "runtime": "umu",
+                "command_argv": [str(executable)],
+            }
+            with patch.object(self.session.shutil, "which", return_value="/usr/bin/wine"):
+                argv = self.session.runtime_argv(profile, home)
+
+        self.assertEqual(argv, ["/usr/bin/wine", str(executable)])
+
+    def test_system_wine_ignores_stale_installer_wrapper(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            installed = home / ".wine" / "drive_c" / "Program Files" / "App" / "App.exe"
+            installed.parent.mkdir(parents=True)
+            installed.touch()
+            (home / ".winege_app_path").write_text(
+                f"{installed}\n",
+                encoding="utf-8",
+            )
+            (home / ".windows_runtime.json").write_text(
+                json.dumps({"runtime": "wine"}),
+                encoding="utf-8",
+            )
+            wrapper = home / ".launch_winege_app.sh"
+            wrapper.write_text(
+                '#!/bin/bash\nexec wine "/old/Installer.exe"\n',
+                encoding="utf-8",
+            )
+            profile = {
+                "profile_id": "default",
+                "profile_type": "winege-remoteapp",
+                "runtime": "umu",
+                "command_argv": ["/old/Installer.exe"],
+            }
+
+            with patch.object(self.session.shutil, "which", return_value="/usr/bin/wine"):
+                argv = self.session.runtime_argv(profile, home)
+
+        self.assertEqual(argv, ["/usr/bin/wine", str(installed)])
+
+    def test_promotes_new_program_files_executable_after_installer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            prefix = home / ".wine"
+            application = prefix / "drive_c" / "Program Files" / "Notepad++" / "notepad++.exe"
+            updater = application.parent / "updater" / "GUP.exe"
+            application.parent.mkdir(parents=True)
+            updater.parent.mkdir()
+            (home / ".windows_runtime.json").write_text(
+                json.dumps({"runtime": "wine", "executable": "setup.exe"}),
+                encoding="utf-8",
+            )
+            (home / ".rdp_profiles.json").write_text(
+                json.dumps({
+                    "schema_version": 2,
+                    "profiles": [{
+                        "profile_id": "notepad",
+                        "profile_type": "winege-remoteapp",
+                        "app_command": "setup.exe",
+                        "command_argv": ["setup.exe", "--example"],
+                        "is_default": True,
+                    }],
+                }),
+                encoding="utf-8",
+            )
+
+            before = self.session.installed_executables(prefix)
+            application.write_bytes(b"MZ" + (b"a" * 4096))
+            updater.write_bytes(b"MZ" + (b"b" * 8192))
+            selected = self.session.promote_installed_executable(
+                home, prefix, before, "notepad"
+            )
+
+            self.assertEqual(selected, application)
+            self.assertEqual(
+                (home / ".winege_app_path").read_text(encoding="utf-8").strip(),
+                str(application),
+            )
+            manifest = json.loads(
+                (home / ".windows_runtime.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["executable"], str(application))
+            profiles = json.loads(
+                (home / ".rdp_profiles.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                profiles["profiles"][0]["command_argv"],
+                [str(application), "--example"],
+            )
+
+    def test_does_not_promote_unchanged_existing_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            prefix = home / ".wine"
+            application = prefix / "drive_c" / "Program Files" / "Example" / "Example.exe"
+            application.parent.mkdir(parents=True)
+            application.write_bytes(b"MZapplication")
+            before = self.session.installed_executables(prefix)
+
+            selected = self.session.promote_installed_executable(home, prefix, before)
+
+            self.assertIsNone(selected)
+            self.assertFalse((home / ".winege_app_path").exists())
+
+    def test_installer_can_promote_application_installed_in_previous_session(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            prefix = home / ".wine"
+            application = prefix / "drive_c" / "Program Files" / "Example" / "Example.exe"
+            application.parent.mkdir(parents=True)
+            application.write_bytes(b"MZapplication")
+            before = self.session.installed_executables(prefix)
+
+            selected = self.session.promote_installed_executable(
+                home, prefix, before, allow_existing=True
+            )
+
+            self.assertEqual(selected, application)
+
 
 if __name__ == "__main__":
     unittest.main()

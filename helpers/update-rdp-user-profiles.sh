@@ -23,7 +23,10 @@ fi
 PROFILES_DEST="$HOME_DIR/.rdp_profiles.json"
 /usr/bin/cp "$PROFILES_JSON_SRC" "$PROFILES_DEST"
 /usr/bin/chown "$USERNAME:rdp-users" "$PROFILES_DEST"
-/usr/bin/chmod 600 "$PROFILES_DEST"
+# Connection profiles contain launch metadata, not credentials. The desktop
+# manager must be able to read them without triggering a privilege prompt each
+# time the user list refreshes.
+/usr/bin/chmod 644 "$PROFILES_DEST"
 
 # 2. Update .xsession dispatcher script
 XSESSION_FILE="$HOME_DIR/.xsession"

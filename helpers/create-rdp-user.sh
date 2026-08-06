@@ -1,6 +1,7 @@
 #!/bin/bash
 # Helper script para criar usuário RDP com pkexec
-# Uso: pkexec helpers/create-rdp-user.sh USERNAME USER_UID HOME_DIR FULLNAME SESSION_TYPE SESSION_COMMAND [APP_ARGS]
+# Uso: printf '%s\n' PASSWORD | pkexec helpers/create-rdp-user.sh \
+#   USERNAME USER_UID HOME_DIR FULLNAME SESSION_TYPE SESSION_COMMAND APP_ARGS PROFILES_JSON
 
 set -e
 
@@ -15,13 +16,31 @@ FULLNAME="$4"
 SESSION_TYPE="$5"        # 'desktop', 'remoteapp', ou 'winege-remoteapp'
 SESSION_COMMAND="$6"     # DE command (ex: startxfce4), app command (ex: firefox), ou .exe path para WineGE
 APP_ARGS="$7"            # Argumentos do app (apenas para remoteapp)
+PROFILES_JSON_SRC="${8:-}"
 
 # Validar parâmetros
-if [ -z "$USERNAME" ] || [ -z "$USER_UID" ] || [ -z "$HOME_DIR" ]; then
+if [ -z "$USERNAME" ] || [ -z "$USER_UID" ] || [ -z "$HOME_DIR" ] \
+    || [ -z "$PROFILES_JSON_SRC" ] || [ ! -f "$PROFILES_JSON_SRC" ]; then
     echo "Error: Not enough arguments"
-    echo "Usage: $0 USERNAME USER_UID HOME_DIR [FULLNAME] [SESSION_TYPE] [SESSION_COMMAND] [APP_ARGS]"
+    echo "Usage: $0 USERNAME USER_UID HOME_DIR FULLNAME SESSION_TYPE SESSION_COMMAND APP_ARGS PROFILES_JSON"
     exit 1
 fi
+[[ "$USERNAME" =~ ^[a-z][a-z0-9_-]{2,31}$ ]] || {
+    echo "Error: Invalid username." >&2
+    exit 1
+}
+[[ "$USER_UID" =~ ^[0-9]+$ ]] && [ "$USER_UID" -ge 5000 ] || {
+    echo "Error: Invalid RDP UID." >&2
+    exit 1
+}
+[ "$HOME_DIR" = "/opt/rdp-users/$USERNAME" ] || {
+    echo "Error: Invalid RDP home directory." >&2
+    exit 1
+}
+case "$SESSION_TYPE" in
+    desktop|remoteapp|winege-remoteapp) ;;
+    *) echo "Error: Invalid session type." >&2; exit 1 ;;
+esac
 
 # Defaults
 SESSION_TYPE="${SESSION_TYPE:-desktop}"
@@ -44,6 +63,15 @@ fi
 
 [ "$SESSION_TYPE" != "winege-remoteapp" ] || [ -f "$SESSION_COMMAND" ] || {
     echo "Error: Windows executable not found: $SESSION_COMMAND" >&2
+    exit 1
+}
+
+IFS= read -r RDP_PASSWORD || {
+    echo "Error: RDP password was not provided through stdin." >&2
+    exit 1
+}
+[ -n "$RDP_PASSWORD" ] || {
+    echo "Error: RDP password cannot be empty." >&2
     exit 1
 }
 
@@ -99,6 +127,12 @@ cleanup_partial_user() {
     status=$?
     if [ "$status" -ne 0 ] && [ "${USER_CREATED:-false}" = true ]; then
         echo "→ Rolling back partially created user $USERNAME..." >&2
+        # runuser/UMU can leave a systemd user manager or helper alive. Stop
+        # only this newly-created account so userdel can reliably remove it.
+        if command -v loginctl >/dev/null 2>&1; then
+            loginctl terminate-user "$USERNAME" >/dev/null 2>&1 || true
+        fi
+        /usr/bin/pkill -KILL -u "$USERNAME" >/dev/null 2>&1 || true
         /usr/sbin/userdel -r "$USERNAME" >/dev/null 2>&1 || {
             /usr/sbin/userdel "$USERNAME" >/dev/null 2>&1 || true
             case "$HOME_DIR" in
@@ -109,6 +143,13 @@ cleanup_partial_user() {
     exit "$status"
 }
 trap cleanup_partial_user EXIT
+
+# Set the RDP password while the same privileged process is still active.
+# The password is received through stdin and never appears in argv or logs.
+step "→ Setting RDP password..."
+printf '%s:%s\n' "$USERNAME" "$RDP_PASSWORD" | /usr/sbin/chpasswd
+unset RDP_PASSWORD
+step "  OK RDP password set"
 
 # 4. Ajustar permissões do home directory (751 para permitir leitura do .xsession)
 step "→ Adjusting home directory permissions..."
@@ -355,6 +396,10 @@ if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
 
     echo "  OK Windows RemoteApp configured successfully"
 fi
+
+# Persist the initial profile inside this same privileged transaction. This
+# also finishes with the shared, safe session wrapper.
+"$SCRIPT_DIR/update-rdp-user-profiles.sh" "$USERNAME" "$PROFILES_JSON_SRC"
 
 echo "OK User $USERNAME created successfully!"
 echo "  - Keyboard layout: $XKBLAYOUT"

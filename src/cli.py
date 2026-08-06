@@ -739,6 +739,53 @@ class CLI:
             self.print_error(f"Error changing password: {e}")
             return 1
 
+    def user_repair(self, args):
+        """Diagnose and repair a managed RDP account."""
+        try:
+            import getpass
+            import json
+
+            diagnosis = self.user_manager.diagnose_user(args.username)
+            if args.format == 'json':
+                print(json.dumps(diagnosis, indent=2))
+            else:
+                self.print_header(f"RDP User Diagnosis: {args.username}")
+                if diagnosis.get('issues'):
+                    for issue in diagnosis['issues']:
+                        self.print_warning(issue)
+                else:
+                    self.print_info("Managed files look healthy; the RDP password will be reset.")
+
+            if not diagnosis.get('exists') or not diagnosis.get('managed'):
+                self.print_error("The account is not eligible for automatic repair")
+                return 1
+            if diagnosis.get('active'):
+                self.print_error("Disconnect the user before repairing it")
+                return 1
+
+            password = getpass.getpass(f"New RDP password for {args.username}: ")
+            confirmation = getpass.getpass("Confirm RDP password: ")
+            if password != confirmation:
+                self.print_error("Passwords do not match")
+                return 1
+
+            self.print_info(
+                "Authenticate once to repair the password, profile and session runtime..."
+            )
+            success, message = self.user_manager.repair_user(
+                args.username, password
+            )
+            if not success:
+                self.print_error(message or "Repair failed")
+                return 1
+            self.print_success(f"User '{args.username}' repaired successfully")
+            if args.verbose and message:
+                print(message)
+            return 0
+        except Exception as e:
+            self.print_error(f"Error repairing user: {e}")
+            return 1
+
     def user_processes(self, args):
         """List user processes"""
         try:
@@ -1725,6 +1772,20 @@ class CLI:
         user_password.add_argument('username', help='Username')
         user_password.add_argument('-p', '--password', help='New password (will prompt if not provided)')
         user_password.set_defaults(func=self.user_password)
+
+        # user repair
+        user_repair = user_subparsers.add_parser(
+            'repair',
+            help='Diagnose and repair a managed RDP user',
+        )
+        user_repair.add_argument('username', help='Username')
+        user_repair.add_argument(
+            '--format',
+            choices=['table', 'json'],
+            default='table',
+            help='Diagnosis output format',
+        )
+        user_repair.set_defaults(func=self.user_repair)
 
         # user processes
         user_processes = user_subparsers.add_parser('processes', help='List user processes')

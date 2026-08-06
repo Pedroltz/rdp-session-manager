@@ -308,6 +308,9 @@ class UserManager:
                 if log_callback:
                     log_callback(msg)
 
+            if not password or '\n' in password or '\r' in password:
+                raise ValueError("RDP password must be a non-empty single line")
+
             if session_type == 'desktop':
                 desktop_env = normalize_desktop_id(desktop_env)
                 if desktop_env not in SUPPORTED_DESKTOPS:
@@ -342,33 +345,6 @@ class UserManager:
             log(f"  RDP port: {rdp_port} (global port)")
             log(f"  Home: {home_dir}")
 
-            # Criar grupo rdp-users se não existir
-            log("")
-            log("→ Checking the rdp-users group...")
-            self._ensure_rdp_group_exists(log_callback=log)
-
-            # Criar diretório base se não existir
-            log("")
-            log("→ Checking the base directory...")
-            self._create_base_directory(log_callback=log)
-
-            # Create the user with the elevation method selected for this
-            # session (terminal sudo on headless systems, pkexec on desktops).
-            log("")
-            log("→ Creating the system user...")
-            privilege_method, _ = get_privilege_command()
-            auth_name = "pkexec" if privilege_method == "pkexec" else "sudo"
-            log(f"  WARNING You will be asked to authenticate ({auth_name})")
-            success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
-                                               session_type, app_command, app_args, log_callback=log)
-
-            if not success:
-                detail = getattr(self, '_last_create_error', '')
-                message = "Failed to create system user"
-                if detail:
-                    message += f": {detail}"
-                raise Exception(message)
-
             rdp_user = RDPUser(
                 username=username,
                 uid=uid,
@@ -376,14 +352,30 @@ class UserManager:
                 desktop_env=desktop_env,
                 rdp_port=rdp_port,
                 active=False,
-                is_superuser=False,  # Novos usuários não têm sudo por padrão
+                is_superuser=False,
                 session_type=session_type,
                 app_command=app_command,
                 app_args=app_args
             )
 
-            # Salvar o perfil inicial no arquivo .rdp_profiles.json do usuário
-            self.save_profiles_for_user(username, rdp_user.profiles)
+            # Group, base directory, account, password, profile, session
+            # wrapper and optional Windows runtime are provisioned by one
+            # privileged helper invocation.
+            log("")
+            log("→ Creating the system user...")
+            privilege_method, _ = get_privilege_command()
+            auth_name = "pkexec" if privilege_method == "pkexec" else "sudo"
+            log(f"  WARNING Authenticate once with {auth_name}")
+            success = self._create_system_user(username, password, uid, home_dir, full_name, desktop_env,
+                                               session_type, app_command, app_args,
+                                               profiles=rdp_user.profiles, log_callback=log)
+
+            if not success:
+                detail = getattr(self, '_last_create_error', '')
+                message = "Failed to create system user"
+                if detail:
+                    message += f": {detail}"
+                raise Exception(message)
 
             log("")
             log("OK System user created successfully!")
@@ -509,14 +501,18 @@ class UserManager:
     def _create_system_user(self, username: str, password: str, uid: int,
                            home_dir: str, full_name: str, desktop_env: str,
                            session_type: str = 'desktop', app_command: str = '',
-                           app_args: str = '', log_callback=None) -> bool:
-        """Cria usuário no sistema via pkexec/sudo usando script helper"""
+                           app_args: str = '',
+                           profiles: Optional[List[ConnectionProfile]] = None,
+                           log_callback=None) -> bool:
+        """Create an RDP user through one privileged helper invocation."""
+        temp_path = None
         try:
+            import tempfile
+
             self._last_create_error = ''
             # Obter caminho do script helper
             script_dir = Path(__file__).parent.parent.parent / "helpers"
             create_script = script_dir / "create-rdp-user.sh"
-            password_script = script_dir / "set-user-password.sh"
 
             # Obter comando de elevação apropriado (pkexec ou sudo)
             priv_method, priv_cmd = get_privilege_command()
@@ -539,6 +535,18 @@ class UserManager:
                 session_command = de_command
                 extra_args = ""
 
+            profile_data = {
+                'schema_version': 2,
+                'profiles': [profile.to_dict() for profile in (profiles or [])],
+            }
+            with tempfile.NamedTemporaryFile(
+                'w', delete=False, suffix='.json', encoding='utf-8'
+            ) as temp_file:
+                json.dump(profile_data, temp_file, indent=2)
+                temp_file.write('\n')
+                temp_path = temp_file.name
+            os.chmod(temp_path, 0o600)
+
             cmd = priv_cmd + [
                 str(create_script),
                 username,
@@ -547,7 +555,8 @@ class UserManager:
                 full_name or "",
                 session_type,  # 'desktop' ou 'remoteapp'
                 session_command,  # Comando DE ou app
-                extra_args  # Args do app (vazio para desktop)
+                extra_args,  # Args do app (vazio para desktop)
+                temp_path,
             ]
 
             logger.info(f"Executando script helper: {create_script.name}")
@@ -562,6 +571,7 @@ class UserManager:
             try:
                 result = subprocess.run(
                     cmd,
+                    input=password + '\n',
                     capture_output=True,
                     text=True,
                     timeout=timeout_seconds
@@ -610,44 +620,6 @@ class UserManager:
                     if log_callback:
                         log_callback(f"  {line}")
 
-            # Definir senha
-            if log_callback:
-                log_callback("  → Setting password...")
-                # Só avisa sobre autenticação novamente se for pkexec
-                if priv_method == "pkexec":
-                    log_callback("  WARNING You will be asked to authenticate again")
-
-            echo_proc = subprocess.Popen(
-                ['echo', f'{username}:{password}'],
-                stdout=subprocess.PIPE
-            )
-
-            passwd_proc = subprocess.Popen(
-                priv_cmd + [str(password_script)],
-                stdin=echo_proc.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-
-            echo_proc.stdout.close()
-            stdout, stderr = passwd_proc.communicate()
-
-            if passwd_proc.returncode != 0:
-                # Verificar código de erro
-                if passwd_proc.returncode == 126:
-                    error_msg = "Authentication canceled by the user"
-                else:
-                    error_msg = f"Exit code: {passwd_proc.returncode}, stderr: {stderr.decode().strip()}"
-
-                logger.error(f"Password setup failed: {error_msg}")
-                self._last_create_error = error_msg
-                if log_callback:
-                    log_callback(f"  X Error setting password: {error_msg}")
-                return False
-
-            if log_callback:
-                log_callback("  OK Password set successfully")
-
             logger.info(f"User {username} created successfully")
             return True
 
@@ -657,6 +629,156 @@ class UserManager:
             if log_callback:
                 log_callback(f"  X Error: {e}")
             return False
+        finally:
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+
+    def diagnose_user(self, username: str) -> Dict:
+        """Return a non-privileged health snapshot for one managed account."""
+        result = {
+            'username': username,
+            'exists': False,
+            'managed': False,
+            'active': False,
+            'issues': [],
+        }
+        try:
+            account = pwd.getpwnam(username)
+        except KeyError:
+            result['issues'].append('System account does not exist')
+            return result
+
+        result['exists'] = True
+        expected_home = self.rdp_users_home / username
+        actual_home = Path(account.pw_dir)
+        try:
+            rdp_group = grp.getgrnam(self.RDP_GID_NAME)
+            in_group = (
+                account.pw_gid == rdp_group.gr_gid
+                or username in rdp_group.gr_mem
+            )
+        except KeyError:
+            in_group = False
+
+        result['managed'] = in_group and actual_home == expected_home
+        if not in_group:
+            result['issues'].append(f"User is not in {self.RDP_GID_NAME}")
+        if actual_home != expected_home:
+            result['issues'].append(
+                f"Unexpected home directory: {actual_home}"
+            )
+
+        processes = self.get_user_processes(username)
+        result['active'] = bool(processes)
+        if processes:
+            result['issues'].append('User has active processes')
+
+        required = [
+            actual_home / '.xsession',
+            actual_home / '.xinitrc',
+            actual_home / '.rdp_profiles.json',
+        ]
+        session_type, app_command, _ = self._detect_session_info(str(actual_home))
+        result['session_type'] = session_type
+        result['app_command'] = app_command
+        if session_type == 'winege-remoteapp':
+            required.extend([
+                actual_home / '.launch_winege_app.sh',
+                actual_home / '.windows_runtime.json',
+            ])
+        missing = [str(path) for path in required if not path.exists()]
+        if missing:
+            result['issues'].append(
+                'Missing managed files: ' + ', '.join(missing)
+            )
+        result['healthy'] = result['managed'] and not result['issues']
+        return result
+
+    def repair_user(
+        self,
+        username: str,
+        password: str,
+        profiles: Optional[List[ConnectionProfile]] = None,
+    ) -> tuple[bool, str]:
+        """Repair a managed account with exactly one privilege escalation."""
+        import tempfile
+
+        if not password or '\n' in password or '\r' in password:
+            return False, 'RDP password must be a non-empty single line'
+
+        diagnosis = self.diagnose_user(username)
+        if not diagnosis['exists']:
+            return False, 'System account does not exist'
+        if not diagnosis['managed']:
+            return False, 'Refusing to repair an unmanaged system account'
+        if diagnosis['active']:
+            return False, 'Disconnect the user before repairing it'
+
+        user = self.get_user(username)
+        if not user:
+            return False, 'Could not load the RDP user configuration'
+        selected_profiles = profiles or user.profiles
+        if not selected_profiles:
+            return False, 'No connection profile is available for repair'
+        default_profile = next(
+            (profile for profile in selected_profiles if profile.is_default),
+            selected_profiles[0],
+        )
+
+        script_dir = Path(__file__).parent.parent.parent / 'helpers'
+        repair_script = script_dir / 'repair-rdp-user.sh'
+        temp_path = None
+        try:
+            payload = {
+                'schema_version': 2,
+                'profiles': [profile.to_dict() for profile in selected_profiles],
+            }
+            with tempfile.NamedTemporaryFile(
+                'w', delete=False, suffix='.json', encoding='utf-8'
+            ) as temp_file:
+                json.dump(payload, temp_file, indent=2)
+                temp_file.write('\n')
+                temp_path = temp_file.name
+            os.chmod(temp_path, 0o600)
+
+            _, privilege = get_privilege_command()
+            command = privilege + [
+                str(repair_script),
+                username,
+                default_profile.profile_type,
+                default_profile.app_command,
+                temp_path,
+            ]
+            timeout = (
+                1200
+                if default_profile.profile_type == 'winege-remoteapp'
+                else 120
+            )
+            completed = subprocess.run(
+                command,
+                input=password + '\n',
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            if completed.returncode != 0:
+                message = completed.stderr.strip() or completed.stdout.strip()
+                return False, message or f'Repair exited with {completed.returncode}'
+            return True, completed.stdout.strip()
+        except subprocess.TimeoutExpired:
+            return False, 'Repair timed out'
+        except Exception as exc:
+            logger.error("Could not repair %s: %s", username, exc)
+            return False, str(exc)
+        finally:
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
     def get_user_processes(self, username: str) -> List[int]:
         """
@@ -1190,6 +1312,27 @@ class UserManager:
                     except (OSError, ValueError, TypeError) as exc:
                         logger.debug(f"Could not read profiles from {profiles_file}: {exc}")
 
+                # Profiles created by v0.6.0-v0.6.3 may be mode 0600 and
+                # unreadable by the desktop manager. Recover the Windows
+                # session type from its managed runtime markers without
+                # elevating just to populate the user list.
+                runtime_markers = (
+                    Path(home_dir) / '.windows_runtime.json',
+                    Path(home_dir) / '.launch_winege_app.sh',
+                )
+                winege_app_path = Path(home_dir) / '.winege_app_path'
+                if any(path.exists() for path in runtime_markers):
+                    if winege_app_path.exists():
+                        try:
+                            executable = winege_app_path.read_text(
+                                encoding='utf-8'
+                            ).strip()
+                        except OSError:
+                            executable = 'unknown'
+                    else:
+                        executable = 'unknown'
+                    return ('winege-remoteapp', executable or 'unknown', '')
+
             # Detectar se é WineGE RemoteApp
             if 'Mode: WineGE RemoteApp' in content or '.launch_winege_app.sh' in content:
                 # WineGE RemoteApp mode - ler o caminho do .exe
@@ -1328,15 +1471,14 @@ class UserManager:
                 with open(profiles_file, 'r') as f:
                     content = f.read()
             except Exception as e:
-                # Tentar ler com privilégios de elevação caso falhe a leitura direta
-                try:
-                    _, priv_cmd = get_privilege_command()
-                    res = subprocess.run(priv_cmd + ['/usr/bin/cat', str(profiles_file)],
-                                         capture_output=True, text=True, timeout=5)
-                    if res.returncode == 0:
-                        content = res.stdout
-                except Exception as ex:
-                    logger.error(f"Erro ao ler .rdp_profiles.json em {home_dir}: {ex}")
+                # Listing users must never trigger an authentication dialog.
+                # Provisioning and repair keep this non-secret metadata
+                # readable by the management application.
+                logger.warning(
+                    "Could not read %s without elevation: %s",
+                    profiles_file,
+                    e,
+                )
 
         if content:
             try:
@@ -1629,6 +1771,35 @@ class UserManager:
             logger.error(f"Error changing full name for {username}: {e}")
             return False
 
+    @staticmethod
+    def _is_listable_windows_executable(executable: Path) -> bool:
+        """Hide Wine/system helpers without hiding real apps such as Notepad++."""
+        lowered = str(executable).lower().replace('\\', '/')
+        name = executable.name.lower()
+        ignored_names = (
+            'unins',
+            'uninst',
+            'gup.exe',
+            'update.exe',
+            'updater.exe',
+            'crashreport',
+            'vc_redist',
+            'dxsetup',
+        )
+        ignored_paths = (
+            '/windows/',
+            '/internet explorer/',
+            '/windows media player/',
+            '/windows nt/',
+            '/windows mail/',
+            '/windows photo',
+            '/wordpad/',
+        )
+        return not (
+            any(token in name for token in ignored_names)
+            or any(token in lowered for token in ignored_paths)
+        )
+
     def list_user_executables(self, username: str) -> list:
         """
         Lista todos os executáveis disponíveis para um usuário WineGE
@@ -1663,13 +1834,7 @@ class UserManager:
                 for pf in program_files:
                     if pf.exists():
                         for exe in pf.rglob("*.exe"):
-                            exe_name_lower = exe.name.lower()
-                            # Filtrar aplicativos padrão do Windows e uninstallers
-                            if not any(x in str(exe).lower() for x in [
-                                'unins', 'uninst', 'windows nt', 'internet explorer',
-                                'windows media', 'windows mail', 'windows photo',
-                                'wordpad', 'notepad'
-                            ]):
+                            if self._is_listable_windows_executable(exe):
                                 executables.append(("Wine", str(exe)))
 
             return executables

@@ -108,6 +108,138 @@ def write_openbox_config(home: Path) -> Path:
     return path
 
 
+def umu_runtime_ready(root: Path) -> bool:
+    runtime = root / "umu" / "steamrt3"
+    proton_root = root / "Steam" / "compatibilitytools.d"
+    return (
+        (runtime / ".installed.ok").is_file()
+        and any(path.is_dir() for path in runtime.glob("sniper_platform_*"))
+        and any(proton_root.glob("*/toolmanifest.vdf"))
+    )
+
+
+def configured_runtime(profile: dict[str, Any], home: Path) -> str:
+    """Prefer the provisioner's per-user fallback over the requested runtime."""
+    runtime = profile.get("runtime", "umu")
+    manifest = home / ".windows_runtime.json"
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        configured = payload.get("runtime")
+        if configured in {"umu", "wine"}:
+            runtime = configured
+    except (OSError, ValueError, TypeError):
+        pass
+    return runtime
+
+
+def installed_executables(prefix: Path) -> dict[str, tuple[int, int]]:
+    """Return executable path -> (mtime_ns, size) for application directories."""
+    inventory: dict[str, tuple[int, int]] = {}
+    drive_c = prefix / "drive_c"
+    for root_name in ("Program Files", "Program Files (x86)"):
+        root = drive_c / root_name
+        if not root.is_dir():
+            continue
+        for executable in root.rglob("*.exe"):
+            try:
+                stat = executable.stat()
+            except OSError:
+                continue
+            inventory[str(executable)] = (stat.st_mtime_ns, stat.st_size)
+    return inventory
+
+
+def _is_application_executable(path: Path) -> bool:
+    lowered = str(path).lower().replace("\\", "/")
+    name = path.name.lower()
+    ignored_names = (
+        "unins",
+        "uninst",
+        "setup",
+        "install",
+        "update",
+        "gup.exe",
+        "crashreport",
+        "helper",
+        "vc_redist",
+        "dxsetup",
+    )
+    ignored_paths = (
+        "/common files/",
+        "/internet explorer/",
+        "/windows media player/",
+        "/windows nt/",
+    )
+    return not (
+        any(token in name for token in ignored_names)
+        or any(token in lowered for token in ignored_paths)
+    )
+
+
+def promote_installed_executable(
+    home: Path,
+    prefix: Path,
+    before: dict[str, tuple[int, int]],
+    profile_id: str = "",
+    allow_existing: bool = False,
+) -> Path | None:
+    """Select the most likely application created or changed by an installer."""
+    changed = []
+    for raw_path, metadata in installed_executables(prefix).items():
+        path = Path(raw_path)
+        if not _is_application_executable(path):
+            continue
+        if not allow_existing and before.get(raw_path) == metadata:
+            continue
+        # Prefer a sizeable, top-level executable in Program Files. The
+        # ordering remains deterministic when two candidates score equally.
+        relative_depth = len(path.relative_to(prefix / "drive_c").parts)
+        score = metadata[1] - (relative_depth * 1024)
+        changed.append((score, raw_path.lower(), path))
+    if not changed:
+        return None
+
+    changed.sort(key=lambda item: (-item[0], item[1]))
+    selected = changed[0][2]
+    app_path = home / ".winege_app_path"
+    temporary = app_path.with_name(f"{app_path.name}.new")
+    temporary.write_text(f"{selected}\n", encoding="utf-8")
+    os.replace(temporary, app_path)
+
+    manifest_path = home / ".windows_runtime.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["executable"] = str(selected)
+        temporary_manifest = manifest_path.with_name(f"{manifest_path.name}.new")
+        temporary_manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary_manifest, manifest_path)
+    except (OSError, ValueError, TypeError):
+        audit("installed_executable_manifest_update_failed")
+
+    profiles_path = home / PROFILE_FILE
+    try:
+        document = json.loads(profiles_path.read_text(encoding="utf-8"))
+        profiles = document.get("profiles", []) if isinstance(document, dict) else document
+        for item in profiles:
+            if not isinstance(item, dict):
+                continue
+            if profile_id and item.get("profile_id") != profile_id:
+                continue
+            if not profile_id and not item.get("is_default"):
+                continue
+            item["app_command"] = str(selected)
+            old_argv = item.get("command_argv", [])
+            item["command_argv"] = [str(selected), *old_argv[1:]] if old_argv else [str(selected)]
+            break
+        temporary_profiles = profiles_path.with_name(f"{profiles_path.name}.new")
+        temporary_profiles.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary_profiles, profiles_path)
+    except (OSError, ValueError, TypeError):
+        audit("installed_executable_profile_update_failed")
+    audit("installed_executable_selected", executable=str(selected))
+    return selected
+
+
 def runtime_argv(profile: dict[str, Any], home: Path) -> list[str]:
     app = command_argv(profile)
     if profile.get("profile_type") != "winege-remoteapp":
@@ -123,21 +255,35 @@ def runtime_argv(profile: dict[str, Any], home: Path) -> list[str]:
     if not app:
         raise ValueError("Windows application path is missing")
 
-    runtime = profile.get("runtime", "umu")
+    runtime = configured_runtime(profile, home)
+    legacy = home / ".launch_winege_app.sh"
     if runtime == "umu":
         umu = shutil.which("umu-run")
         if umu:
+            shared_root = Path("/opt/rdp-session-manager/runtimes")
+            if shared_root.is_dir() and not umu_runtime_ready(shared_root):
+                raise RuntimeError(
+                    "The shared UMU runtime is incomplete. "
+                    "Run 'rdpsm user repair USERNAME' before reconnecting."
+                )
             return [umu, app[0], *app[1:]]
-        legacy = home / ".launch_winege_app.sh"
         if not legacy.exists():
             raise RuntimeError("umu-run is unavailable and no legacy WineGE runtime exists")
-    legacy = home / ".launch_winege_app.sh"
+        return [str(legacy), *app[1:]]
+
+    if runtime == "wine":
+        wine = shutil.which("wine")
+        if wine:
+            # The compatibility wrapper may still contain the original
+            # installer path. The profile/.winege_app_path is authoritative.
+            return [wine, *app]
+        if legacy.exists():
+            return [str(legacy), *app[1:]]
+        raise RuntimeError("system Wine is unavailable")
+
     if legacy.exists():
         return [str(legacy), *app[1:]]
-    wine = shutil.which("wine")
-    if not wine:
-        raise RuntimeError("no Windows runtime is available")
-    return [wine, *app]
+    raise RuntimeError(f"unsupported Windows runtime: {runtime}")
 
 
 def terminate_group(process: subprocess.Popen, grace: float = 5.0) -> None:
@@ -190,6 +336,7 @@ def run_remoteapp(profile: dict[str, Any], home: Path) -> int:
         environment.setdefault("PROTONPATH", "UMU-Proton")
         environment.setdefault("GAMEID", "umu-default")
         environment.setdefault("STORE", "none")
+        environment.setdefault("UMU_RUNTIME_UPDATE", "0")
     cwd = Path(profile.get("working_directory") or home)
     if not cwd.is_dir():
         raise ValueError(f"working directory does not exist: {cwd}")
@@ -211,8 +358,48 @@ def run_remoteapp(profile: dict[str, Any], home: Path) -> int:
             profile_type=profile.get("profile_type", ""),
             executable=Path(argv[0]).name,
         )
+        prefix = Path(environment["WINEPREFIX"])
+        before_install = (
+            installed_executables(prefix)
+            if profile.get("profile_type") == "winege-remoteapp"
+            else {}
+        )
+        selected_app = command_argv(profile)
+        if profile.get("profile_id") == "default":
+            app_path = home / ".winege_app_path"
+            if app_path.exists():
+                selected_app = [app_path.read_text(encoding="utf-8").strip()]
+        selected_is_installer = bool(
+            selected_app and not _is_application_executable(Path(selected_app[0]))
+        )
         app = subprocess.Popen(argv, cwd=str(cwd), env=environment, start_new_session=True)
         return_code = app.wait()
+        if return_code == 0 and profile.get("profile_type") == "winege-remoteapp":
+            selected = promote_installed_executable(
+                home,
+                prefix,
+                before_install,
+                str(profile.get("profile_id", "")),
+                allow_existing=selected_is_installer,
+            )
+            if selected is not None:
+                # Keep the current RDP connection useful: replace the completed
+                # installer with the application that was just installed.
+                promoted_profile = dict(profile)
+                original_app = command_argv(profile)
+                promoted_profile["command_argv"] = [
+                    str(selected),
+                    *original_app[1:],
+                ]
+                promoted_profile["app_command"] = str(selected)
+                argv = runtime_argv(promoted_profile, home)
+                audit(
+                    "installed_application_start",
+                    profile_id=profile.get("profile_id", ""),
+                    executable=str(selected),
+                )
+                app = subprocess.Popen(argv, cwd=str(cwd), env=environment, start_new_session=True)
+                return_code = app.wait()
         audit(
             "application_exit",
             profile_id=profile.get("profile_id", ""),
@@ -245,6 +432,18 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         audit("session_error", error_type=type(exc).__name__, message=str(exc))
         print(f"RDPSM session failed: {exc}", file=sys.stderr)
+        zenity = shutil.which("zenity")
+        if zenity and os.environ.get("DISPLAY"):
+            subprocess.run(
+                [
+                    zenity,
+                    "--error",
+                    "--title=RDP Session Manager",
+                    f"--text={exc}",
+                ],
+                timeout=30,
+                check=False,
+            )
         return 1
 
 

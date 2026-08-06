@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from core.user_manager import UserManager, RDPUser
+from core.user_manager import ConnectionProfile, UserManager, RDPUser
 
 
 class TestUserManager(unittest.TestCase):
@@ -244,6 +244,162 @@ class TestUserManager(unittest.TestCase):
         # Caracteres especiais inválidos
         self.assertFalse(self.user_manager._validate_username('user@name'))
         self.assertFalse(self.user_manager._validate_username('user.name'))
+
+    @patch('core.user_manager.get_privilege_command')
+    @patch('core.user_manager.subprocess.run')
+    def test_create_system_user_uses_one_elevation_and_password_stdin(
+        self, run, privilege
+    ):
+        privilege.return_value = ('pkexec', ['pkexec', '--user', 'root'])
+        run.return_value = Mock(returncode=0, stdout='OK\n', stderr='')
+        profile = ConnectionProfile(
+            'default',
+            'Windows App',
+            'winege-remoteapp',
+            app_command='/tmp/example.exe',
+            is_default=True,
+        )
+
+        created = self.user_manager._create_system_user(
+            username='rdptest',
+            password='a password:with symbols!',
+            uid=5000,
+            home_dir='/opt/rdp-users/rdptest',
+            full_name='RDP Test',
+            desktop_env='xfce',
+            session_type='winege-remoteapp',
+            app_command='/tmp/example.exe',
+            profiles=[profile],
+        )
+
+        self.assertTrue(created)
+        run.assert_called_once()
+        command = run.call_args.args[0]
+        self.assertEqual(command[:3], ['pkexec', '--user', 'root'])
+        self.assertNotIn('a password:with symbols!', command)
+        self.assertEqual(
+            run.call_args.kwargs['input'],
+            'a password:with symbols!\n',
+        )
+
+    @patch('core.user_manager.get_privilege_command')
+    def test_unreadable_profile_does_not_request_elevation(self, privilege):
+        with tempfile.TemporaryDirectory() as directory:
+            profile_file = Path(directory) / '.rdp_profiles.json'
+            profile_file.write_text('{}', encoding='utf-8')
+            profile_file.chmod(0)
+            try:
+                profiles = self.user_manager.load_profiles_for_user(
+                    directory,
+                    default_session_type='desktop',
+                    default_de='xfce',
+                )
+            finally:
+                profile_file.chmod(0o600)
+
+        self.assertEqual(len(profiles), 1)
+        self.assertEqual(profiles[0].profile_type, 'desktop')
+        privilege.assert_not_called()
+
+    def test_detects_windows_runtime_when_profile_is_unreadable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            (home / '.xsession').write_text(
+                'exec /usr/bin/python3 /opt/rdp-users/rdpsm-session.py\n',
+                encoding='utf-8',
+            )
+            (home / '.xinitrc').symlink_to(home / '.xsession')
+            profile = home / '.rdp_profiles.json'
+            profile.write_text('{}', encoding='utf-8')
+            profile.chmod(0)
+            (home / '.windows_runtime.json').write_text(
+                '{}', encoding='utf-8'
+            )
+            (home / '.winege_app_path').write_text(
+                '/opt/rdp-users/test/WindowsApps/example.exe\n',
+                encoding='utf-8',
+            )
+            try:
+                detected = self.user_manager._detect_session_info(directory)
+            finally:
+                profile.chmod(0o600)
+
+        self.assertEqual(
+            detected,
+            (
+                'winege-remoteapp',
+                '/opt/rdp-users/test/WindowsApps/example.exe',
+                '',
+            ),
+        )
+
+    def test_executable_listing_keeps_notepad_plus_plus_and_hides_wine_helpers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / 'rdptest'
+            windows_apps = home / 'WindowsApps'
+            program_files = home / '.wine' / 'drive_c' / 'Program Files'
+            notepad_plus = program_files / 'Notepad++' / 'notepad++.exe'
+            updater = program_files / 'Notepad++' / 'updater' / 'GUP.exe'
+            uninstaller = program_files / 'Notepad++' / 'uninstall.exe'
+            wine_notepad = (
+                home / '.wine' / 'drive_c' / 'windows' / 'system32' / 'notepad.exe'
+            )
+            installer = windows_apps / 'npp.Installer.x64.exe'
+            for executable in (notepad_plus, updater, uninstaller, wine_notepad, installer):
+                executable.parent.mkdir(parents=True, exist_ok=True)
+                executable.touch()
+
+            manager = UserManager(app_config=None, rdp_users_home=Path(directory))
+            manager.user_exists = Mock(return_value=True)
+            listed = manager.list_user_executables('rdptest')
+
+        paths = {path for _, path in listed}
+        self.assertIn(str(notepad_plus), paths)
+        self.assertIn(str(installer), paths)
+        self.assertNotIn(str(updater), paths)
+        self.assertNotIn(str(uninstaller), paths)
+        self.assertNotIn(str(wine_notepad), paths)
+
+    @patch('core.user_manager.get_privilege_command')
+    @patch('core.user_manager.subprocess.run')
+    def test_repair_user_uses_one_elevation_and_password_stdin(
+        self, run, privilege
+    ):
+        profile = ConnectionProfile(
+            'default',
+            'Windows App',
+            'winege-remoteapp',
+            app_command='/opt/rdp-users/rdptest/WindowsApps/example.exe',
+            is_default=True,
+        )
+        user = RDPUser(
+            username='rdptest',
+            uid=5000,
+            home_dir='/opt/rdp-users/rdptest',
+            session_type='winege-remoteapp',
+            app_command=profile.app_command,
+            profiles=[profile],
+        )
+        self.user_manager.diagnose_user = Mock(return_value={
+            'exists': True,
+            'managed': True,
+            'active': False,
+            'issues': [],
+        })
+        self.user_manager.get_user = Mock(return_value=user)
+        privilege.return_value = ('sudo', ['sudo'])
+        run.return_value = Mock(returncode=0, stdout='OK repaired\n', stderr='')
+
+        success, _ = self.user_manager.repair_user(
+            'rdptest', 'new password', profiles=[profile]
+        )
+
+        self.assertTrue(success)
+        run.assert_called_once()
+        command = run.call_args.args[0]
+        self.assertEqual(command[0], 'sudo')
+        self.assertNotIn('new password', command)
+        self.assertEqual(run.call_args.kwargs['input'], 'new password\n')
 
 
 if __name__ == '__main__':
