@@ -916,12 +916,13 @@ class UserManager:
             logger.error(f"Error removing user {username}: {e}")
             raise
 
-    def lock_user(self, username: str) -> bool:
+    def lock_user(self, username: str, kill_sessions: bool = True) -> bool:
         """
-        Desabilita (bloqueia) um usuário RDP
+        Desabilita (bloqueia) um usuário RDP e encerra suas sessões ativas
 
         Args:
             username: Nome do usuário
+            kill_sessions: Se True, mata sessões/processos ativos do usuário ao desabilitar
 
         Returns:
             True se sucesso, False se falha
@@ -947,6 +948,10 @@ class UserManager:
             if result.returncode != 0:
                 logger.error(f"Failed to disable user: {result.stderr}")
                 return False
+
+            if kill_sessions:
+                # Garantir encerramento de processos remanescentes se houver
+                self.kill_user_processes(username, force=False)
 
             logger.info(f"OK User {username} disabled successfully")
 

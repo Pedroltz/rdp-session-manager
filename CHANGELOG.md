@@ -1,5 +1,11 @@
 # Changelog - RDP Session Manager
 
+## [0.6.5] - 2026-08-07
+
+- Fixed user disable/lock toggle to terminate active systemd/loginctl sessions (`loginctl terminate-user`) and terminate remaining user processes (`pkill -15` / `pkill -9`).
+- Fixed RDP connection source graphical chooser launcher (`rdp-session-launcher.py`) when multiple connection profiles exist.
+- Fixed JSON schema v2 profile parsing in `rdp-session-launcher.py`.
+
 ## [0.6.4] - 2026-08-05
 
 - Reduced Windows RemoteApp provisioning to one administrative authentication.

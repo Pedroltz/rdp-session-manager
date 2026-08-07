@@ -159,13 +159,17 @@ def main():
 
     try:
         with open(profiles_file, "r") as f:
-            profiles = json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict):
+                profiles = data.get("profiles", [])
+            else:
+                profiles = data
     except Exception as e:
         logger.error(f"Failed to read profiles: {e}")
         sys.exit(1)
 
-    if not profiles:
-        logger.error("No profiles found in profiles.json")
+    if not isinstance(profiles, list) or not profiles:
+        logger.error("No valid profiles found in profiles.json")
         sys.exit(1)
 
     # Check command line arguments if profile specified

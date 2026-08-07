@@ -123,6 +123,21 @@ class SessionDispatcherTest(unittest.TestCase):
                 "unknown",
             )
 
+    @patch("core.server_manager.subprocess.Popen")
+    @patch("core.server_manager.subprocess.run")
+    def test_select_profile_invokes_chooser_for_multiple_profiles(self, mock_run, mock_popen):
+        profiles = [
+            {"profile_id": "p1", "name": "Desktop", "profile_type": "desktop", "is_default": True},
+            {"profile_id": "p2", "name": "WineGE App", "profile_type": "winege-remoteapp", "is_default": False},
+        ]
+        mock_run.return_value = Mock(returncode=0, stdout=json.dumps(profiles[1]))
+        with patch.object(Path, "exists", return_value=True):
+            selected = self.session.select_profile(profiles, "")
+
+        self.assertEqual(selected, profiles[1])
+        mock_popen.assert_called_once_with(["openbox"], start_new_session=True)
+        mock_run.assert_called_once()
+
     def test_marks_successful_runtime_validation_atomically(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

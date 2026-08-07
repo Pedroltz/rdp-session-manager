@@ -401,6 +401,46 @@ class TestUserManager(unittest.TestCase):
         self.assertNotIn('new password', command)
         self.assertEqual(run.call_args.kwargs['input'], 'new password\n')
 
+    @patch('core.user_manager.get_privilege_command')
+    @patch('core.user_manager.subprocess.run')
+    def test_lock_user_kills_sessions(self, mock_run, mock_privilege):
+        """Test lock_user calls toggle script and kills user processes"""
+        self.user_manager.user_exists = Mock(return_value=True)
+        self.user_manager.kill_user_processes = Mock(return_value=True)
+        self.user_manager._save_states_cache = Mock()
+        mock_privilege.return_value = ('sudo', ['sudo'])
+        mock_run.return_value = Mock(returncode=0, stdout='OK locked', stderr='')
+
+        success = self.user_manager.lock_user('rdptest', kill_sessions=True)
+
+        self.assertTrue(success)
+        mock_run.assert_called_once()
+        command = mock_run.call_args.args[0]
+        self.assertIn('toggle-user-lock.sh', command[1])
+        self.assertEqual(command[2], 'rdptest')
+        self.assertEqual(command[3], 'lock')
+        self.user_manager.kill_user_processes.assert_called_once_with('rdptest', force=False)
+        self.assertFalse(UserManager._user_states_cache.get('rdptest'))
+
+    @patch('core.user_manager.get_privilege_command')
+    @patch('core.user_manager.subprocess.run')
+    def test_unlock_user(self, mock_run, mock_privilege):
+        """Test unlock_user calls toggle script for unlock"""
+        self.user_manager.user_exists = Mock(return_value=True)
+        self.user_manager._save_states_cache = Mock()
+        mock_privilege.return_value = ('sudo', ['sudo'])
+        mock_run.return_value = Mock(returncode=0, stdout='OK unlocked', stderr='')
+
+        success = self.user_manager.unlock_user('rdptest')
+
+        self.assertTrue(success)
+        mock_run.assert_called_once()
+        command = mock_run.call_args.args[0]
+        self.assertIn('toggle-user-lock.sh', command[1])
+        self.assertEqual(command[2], 'rdptest')
+        self.assertEqual(command[3], 'unlock')
+        self.assertTrue(UserManager._user_states_cache.get('rdptest'))
+
 
 if __name__ == '__main__':
     unittest.main()

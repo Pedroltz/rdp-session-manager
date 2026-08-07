@@ -60,13 +60,13 @@ def select_profile(profiles: list[dict[str, Any]], requested: str = "") -> dict[
             if requested in (profile.get("profile_id"), profile.get("name")):
                 return profile
         raise ValueError(f"unknown profile: {requested}")
-    defaults = [profile for profile in profiles if profile.get("is_default")]
-    if len(profiles) == 1 or defaults:
-        return (defaults or profiles)[0]
+    if len(profiles) == 1:
+        return profiles[0]
 
     chooser = Path("/opt/rdp-users/rdp-session-launcher.py")
     if not chooser.exists():
-        raise ValueError("multiple profiles require the graphical chooser")
+        defaults = [profile for profile in profiles if profile.get("is_default")]
+        return (defaults or profiles)[0]
     wm = subprocess.Popen(["openbox"], start_new_session=True)
     try:
         result = subprocess.run(

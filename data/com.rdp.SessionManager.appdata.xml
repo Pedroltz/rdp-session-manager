@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.6.5" date="2026-08-07">
+      <description>
+        <p>Fixes user lock/disable session termination and multi-profile RDP connection source selection launcher.</p>
+      </description>
+    </release>
     <release version="0.6.4" date="2026-08-05">
       <description>
         <p>Stabilizes Windows RemoteApp user provisioning, automatic installed-application detection, Wine fallback, executable selection, and current libadwaita compatibility.</p>

@@ -29,7 +29,23 @@ fi
 if [ "$ACTION" = "lock" ]; then
     echo "Disabling user $USERNAME..."
     /usr/sbin/usermod --lock "$USERNAME"
-    echo "OK User $USERNAME disabled (account locked)"
+
+    # Terminar sessões ativas do loginctl/systemd se disponível
+    if command -v loginctl >/dev/null 2>&1; then
+        loginctl terminate-user "$USERNAME" 2>/dev/null || true
+    fi
+
+    # Encerrar processos ativos do usuário
+    if /usr/bin/pgrep -u "$USERNAME" > /dev/null 2>&1; then
+        echo "  Terminating active processes for $USERNAME..."
+        /usr/bin/pkill -15 -u "$USERNAME" 2>/dev/null || true
+        sleep 1
+        if /usr/bin/pgrep -u "$USERNAME" > /dev/null 2>&1; then
+            /usr/bin/pkill -9 -u "$USERNAME" 2>/dev/null || true
+        fi
+    fi
+
+    echo "OK User $USERNAME disabled (account locked and sessions terminated)"
 else
     echo "Enabling user $USERNAME..."
     /usr/sbin/usermod --unlock "$USERNAME"
