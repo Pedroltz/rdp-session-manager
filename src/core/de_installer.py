@@ -14,6 +14,7 @@ from core.desktop_environments import (
     normalize_desktop_id,
 )
 from utils.polkit import get_privilege_command
+from core.audit import audited_command
 
 logger = logging.getLogger(__name__)
 
@@ -149,16 +150,21 @@ class DEInstaller:
             log(10, f"WARNING You may be asked to authenticate ({auth_name})")
 
             if self.family == "arch":
-                install_command = privilege_command + [
+                install_command = audited_command(privilege_command, "desktop.install", normalized, [
                     "/usr/bin/pacman",
                     "-Syu",
                     "--needed",
                     "--noconfirm",
                     *packages,
-                ]
+                ])
                 log(20, f"$ {auth_name} pacman -Syu --needed --noconfirm {' '.join(packages)}")
             else:
-                update_command = privilege_command + ["/usr/bin/apt-get", "update"]
+                update_command = audited_command(
+                    privilege_command,
+                    "desktop.package-index.update",
+                    normalized,
+                    ["/usr/bin/apt-get", "update"],
+                )
                 log(10, f"$ {auth_name} apt-get update")
                 update = self._run_command(update_command, timeout=300)
                 if update.returncode != 0:
@@ -167,13 +173,13 @@ class DEInstaller:
                     log(0, f"X {message}")
                     return False, message
 
-                install_command = privilege_command + [
+                install_command = audited_command(privilege_command, "desktop.install", normalized, [
                     "/usr/bin/apt-get",
                     "install",
                     "-y",
                     "--no-install-recommends",
                     *packages,
-                ]
+                ])
                 log(20, f"$ {auth_name} apt-get install -y --no-install-recommends {' '.join(packages)}")
 
             log(30, f"Installing {info['name']}...")

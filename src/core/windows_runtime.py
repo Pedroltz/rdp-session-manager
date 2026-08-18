@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from utils.polkit import get_privilege_command
+from core.audit import audited_command
 
 
 class WindowsRuntimeMigrator:
@@ -52,11 +53,16 @@ class WindowsRuntimeMigrator:
 
     def migrate(self, username: str, rollback: str = "") -> dict:
         privilege = [] if os.geteuid() == 0 else get_privilege_command()[1]
-        command = privilege + [sys.executable, str(self.helper_path), username]
+        action = "windows.runtime.rollback" if rollback else "windows.runtime.migrate"
+        command = audited_command(
+            privilege,
+            action,
+            username,
+            [sys.executable, str(self.helper_path), username],
+        )
         if rollback:
             command += ["--rollback", rollback]
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         if result.returncode:
             raise RuntimeError(result.stderr.strip() or result.stdout.strip())
         return json.loads(result.stdout)
-

@@ -6,6 +6,9 @@ set -e
 
 USERNAME="$1"
 ACTION="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit "user.sudo.$ACTION" "$USERNAME"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$ACTION" ]; then

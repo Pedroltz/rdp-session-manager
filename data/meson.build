@@ -32,6 +32,12 @@ install_data(
     install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
 )
 
+install_data(
+    'rdp-session-manager.logrotate',
+    install_dir: join_paths(get_option('sysconfdir'), 'logrotate.d'),
+    rename: 'rdp-session-manager'
+)
+
 install_subdir(
     'windows-app-recipes',
     install_dir: join_paths(get_option('datadir'), 'rdp-session-manager')

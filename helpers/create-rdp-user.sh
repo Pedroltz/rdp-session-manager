@@ -17,6 +17,9 @@ SESSION_TYPE="$5"        # 'desktop', 'remoteapp', ou 'winege-remoteapp'
 SESSION_COMMAND="$6"     # DE command (ex: startxfce4), app command (ex: firefox), ou .exe path para WineGE
 APP_ARGS="$7"            # Argumentos do app (apenas para remoteapp)
 PROFILES_JSON_SRC="${8:-}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.create "$USERNAME"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$USER_UID" ] || [ -z "$HOME_DIR" ] \

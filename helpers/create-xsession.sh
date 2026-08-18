@@ -7,6 +7,9 @@ set -e
 USERNAME="$1"
 HOME_DIR="$2"
 DE_COMMAND="$3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.session.create "$USERNAME"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ] || [ -z "$HOME_DIR" ] || [ -z "$DE_COMMAND" ]; then

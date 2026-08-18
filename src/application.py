@@ -19,6 +19,9 @@ from core.de_installer import DEInstaller
 from core.session_monitor import SessionMonitor
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
+from core.server_manager import ServerManager
+from core.health import HealthService
+from core.remediation import RemediationService
 from version import __version__
 
 logger = logging.getLogger(__name__)
@@ -42,6 +45,9 @@ class RDPSessionManagerApp(Adw.Application):
         self.session_monitor = None
         self.system_deps = None
         self.app_config = None
+        self.server_manager = None
+        self.health_service = None
+        self.remediation_service = None
 
     def do_startup(self):
         """Called on application startup"""
@@ -56,6 +62,13 @@ class RDPSessionManagerApp(Adw.Application):
         self.de_installer = DEInstaller()
         self.session_monitor = SessionMonitor()
         self.system_deps = SystemDependencies()
+        self.server_manager = ServerManager()
+        self.health_service = HealthService(
+            self.server_manager,
+            self.user_manager,
+            self.session_monitor,
+        )
+        self.remediation_service = RemediationService(self.user_manager)
 
         # Setup actions
         self.create_actions()
@@ -74,7 +87,9 @@ class RDPSessionManagerApp(Adw.Application):
                 rdp_config=self.rdp_config,
                 de_installer=self.de_installer,
                 session_monitor=self.session_monitor,
-                system_deps=self.system_deps
+                system_deps=self.system_deps,
+                health_service=self.health_service,
+                remediation_service=self.remediation_service,
             )
 
         self.window.present()

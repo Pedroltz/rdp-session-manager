@@ -38,6 +38,11 @@
   </provides>
 
   <releases>
+    <release version="0.7.0" date="2026-08-18">
+      <description>
+        <p>Introduces unified Operations Center and health diagnostics, transactional user repair with rollback, privileged audit trail, server capacity management in Preferences, and modernized GTK 4/Libadwaita UI layout.</p>
+      </description>
+    </release>
     <release version="0.6.5" date="2026-08-07">
       <description>
         <p>Fixes user lock/disable session termination and multi-profile RDP connection source selection launcher.</p>

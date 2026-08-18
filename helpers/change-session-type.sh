@@ -13,6 +13,9 @@ USERNAME="$1"
 SESSION_TYPE="$2"        # 'desktop' ou 'remoteapp'
 SESSION_COMMAND="$3"     # DE command ou app command
 APP_ARGS="$4"            # Argumentos (opcional)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.session.change "$USERNAME"
 
 # Verificar se usuário existe
 if ! id "$USERNAME" &>/dev/null; then

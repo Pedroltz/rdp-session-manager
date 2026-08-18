@@ -4,8 +4,8 @@
   <requires lib="libadwaita" version="1.0"/>
 
   <template class="MainWindow" parent="AdwApplicationWindow">
-    <property name="default-width">600</property>
-    <property name="default-height">850</property>
+    <property name="default-width">800</property>
+    <property name="default-height">620</property>
     <property name="title">RDP Session Manager</property>
 
     <child>
@@ -62,38 +62,77 @@
                       <object class="GtkScrolledWindow">
                         <property name="hscrollbar-policy">never</property>
                         <child>
-                          <object class="GtkBox">
-                            <property name="orientation">vertical</property>
-                            <property name="margin-top">12</property>
-                            <property name="margin-bottom">12</property>
-                            <property name="margin-start">12</property>
-                            <property name="margin-end">12</property>
-                            <property name="spacing">12</property>
-
-                            <!-- Server Info Card -->
+                          <object class="AdwClamp">
+                            <property name="maximum-size">800</property>
+                            <property name="tightening-threshold">600</property>
                             <child>
-                              <object class="AdwPreferencesGroup" id="server_info_group">
-                                <property name="title">Server Information</property>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="margin-top">18</property>
+                                <property name="margin-bottom">18</property>
+                                <property name="margin-start">16</property>
+                                <property name="margin-end">16</property>
+                                <property name="spacing">18</property>
+
+                                <!-- Server Info Card -->
                                 <child>
-                                  <object class="AdwActionRow" id="ip_row">
-                                    <property name="title">IP Address</property>
-                                    <property name="subtitle" bind-source="ip_row" bind-property="subtitle" bind-flags="sync-create"/>
+                                  <object class="AdwPreferencesGroup" id="server_info_group">
+                                    <property name="title">Server Information</property>
                                     <child>
-                                      <object class="GtkButton" id="copy_ip_button">
-                                        <property name="icon-name">edit-copy-symbolic</property>
+                                      <object class="AdwActionRow" id="ip_row">
+                                        <property name="title">IP Address</property>
+                                        <property name="subtitle">Detecting…</property>
+                                        <child>
+                                          <object class="GtkButton" id="copy_ip_button">
+                                            <property name="icon-name">edit-copy-symbolic</property>
+                                            <property name="valign">center</property>
+                                            <property name="tooltip-text">Copy IP Address</property>
+                                            <style>
+                                              <class name="flat"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                <child>
+                                  <object class="AdwActionRow" id="sessions_row">
+                                    <property name="title">Active Sessions</property>
+                                    <property name="subtitle">0 sessions</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="AdwActionRow" id="health_row">
+                                    <property name="title">System Health</property>
+                                    <property name="subtitle">Not checked yet</property>
+                                    <property name="icon-name">emblem-system-symbolic</property>
+                                    <child>
+                                      <object class="GtkButton" id="health_details_button">
+                                        <property name="label">Details</property>
                                         <property name="valign">center</property>
-                                        <property name="tooltip-text">Copiar IP</property>
+                                        <property name="sensitive">false</property>
+                                        <property name="tooltip-text">Inspect health checks and evidence</property>
                                         <style>
                                           <class name="flat"/>
                                         </style>
                                       </object>
                                     </child>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="AdwActionRow" id="sessions_row">
-                                    <property name="title">Active Sessions</property>
-                                    <property name="subtitle">0 sessions</property>
+                                    <child>
+                                      <object class="GtkSpinner" id="health_spinner">
+                                        <property name="visible">false</property>
+                                        <property name="valign">center</property>
+                                        <property name="tooltip-text">System health check in progress</property>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkButton" id="health_refresh_button">
+                                        <property name="icon-name">view-refresh-symbolic</property>
+                                        <property name="valign">center</property>
+                                        <property name="tooltip-text">Check system health now</property>
+                                        <style>
+                                          <class name="flat"/>
+                                        </style>
+                                      </object>
+                                    </child>
                                   </object>
                                 </child>
                               </object>
@@ -117,9 +156,11 @@
                           </object>
                         </child>
                       </object>
-                    </property>
+                    </child>
                   </object>
-                </child>
+                </property>
+              </object>
+            </child>
 
                 <!-- Empty State -->
                 <child>

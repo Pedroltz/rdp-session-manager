@@ -58,6 +58,9 @@ case "$COMMAND" in
         ;;
 
     copy-files)
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        . "$SCRIPT_DIR/audit-lib.sh"
+        rdpsm_audit_on_exit windows.files.copy "$USERNAME"
         [ ! -d "$HOME_DIR/.wine" ] && {
                 echo "Error: Wine prefix not found"
             exit 1

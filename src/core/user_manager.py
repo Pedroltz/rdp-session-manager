@@ -19,6 +19,7 @@ from core.desktop_environments import (
     normalize_desktop_id,
 )
 from utils.polkit import get_privilege_command
+from core.audit import audited_command
 
 logger = logging.getLogger(__name__)
 
@@ -425,7 +426,12 @@ class UserManager:
                 log_callback(f"  $ {auth_msg} /usr/sbin/groupadd {self.RDP_GID_NAME}")
 
             result = subprocess.run(
-                priv_cmd + ['/usr/sbin/groupadd', self.RDP_GID_NAME],
+                audited_command(
+                    priv_cmd,
+                    'system.group.create',
+                    self.RDP_GID_NAME,
+                    ['/usr/sbin/groupadd', self.RDP_GID_NAME],
+                ),
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -461,7 +467,12 @@ class UserManager:
                 log_callback(f"  $ {auth_msg} mkdir -p {self.rdp_users_home}")
 
             result = subprocess.run(
-                priv_cmd + ['/usr/bin/mkdir', '-p', str(self.rdp_users_home)],
+                audited_command(
+                    priv_cmd,
+                    'system.directory.create',
+                    str(self.rdp_users_home),
+                    ['/usr/bin/mkdir', '-p', str(self.rdp_users_home)],
+                ),
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -483,7 +494,12 @@ class UserManager:
                 log_callback(f"  $ {auth_msg} chmod 755 {self.rdp_users_home}")
 
             chmod_result = subprocess.run(
-                priv_cmd + ['/usr/bin/chmod', '755', str(self.rdp_users_home)],
+                audited_command(
+                    priv_cmd,
+                    'system.directory.permissions',
+                    str(self.rdp_users_home),
+                    ['/usr/bin/chmod', '755', str(self.rdp_users_home)],
+                ),
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -702,6 +718,7 @@ class UserManager:
         username: str,
         password: str,
         profiles: Optional[List[ConnectionProfile]] = None,
+        plan_id: str = '',
     ) -> tuple[bool, str]:
         """Repair a managed account with exactly one privilege escalation."""
         import tempfile
@@ -751,6 +768,7 @@ class UserManager:
                 default_profile.profile_type,
                 default_profile.app_command,
                 temp_path,
+                plan_id,
             ]
             timeout = (
                 1200
@@ -830,7 +848,13 @@ class UserManager:
 
             # Primeiro tentar SIGTERM
             result = subprocess.run(
-                priv_cmd + ['/usr/bin/pkill', signal, '-u', username],
+                audited_command(
+                    priv_cmd,
+                    'session.terminate',
+                    username,
+                    ['/usr/bin/pkill', signal, '-u', username],
+                    success_codes=(0, 1),
+                ),
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -1653,24 +1677,17 @@ class UserManager:
             # Obter comando de elevação apropriado (pkexec ou sudo)
             _, priv_cmd = get_privilege_command()
 
-            # Usar echo e pipe para passar a senha
-            echo_proc = subprocess.Popen(
-                ['echo', f'{username}:{new_password}'],
-                stdout=subprocess.PIPE
-            )
-
-            passwd_proc = subprocess.Popen(
+            # Pass credentials only through stdin; never expose them in argv.
+            passwd_proc = subprocess.run(
                 priv_cmd + [str(password_script)],
-                stdin=echo_proc.stdout,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                input=f'{username}:{new_password}\n',
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
-
-            echo_proc.stdout.close()
-            stdout, stderr = passwd_proc.communicate(timeout=30)
 
             if passwd_proc.returncode != 0:
-                error_msg = stderr.decode().strip()
+                error_msg = passwd_proc.stderr.strip()
                 logger.error(f"Failed to change password: {error_msg}")
                 return False
 

@@ -1,52 +1,48 @@
 # Continuous integration
 
-The repository has two GitHub Actions workflows.
+The repository has three GitHub Actions workflows.
 
 ## Quality Checks
 
-`Quality Checks` runs for pull requests and pushes to `main`, `master`, and
-`develop`. It performs syntax checks, unit tests, bootstrap tests, a dry-run,
-and builds the complete release bundle.
+`Quality Checks` runs for every pull request and for pushes to `master`, `main`,
+and `develop`. The independent gates are:
 
-The built bundle is then installed, without simulation, on:
+- syntax compilation on Python 3.9 and 3.13;
+- Python compilation, shell syntax, XML/recipe parsing, the complete unittest
+  suite, and installer bootstrap tests;
+- real Debian and Arch package builds, followed by archive inspection for the
+  privileged audit helpers and logrotate policy.
 
-- Ubuntu 22.04
-- Ubuntu 24.04
-- Debian 12
-- Debian 13
-- Arch Linux
+The generated packages are retained for seven days as workflow artifacts. Add
+both jobs as required status checks in the repository branch-protection rule.
 
-Ubuntu jobs run directly on GitHub-hosted virtual machines. Debian and Arch
-run in clean containers on a GitHub-hosted Ubuntu runner. The default
-application and xrdp installation is tested everywhere. Wine dependencies are
-also installed on Ubuntu 24.04 and Arch Linux.
+## Privileged RDP E2E
 
-The verification checks package registration, installed commands, metadata,
-PolicyKit and schema files, helper permissions, xrdp, and a headless GTK
-startup through Xvfb. Native Ubuntu jobs additionally require the xrdp service
-to be enabled, active, and listening on TCP port 3389.
+`Privileged RDP E2E` runs every Monday at 03:30 UTC and can also be started
+manually. It requires a dedicated runner labeled `self-hosted`, `linux`, and
+`rdpsm-e2e`, with xrdp, Xvfb, FreeRDP, the supported desktops, and Windows
+runtime dependencies already installed.
+
+Suites run serially because they share system users, xrdp, display numbers, and
+host capacity:
+
+1. desktop connection smoke test;
+2. Linux RemoteApp battery;
+3. privileged audit create/lock/unlock/delete round trip;
+4. staged 5/10/25-session capacity test;
+5. Windows application connection test.
+
+The runner must provide a deterministic Windows GUI executable at
+`/opt/rdpsm-fixtures/windows-test.exe`, or a different absolute path through the
+manual workflow input. Diagnostics are uploaded even when a suite fails.
 
 ## Publish Release
 
-`Publish Release` runs for tags matching `v*.*.*`. It:
+`Publish Release` runs for tags matching `v*.*.*`. Before building or publishing
+it verifies the tag against `src/version.py` and repeats compilation, shell,
+unit, and bootstrap gates. It then builds the checksummed installer assets and
+publishes the release.
 
-1. validates the tag against `src/version.py`;
-2. runs the regular checks and builds the two release assets;
-3. installs the generated bundle across the full operating-system matrix;
-4. publishes the assets as a prerelease candidate;
-5. repeats the full matrix through the public release `install.sh`;
-6. promotes stable tags to `latest` only after every installation succeeds.
-
-If a public installation fails, the candidate remains a prerelease and the
-previous stable release remains `latest`. Reruns reuse an existing candidate
-only when its asset names and contents exactly match the newly built files.
-
-Prerelease tags, such as beta or release-candidate tags, are tested in the same
-way but are not promoted to stable.
-
-## Branch protection
-
-To prevent merges after a failed installation, configure the jobs shown under
-`Quality Checks` as required status checks for the protected branch. This
-repository currently has no branch protection rule, so workflow failures are
-visible but do not by themselves prevent an authorized manual merge.
+The privileged E2E workflow is intentionally separate: GitHub-hosted runners do
+not provide a persistent systemd/xrdp host or a Windows fixture. A release should
+only be tagged after the latest scheduled or manually triggered E2E run passes.

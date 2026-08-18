@@ -6,10 +6,16 @@ from .de_installer import DEInstaller
 from .session_monitor import SessionMonitor
 from .server_config import ServerConfig, ServerSettings
 from .server_manager import ServerManager
+from .health import HealthCheck, HealthReport, HealthService
+from .remediation import RepairPlan, RepairStep, RemediationService
+from .audit import AuditStore
 from .windows_runtime import WindowsRuntimeMigrator
 
 __all__ = [
     'UserManager', 'RDPConfig', 'DEInstaller', 'SessionMonitor',
     'ServerConfig', 'ServerSettings', 'ServerManager',
+    'HealthCheck', 'HealthReport', 'HealthService',
+    'RepairPlan', 'RepairStep', 'RemediationService',
+    'AuditStore',
     'WindowsRuntimeMigrator',
 ]

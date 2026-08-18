@@ -8,6 +8,7 @@ import logging
 from typing import Tuple, Optional, Callable
 
 from utils.polkit import get_privilege_command
+from core.audit import audited_command
 
 logger = logging.getLogger(__name__)
 
@@ -239,14 +240,24 @@ class SystemDependencies:
 
                 # Habilitar serviço
                 subprocess.run(
-                    priv_cmd + ['/usr/bin/systemctl', 'enable', dep_info['service']],
+                    audited_command(
+                        priv_cmd,
+                        'system.service.enable',
+                        dep_info['service'],
+                        ['/usr/bin/systemctl', 'enable', dep_info['service']],
+                    ),
                     capture_output=True,
                     timeout=10
                 )
 
                 # Iniciar serviço
                 start_result = subprocess.run(
-                    priv_cmd + ['/usr/bin/systemctl', 'start', dep_info['service']],
+                    audited_command(
+                        priv_cmd,
+                        'system.service.start',
+                        dep_info['service'],
+                        ['/usr/bin/systemctl', 'start', dep_info['service']],
+                    ),
                     capture_output=True,
                     timeout=10
                 )

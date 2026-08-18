@@ -7,6 +7,7 @@ USERNAME="${1:-}"
 SESSION_TYPE="${2:-}"
 SESSION_COMMAND="${3:-}"
 PROFILES_JSON_SRC="${4:-}"
+PLAN_ID="${5:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 [ "$(id -u)" -eq 0 ] || {
@@ -23,6 +24,10 @@ case "$SESSION_TYPE" in
 esac
 [ -f "$PROFILES_JSON_SRC" ] || {
     echo "Error: profile data is missing." >&2
+    exit 2
+}
+[[ "$PLAN_ID" =~ ^[A-Za-z0-9-]{0,64}$ ]] || {
+    echo "Error: invalid repair plan ID." >&2
     exit 2
 }
 
@@ -69,6 +74,39 @@ IFS= read -r RDP_PASSWORD || {
     exit 2
 }
 
+BACKUP_DIR=""
+audit_repair() {
+    local result="$1"
+    local error_code="${2:-}"
+    if ! /usr/bin/python3 "$SCRIPT_DIR/audit-event.py" write \
+        --action user.repair --target "$USERNAME" --result "$result" \
+        --error-code "$error_code" --plan-id "$PLAN_ID"; then
+        echo "Warning: could not write the privileged audit event." >&2
+    fi
+}
+rollback_on_exit() {
+    local status=$?
+    trap - EXIT
+    unset RDP_PASSWORD
+    if [ "$status" -ne 0 ]; then
+        if [ -n "$BACKUP_DIR" ]; then
+            if /usr/bin/python3 "$SCRIPT_DIR/repair-transaction.py" restore \
+                "$BACKUP_DIR" "$HOME_DIR" "$USERNAME"; then
+                echo "Rollback: managed files restored from $BACKUP_DIR" >&2
+            else
+                echo "Error: automatic rollback failed; preserve $BACKUP_DIR for recovery." >&2
+            fi
+        fi
+        audit_repair failure "exit-$status"
+    fi
+    exit "$status"
+}
+trap rollback_on_exit EXIT
+
+BACKUP_DIR="$(/usr/bin/python3 "$SCRIPT_DIR/repair-transaction.py" backup \
+    "$HOME_DIR" "$USERNAME")"
+echo "→ Backup created: $BACKUP_DIR"
+
 echo "→ Repairing managed files for $USERNAME..."
 /usr/bin/chmod 751 "$HOME_DIR"
 if [ "$SESSION_TYPE" = "winege-remoteapp" ]; then
@@ -89,7 +127,11 @@ case "$PASSWORD_STATE" in
         ;;
 esac
 
+audit_repair success
+trap - EXIT
+
 echo "OK User $USERNAME repaired successfully"
+echo "  - rollback snapshot: $BACKUP_DIR"
 echo "  - password: configured"
 echo "  - profile: validated"
 echo "  - session wrapper: validated"

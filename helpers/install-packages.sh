@@ -22,6 +22,10 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit system.packages.install system
+
 case "$DISTRO" in
     arch|manjaro|endeavouros|cachyos)
         # Atualizar cache de pacotes

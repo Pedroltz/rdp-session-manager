@@ -3,6 +3,9 @@ set -e
 
 USERNAME="$1"
 NEW_EXE_PATH="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit windows.executable.update "$USERNAME"
 
 [ -z "$USERNAME" ] || [ -z "$NEW_EXE_PATH" ] && {
     echo "Usage: $0 USERNAME NEW_EXE_PATH"

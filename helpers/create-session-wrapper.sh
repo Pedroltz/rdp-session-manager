@@ -11,6 +11,8 @@ HOME_DIR="${2:-}"
 
 INSTALL_ROOT="/opt/rdp-users"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.session.wrapper "$USERNAME"
 /usr/bin/install -m 755 "$SCRIPT_DIR/rdpsm-session.py" "$INSTALL_ROOT/rdpsm-session.py"
 if [ -f "$SCRIPT_DIR/rdp-session-launcher.py" ]; then
     /usr/bin/install -m 755 "$SCRIPT_DIR/rdp-session-launcher.py" "$INSTALL_ROOT/rdp-session-launcher.py"

@@ -23,6 +23,9 @@ RDP Session Manager provides a graphical interface for administering RDP access 
 - Run Windows applications through umu, with legacy WineGE prefix compatibility.
 - Check and install required RDP components when needed.
 - Monitor user status and active sessions.
+- Inspect unified host, user, and session health from GTK or `rdpsm health`.
+- Preview repair plans, automatically roll back managed files on failure, and
+  export privileged repair audit events as JSONL.
 
 ## Technology
 
@@ -76,6 +79,7 @@ Command-line usage and available commands are documented in the [CLI reference](
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Development guide](docs/DEVELOPMENT.md)
 - [Continuous integration and release checks](docs/CI.md)
+- [v0.7 implementation roadmap](docs/ROADMAP_V0.7.md)
 - [Changelog](CHANGELOG.md)
 
 ## Contributing

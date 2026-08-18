@@ -1,5 +1,13 @@
 # Changelog - RDP Session Manager
 
+## [0.7.0] - 2026-08-18
+
+- Added unified Operations & Health Diagnostics center (`rdpsm health` CLI and GTK dialog with filtering, search, and evidence inspection).
+- Added transactional user repair (`rdpsm repair user <name>`) with automatic backup, validation, and rollback on failure.
+- Added privileged execution audit trail with structured JSONL event logging (`/var/log/rdp-session-manager/audit.jsonl`) and logrotate configuration.
+- Added Server & Capacity management page in Preferences with real-time memory budget gauge, auto-recommendation, and system limit enforcement.
+- Modernized and standardized GTK 4 / Libadwaita user interface: standardized dialog dimensions (`560x580`), main window layout (`800x620` with `AdwClamp`), and clean notifications.
+
 ## [0.6.5] - 2026-08-07
 
 - Fixed user disable/lock toggle to terminate active systemd/loginctl sessions (`loginctl terminate-user`) and terminate remaining user processes (`pkill -15` / `pkill -9`).

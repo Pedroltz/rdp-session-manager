@@ -6,6 +6,8 @@ Command-line interface for RDP Session Manager. All operations available in the 
 
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
+- [Unified health diagnostics](#unified-health-diagnostics)
+- [Administrative audit](#administrative-audit)
 - [User Management](#user-management)
 - [Session Management](#session-management)
 - [Desktop Environments](#desktop-environments)
@@ -63,6 +65,53 @@ rdpsm server migrate
 
 See [Server mode](SERVER_MODE.md) for resource defaults, migration, and
 operational requirements.
+
+## Unified health diagnostics
+
+Use the same read-only health model consumed by the GTK dashboard:
+
+```bash
+# Host, managed users, and active sessions
+rdpsm health
+
+# Stable, versioned JSON for monitoring and automation
+rdpsm health --format json
+
+# Limit the report to one managed user and that user's active session
+rdpsm health --user USERNAME --format json
+```
+
+The report classifies checks as `healthy`, `warning`, `critical`, or `unknown`.
+The command exits with `0` only when every selected check is healthy, `1` when
+attention is required, and `2` when the report could not be collected.
+
+## Administrative audit
+
+Administrative helpers write structured events to the root-owned operational log
+`/var/log/rdp-session-manager/audit.jsonl`. Events contain an ID, UTC timestamp,
+actor, action, target, result, error code, and repair plan ID. Passwords and
+command arguments are never included.
+
+Covered actions include user lifecycle, password and sudo changes, profiles,
+session termination, desktop installation, server profile application, and
+Windows application/runtime mutations.
+
+```bash
+# Most recent events
+rdpsm audit list
+
+# Filter by actor or target, action, result, and UTC period
+rdpsm audit list --user USERNAME --action user.repair --result failure
+rdpsm audit list --since 2026-08-01T00:00:00Z --format json
+
+# Write a private (0600) JSONL export as the current administrator
+rdpsm audit export --output ./rdpsm-audit.jsonl --user USERNAME
+```
+
+Reading the system log may request one terminal authentication. Exported files
+are written by the invoking administrator, not by the privileged helper. The
+installed logrotate policy keeps 12 weekly rotations. This is an operational
+trail suitable for ingestion by a SIEM, not tamper-proof compliance storage.
 
 ## User Management
 
@@ -335,16 +384,36 @@ rdpsm user password john
 ### Diagnose and Repair User
 
 Repair a managed account whose password, profile, session wrapper, or Windows
-runtime was left incomplete. The command refuses active or unmanaged accounts,
-prompts for a new RDP password, and requests administrator authentication once.
+runtime was left incomplete. The command prints a versioned repair plan before
+asking for confirmation, refuses active or unmanaged accounts, revalidates the
+account, prompts for a new RDP password, and requests administrator
+authentication once.
 
 ```bash
+# Review only; this never changes the account
+rdpsm user repair USERNAME --plan
+rdpsm user repair USERNAME --plan --format json
+
+# Review, confirm, and apply
 rdpsm user repair USERNAME
+
+# Apply the displayed plan without the extra yes/no prompt
+rdpsm user repair USERNAME --yes
+
 rdpsm -v user repair USERNAME
 ```
 
+Immediately before changing managed files, repair creates a root-owned snapshot
+under `/var/lib/rdp-session-manager/backups/USERNAME/`. If profile, dispatcher,
+or validation work fails, those files are restored automatically. Successful
+output includes the retained snapshot path for manual recovery. Password changes
+and provisioning inside a Wine/Proton prefix are explicitly non-reversible and
+are shown that way in the plan.
+
 The password is sent directly to the single privileged helper through standard
 input and is never included in its command line or logs.
+If the account changes between planning and execution, the operation is
+rejected and must be diagnosed again.
 
 **GUI Equivalent:** User menu (…) → Diagnose / Repair
 
@@ -1007,28 +1076,9 @@ done
 
 ```bash
 #!/bin/bash
-# Check system health
-
-echo "=== RDP Session Manager Health Check ==="
-echo ""
-
-# Check xrdp
-if rdpsm server status > /dev/null 2>&1; then
-    echo "✓ xrdp server: OK"
-else
-    echo "✗ xrdp server: NOT RUNNING"
-fi
-
-# Check dependencies
-if rdpsm deps check > /dev/null 2>&1; then
-    echo "✓ Dependencies: OK"
-else
-    echo "! Dependencies: MISSING"
-fi
-
-# Show server info
-echo ""
-rdpsm server info
+# Check host, users, and active sessions through one stable contract.
+rdpsm health --format json | tee /var/tmp/rdpsm-health.json
+exit "${PIPESTATUS[0]}"
 ```
 
 ---

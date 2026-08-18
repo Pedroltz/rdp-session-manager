@@ -391,7 +391,7 @@ class TestUserManager(unittest.TestCase):
         run.return_value = Mock(returncode=0, stdout='OK repaired\n', stderr='')
 
         success, _ = self.user_manager.repair_user(
-            'rdptest', 'new password', profiles=[profile]
+            'rdptest', 'new password', profiles=[profile], plan_id='plan-123'
         )
 
         self.assertTrue(success)
@@ -399,7 +399,21 @@ class TestUserManager(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertEqual(command[0], 'sudo')
         self.assertNotIn('new password', command)
+        self.assertEqual(command[-1], 'plan-123')
         self.assertEqual(run.call_args.kwargs['input'], 'new password\n')
+
+    @patch('core.user_manager.get_privilege_command')
+    @patch('core.user_manager.subprocess.run')
+    def test_change_password_never_places_secret_in_argv(self, run, privilege):
+        self.user_manager.user_exists = Mock(return_value=True)
+        privilege.return_value = ('sudo', ['sudo'])
+        run.return_value = Mock(returncode=0, stdout='', stderr='')
+
+        self.assertTrue(self.user_manager.change_password('rdptest', 'very secret'))
+
+        command = run.call_args.args[0]
+        self.assertNotIn('very secret', repr(command))
+        self.assertEqual(run.call_args.kwargs['input'], 'rdptest:very secret\n')
 
     @patch('core.user_manager.get_privilege_command')
     @patch('core.user_manager.subprocess.run')

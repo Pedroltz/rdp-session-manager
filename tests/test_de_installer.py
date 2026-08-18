@@ -113,7 +113,9 @@ class DEInstallerTest(unittest.TestCase):
 
         self.assertTrue(success)
         command = run_command.call_args.args[0]
-        self.assertEqual(command[:6], ["sudo", "/usr/bin/pacman", "-Syu", "--needed", "--noconfirm", "plasma-desktop"])
+        child = command[command.index("--") + 1:]
+        self.assertEqual(child[:5], ["/usr/bin/pacman", "-Syu", "--needed", "--noconfirm", "plasma-desktop"])
+        self.assertIn("desktop.install", command)
         self.assertIn("plasma-x11-session", command)
 
     def test_debian_install_updates_then_installs(self):
@@ -132,10 +134,12 @@ class DEInstallerTest(unittest.TestCase):
 
         self.assertTrue(success)
         commands = [call.args[0] for call in run_command.call_args_list]
-        self.assertEqual(commands[0], ["sudo", "/usr/bin/apt-get", "update"])
+        first_child = commands[0][commands[0].index("--") + 1:]
+        second_child = commands[1][commands[1].index("--") + 1:]
+        self.assertEqual(first_child, ["/usr/bin/apt-get", "update"])
         self.assertEqual(
-            commands[1][:5],
-            ["sudo", "/usr/bin/apt-get", "install", "-y", "--no-install-recommends"],
+            second_child[:4],
+            ["/usr/bin/apt-get", "install", "-y", "--no-install-recommends"],
         )
 
     def test_removed_desktop_is_rejected_before_package_manager(self):

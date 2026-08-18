@@ -20,6 +20,7 @@ import psutil
 
 from core.server_config import RESOURCE_PROFILES, ServerConfig, ServerSettings
 from utils.polkit import get_privilege_command
+from core.audit import audited_command
 
 
 class ServerManager:
@@ -116,7 +117,11 @@ class ServerManager:
             settings=settings,
         )
         if not capacity["admissible"]:
-            errors.append("configured session mix exceeds safe host memory capacity")
+            errors.append(
+                "configured session mix requires "
+                f"{capacity['requested_memory_max_mb']} MB, but the safe host "
+                f"budget is {capacity['safe_memory_mb']} MB"
+            )
         return {
             "ready": not errors,
             "supported": supported,
@@ -247,8 +252,13 @@ class ServerManager:
                 if dry_run or os.geteuid() == 0
                 else get_privilege_command()[1]
             )
+            command = [sys.executable, str(self.helper_path), payload_path]
+            if not dry_run:
+                command = audited_command(privilege, "server.profile.apply", "system", command)
+            else:
+                command = privilege + command
             result = self.command_runner(
-                privilege + [sys.executable, str(self.helper_path), payload_path],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=120,

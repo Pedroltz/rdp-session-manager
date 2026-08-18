@@ -4,8 +4,8 @@
   <requires lib="libadwaita" version="1.0"/>
   <template class="ConnectionSourcesDialog" parent="AdwDialog">
     <property name="title" translatable="yes">User Connection Sources</property>
-    <property name="content-width">580</property>
-    <property name="content-height">500</property>
+    <property name="content-width">640</property>
+    <property name="content-height">520</property>
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>

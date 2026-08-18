@@ -7,6 +7,9 @@ set -e
 USERNAME="$1"
 REMOVE_HOME=false
 KILL_PROCESSES=false
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.delete "$USERNAME"
 
 # Validar parâmetros
 if [ -z "$USERNAME" ]; then

@@ -1,11 +1,12 @@
 # RDP Session Manager - Test Suite Documentation
 
-Complete unit test suite for RDP Session Manager with 163 tests covering the application, installer, and server-mode modules.
+Complete test suite for RDP Session Manager with 223 tests covering the
+application, installer, health, repair, audit, and server-mode modules.
 
 ## Overview
 
-- **Total Tests**: 163
-- **Test Files**: 12
+- **Total Tests**: 223
+- **Test Files**: 20
 - **Framework**: Python `unittest`
 - **Success Rate**: 100%
 
@@ -18,16 +19,22 @@ tests/
 ├── test_backup.py            # 20 tests - Backup system
 ├── test_config.py            # 16 tests - Configuration
 ├── test_logger.py            # 23 tests - Logging and audit
-├── test_server_mode.py       # 9 tests - Server mode and safe launcher
+├── test_audit.py             # 5 tests - Privileged JSONL audit and wrapper
+├── test_health.py            # 10 tests - Unified health contract
+├── test_health_ui.py         # 2 tests - One-shot GTK health refresh
+├── test_health_dialog.py     # 2 tests - Human-readable evidence formatting
+├── test_remediation.py       # 6 tests - Repair plans and revalidation
+├── test_repair_transaction.py # 2 tests - Snapshot and rollback
+├── test_server_mode.py       # 16 tests - Server mode and safe launcher
 ├── test_session_monitor.py   # 19 tests - Session monitoring
-├── test_user_manager.py      # 12 tests - User management
+├── test_user_manager.py      # 21 tests - User management
 ├── test_validator.py         # 19 tests - Input validation
 └── ...                       # Installer, PolicyKit, DE, and dialog tests
 ```
 
 ## Test Files
 
-### test_user_manager.py (12 tests)
+### test_user_manager.py (21 tests)
 
 Tests `src/core/user_manager.py` - RDP user management.
 
@@ -172,6 +179,7 @@ and xrdp already installed, run:
 
 ```bash
 sudo ./tests/e2e/rdp_desktop.sh
+sudo ./tests/e2e/test_audit_trail.sh
 ```
 
 On Arch, install the test-only tools with:
@@ -339,6 +347,6 @@ class TestNewClass(unittest.TestCase):
 
 ---
 
-**Version**: 0.6.0
-**Last Updated**: 2026-08-02
-**Tests**: 163/163 passing
+**Version**: 0.6.5 + v0.7 development
+**Last Updated**: 2026-08-10
+**Tests**: 223/223 passing

@@ -30,9 +30,15 @@ class MainWindow(Adw.ApplicationWindow):
     search_entry = Gtk.Template.Child()
     ip_row = Gtk.Template.Child()
     sessions_row = Gtk.Template.Child()
+    health_row = Gtk.Template.Child()
+    health_details_button = Gtk.Template.Child()
+    health_spinner = Gtk.Template.Child()
+    health_refresh_button = Gtk.Template.Child()
     copy_ip_button = Gtk.Template.Child()
 
-    def __init__(self, application, user_manager, rdp_config, de_installer, session_monitor, system_deps, **kwargs):
+    def __init__(self, application, user_manager, rdp_config, de_installer,
+                 session_monitor, system_deps, health_service,
+                 remediation_service, **kwargs):
         super().__init__(application=application, **kwargs)
 
         self.user_manager = user_manager
@@ -40,9 +46,13 @@ class MainWindow(Adw.ApplicationWindow):
         self.de_installer = de_installer
         self.session_monitor = session_monitor
         self.system_deps = system_deps
+        self.health_service = health_service
+        self.remediation_service = remediation_service
 
         # Flag para evitar atualizações simultâneas
         self._updating_users = False
+        self._health_refreshing = False
+        self._last_health_report = None
 
         # Adicionar toast overlay
         self.toast_overlay = Adw.ToastOverlay()
@@ -58,17 +68,107 @@ class MainWindow(Adw.ApplicationWindow):
         self.update_server_info()
         self.update_xrdp_status()
         self.load_users()
+        GLib.idle_add(self.refresh_health)
 
         # Update UI periodically
         GLib.timeout_add_seconds(5, self.update_sessions_info)
         GLib.timeout_add_seconds(10, self.update_xrdp_status)
+        # Health can touch systemd, certificates and every managed user. Run it
+        # once at startup and then only on explicit refresh; a 30-second poll
+        # kept the row in a near-permanent loading state on slower hosts.
 
     def setup_signals(self):
         """Setup signal handlers"""
         self.add_user_button.connect('clicked', self.on_add_user)
         self.empty_add_user_button.connect('clicked', self.on_add_user)
         self.copy_ip_button.connect('clicked', self.on_copy_ip)
+        self.health_refresh_button.connect('clicked', self.refresh_health)
+        health_details_supported = hasattr(Adw, "Dialog") and hasattr(Adw, "ToolbarView")
+        self.health_details_button.set_visible(health_details_supported)
+        self.health_details_button.set_sensitive(False)
+        if health_details_supported:
+            self.health_details_button.connect('clicked', self.show_health_details)
         self.search_entry.connect('search-changed', self.on_search_changed)
+
+    def show_health_details(self, button):
+        """Open the filterable report without duplicating diagnostic logic."""
+        if self._last_health_report is None:
+            self.show_toast("Health report is not ready yet")
+            return
+        from .health_dialog import HealthDialog
+        dialog = HealthDialog(
+            self.health_service,
+            initial_report=self._last_health_report,
+            on_report=self._health_dialog_report_updated,
+        )
+        dialog.present(self)
+
+    def _health_dialog_report_updated(self, report):
+        self._apply_health_summary(report)
+
+    def refresh_health(self, button=None):
+        """Refresh the unified health summary without blocking GTK."""
+        if self._health_refreshing:
+            # False is essential when invoked through GLib.idle_add: True
+            # would keep this callback registered and create a refresh loop.
+            return False
+        self._health_refreshing = True
+        # A previous critical/warning icon must not masquerade as the result of
+        # the check currently in progress.
+        self.health_row.set_icon_name("emblem-system-symbolic")
+        self.health_row.set_subtitle("Checking host, users and sessions…")
+        self.health_spinner.set_visible(True)
+        self.health_spinner.start()
+        self.health_refresh_button.set_visible(False)
+        if self._last_health_report is None:
+            self.health_details_button.set_sensitive(False)
+
+        def worker():
+            try:
+                report = self.health_service.collect()
+                GLib.idle_add(self._health_refresh_finished, report, None)
+            except Exception as exc:
+                logger.error("Error collecting system health: %s", exc)
+                GLib.idle_add(self._health_refresh_finished, None, str(exc))
+
+        import threading
+        threading.Thread(target=worker, daemon=True).start()
+        return False
+
+    def _health_refresh_finished(self, report, error):
+        self._health_refreshing = False
+        self.health_spinner.stop()
+        self.health_spinner.set_visible(False)
+        self.health_refresh_button.set_visible(True)
+        if error or report is None:
+            self.health_row.set_icon_name("dialog-question-symbolic")
+            self.health_row.set_subtitle("Health check unavailable")
+            self.health_details_button.set_sensitive(
+                self._last_health_report is not None
+            )
+            return False
+
+        self._apply_health_summary(report)
+        return False
+
+    def _apply_health_summary(self, report):
+        self._last_health_report = report
+        self.health_details_button.set_sensitive(True)
+
+        counts = report.counts
+        if report.overall_status == "critical":
+            self.health_row.set_icon_name("dialog-error-symbolic")
+            subtitle = f"{counts['critical']} critical issue(s)"
+        elif report.overall_status == "warning":
+            self.health_row.set_icon_name("dialog-warning-symbolic")
+            subtitle = f"{counts['warning']} warning(s)"
+        elif report.overall_status == "unknown":
+            self.health_row.set_icon_name("dialog-question-symbolic")
+            subtitle = f"{counts['unknown']} check(s) unavailable"
+        else:
+            self.health_row.set_icon_name("emblem-ok-symbolic")
+            subtitle = f"Healthy · {counts['healthy']} checks passed"
+        self.health_row.set_subtitle(subtitle)
 
     def update_server_info(self):
         """Update server information"""
@@ -445,28 +545,28 @@ class MainWindow(Adw.ApplicationWindow):
                     # Habilitar usuário
                     success = self.user_manager.unlock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK User {username} enabled")
+                        GLib.idle_add(self.show_toast, f"User {username} enabled")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Error enabling {username}")
+                        GLib.idle_add(self.show_toast, f"Error enabling user {username}")
                 else:
                     # Desabilitar usuário
                     success = self.user_manager.lock_user(username)
                     if success:
-                        GLib.idle_add(self.show_toast, f"OK User {username} disabled")
+                        GLib.idle_add(self.show_toast, f"User {username} disabled")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(300, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Error disabling {username}")
+                        GLib.idle_add(self.show_toast, f"Error disabling user {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"X Error changing the status of {username}")
+                GLib.idle_add(self.show_toast, f"Error changing status of user {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -486,17 +586,31 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def on_repair_user(self, user, popover):
-        """Show diagnosis and collect a new RDP password for repair."""
+        """Show a repair plan and collect a new RDP password."""
         popover.popdown()
-        diagnosis = self.user_manager.diagnose_user(user.username)
-        issues = diagnosis.get('issues') or [
-            "Managed files look healthy; the RDP password will be reset."
+        plan = self.remediation_service.plan_user(user.username)
+        issue_lines = [f"• {issue}" for issue in plan.issues]
+        if not issue_lines:
+            issue_lines = ["• Managed files are currently healthy"]
+        step_lines = [
+            f"{index}. {step.summary}"
+            for index, step in enumerate(plan.steps, 1)
         ]
+        blocker_lines = [f"• {blocker}" for blocker in plan.blockers]
+        body_parts = [
+            "Current findings:",
+            *issue_lines,
+            "\nPlanned steps:",
+            *step_lines,
+        ]
+        if blocker_lines:
+            body_parts.extend(["\nBlockers:", *blocker_lines])
+        else:
+            body_parts.append("\nThe account will be revalidated before authentication.")
         dialog = Adw.MessageDialog(
             transient_for=self,
             heading=f"Diagnose / Repair {user.username}",
-            body="\n".join(f"• {issue}" for issue in issues)
-            + "\n\nRepair uses one administrator authentication.",
+            body="\n".join(body_parts),
         )
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("repair", "Repair")
@@ -505,6 +619,7 @@ class MainWindow(Adw.ApplicationWindow):
         )
         dialog.set_default_response("repair")
         dialog.set_close_response("cancel")
+        dialog.set_response_enabled("repair", plan.applicable)
 
         fields = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         fields.set_margin_top(12)
@@ -523,10 +638,12 @@ class MainWindow(Adw.ApplicationWindow):
         )
         fields.append(password)
         fields.append(confirmation)
+        fields.set_visible(plan.applicable)
         dialog.set_extra_child(fields)
         dialog._repair_user = user
         dialog._repair_password = password
         dialog._repair_confirmation = confirmation
+        dialog._repair_plan = plan
         dialog.connect("response", self.on_repair_user_response)
         dialog.present()
 
@@ -536,31 +653,40 @@ class MainWindow(Adw.ApplicationWindow):
         password = dialog._repair_password.get_text()
         confirmation = dialog._repair_confirmation.get_text()
         if not password:
-            self.show_toast("X RDP password cannot be empty")
+            self.show_toast("RDP password cannot be empty")
             return
         if password != confirmation:
-            self.show_toast("X Passwords do not match")
+            self.show_toast("Passwords do not match")
             return
 
         username = dialog._repair_user.username
         profiles = dialog._repair_user.profiles
+        valid, validation_error = self.remediation_service.validate_user_plan(
+            dialog._repair_plan
+        )
+        if not valid:
+            self.show_toast(f"{validation_error}")
+            return
         self.show_toast(f"Repairing {username}; authenticate once...")
 
         def repair():
             success, message = self.user_manager.repair_user(
-                username, password, profiles=profiles
+                username,
+                password,
+                profiles=profiles,
+                plan_id=dialog._repair_plan.plan_id,
             )
             if success:
                 GLib.idle_add(
                     self.show_toast,
-                    f"OK User {username} repaired; try connecting again",
+                    f"User {username} repaired; try connecting again",
                 )
                 GLib.idle_add(self.load_users)
             else:
                 logger.error("Repair failed for %s: %s", username, message)
                 GLib.idle_add(
                     self.show_toast,
-                    f"X Repair failed: {message}",
+                    f"Repair failed: {message}",
                 )
 
         import threading
@@ -580,7 +706,7 @@ class MainWindow(Adw.ApplicationWindow):
             action_text = "grant" if new_state else "revoke"
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"WARNING {username} is connected",
+                heading=f"{username} is connected",
                 body=f"""To {action_text} sudo privileges, the user's session will be terminated automatically.
 
 IMPORTANT: Group changes only take effect after a complete logout and login.
@@ -623,28 +749,28 @@ Would you like to continue?"""
                     # Conceder privilégios sudo
                     success = self.user_manager.grant_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, "OK Sudo privileges granted—reconnect to apply")
+                        GLib.idle_add(self.show_toast, "Sudo privileges granted—reconnect to apply")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, True)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Error granting sudo privileges to {username}")
+                        GLib.idle_add(self.show_toast, f"Error granting sudo privileges to {username}")
                 else:
                     # Revogar privilégios sudo
                     success = self.user_manager.revoke_sudo(username, kill_sessions=True)
                     if success:
-                        GLib.idle_add(self.show_toast, "OK Sudo privileges revoked—reconnect to apply")
+                        GLib.idle_add(self.show_toast, "Sudo privileges revoked—reconnect to apply")
                         # Atualizar o switch manualmente
                         GLib.idle_add(switch.set_active, False)
                         # Atualizar lista de usuários
                         GLib.timeout_add(500, self.load_users)
                     else:
-                        GLib.idle_add(self.show_toast, f"X Error revoking sudo privileges from {username}")
+                        GLib.idle_add(self.show_toast, f"Error revoking sudo privileges from {username}")
 
             except Exception as e:
                 logger.error(f"Error toggling sudo for user {username}: {e}")
-                GLib.idle_add(self.show_toast, f"X Error changing sudo privileges for {username}")
+                GLib.idle_add(self.show_toast, f"Error changing sudo privileges for {username}")
 
         # Executar em thread para não bloquear a UI
         import threading
@@ -664,7 +790,7 @@ Would you like to continue?"""
 
             dialog = Adw.MessageDialog(
                 transient_for=self,
-                heading=f"WARNING {username} is active",
+                heading=f"{username} is active",
                 body=f"User {username}{session_info}.\n\nThe user's sessions will be terminated automatically before removal.\n\nWould you like to continue?"
             )
 
@@ -711,10 +837,10 @@ Would you like to continue?"""
 
                 if success:
                     self.load_users()
-                    self.show_toast(f"OK User {username} removed successfully")
+                    self.show_toast(f"User {username} removed successfully")
                     logger.info(f"User {username} deleted successfully")
                 else:
-                    self.show_toast(f"X Error removing {username}")
+                    self.show_toast(f"Error removing user {username}")
                     # Show error dialog
                     error_dialog = Adw.MessageDialog(
                         transient_for=self,
@@ -767,11 +893,11 @@ Would you like to continue?"""
         # Fechar o popover
         popover.popdown()
 
-        # Criar dialog de configurações usando Adw.Dialog (não MessageDialog) para ter controle total do tamanho
+        # Criar dialog de configurações usando Adw.Dialog
         dialog = Adw.Dialog()
         dialog.set_title("Edit RDP User")
-        dialog.set_content_width(500)
-        dialog.set_content_height(680)
+        dialog.set_content_width(560)
+        dialog.set_content_height(580)
         dialog.set_can_close(True)
 
         # Criar toolbar view com header bar
@@ -797,14 +923,14 @@ Would you like to continue?"""
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(500)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
-        clamp.set_margin_start(12)
-        clamp.set_margin_end(12)
+        clamp.set_maximum_size(520)
+        clamp.set_margin_top(18)
+        clamp.set_margin_bottom(18)
+        clamp.set_margin_start(16)
+        clamp.set_margin_end(16)
 
         # Criar container para os campos
-        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        settings_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
 
         # === Banner de Status no Topo ===
         status_banner = Adw.PreferencesGroup()
@@ -1345,20 +1471,20 @@ Would you like to continue?"""
                     if success:
                         changes_made.append("username")
                     else:
-                        GLib.idle_add(self.show_toast, "X Error renaming user")
+                        GLib.idle_add(self.show_toast, "Error renaming user")
                         return
 
                 # Mostrar sucesso
                 if changes_made:
                     changes_text = ", ".join(changes_made)
-                    GLib.idle_add(self.show_toast, f"OK Changed: {changes_text}")
+                    GLib.idle_add(self.show_toast, f"Settings saved: {changes_text}")
                     GLib.timeout_add(300, self.load_users)
                 else:
-                    GLib.idle_add(self.show_toast, "ℹ No changes were made")
+                    GLib.idle_add(self.show_toast, "No changes were made")
 
             except Exception as e:
                 logger.error(f"Error updating user settings: {e}")
-                GLib.idle_add(self.show_toast, "X Error updating settings")
+                GLib.idle_add(self.show_toast, "Error updating settings")
 
         # Executar em thread
         import threading
@@ -1374,7 +1500,7 @@ Would you like to continue?"""
         clipboard = self.get_clipboard()
         clipboard.set(connection_string)
 
-        self.show_toast(f"OK {connection_string} copied!")
+        self.show_toast(f"{connection_string} copied to clipboard")
 
         # Fechar o popover
         popover.popdown()
@@ -1445,7 +1571,7 @@ Would you like to continue?"""
             domain = dialog._domain_entry.get_text().strip()
 
             if not password:
-                self.show_toast("X Password cannot be empty")
+                self.show_toast("Password cannot be empty")
                 return
 
             # Fechar diálogo antes de abrir FreeRDP
@@ -1460,7 +1586,7 @@ Would you like to continue?"""
             # Obter o comando FreeRDP correto
             freerdp_cmd = self.system_deps.get_freerdp_command()
             if not freerdp_cmd:
-                self.show_toast("X FreeRDP not found")
+                self.show_toast("FreeRDP not found")
                 logger.error("FreeRDP command not found")
                 return
 
@@ -1522,11 +1648,11 @@ Would you like to continue?"""
                 self.show_toast(f"Opening {freerdp_cmd}{domain_suffix}...")
                 logger.info(f"Launched {freerdp_cmd} for user {user.username}{domain_suffix}")
         except FileNotFoundError:
-            self.show_toast("X FreeRDP not found")
+            self.show_toast("FreeRDP not found")
             logger.error("FreeRDP command not found")
         except Exception as e:
             logger.error(f"Error launching FreeRDP: {e}")
-            self.show_toast(f"X Error opening FreeRDP: {e}")
+            self.show_toast(f"Error opening FreeRDP: {e}")
 
     def on_copy_ip(self, button):
         """Copy IP to clipboard"""
@@ -1535,7 +1661,7 @@ Would you like to continue?"""
         clipboard = self.get_clipboard()
         clipboard.set(ip)
 
-        self.show_toast(f"OK IP {ip} copied!")
+        self.show_toast(f"IP {ip} copied to clipboard")
         logger.info(f"IP {ip} copied to clipboard")
 
     def show_toast(self, message):

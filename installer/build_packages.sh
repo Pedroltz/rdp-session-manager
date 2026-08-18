@@ -65,6 +65,7 @@ mkdir -p "${BUILD_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${BUILD_DIR}/usr/share/polkit-1/actions"
 mkdir -p "${BUILD_DIR}/usr/share/glib-2.0/schemas"
 mkdir -p "${BUILD_DIR}/usr/share/metainfo"
+mkdir -p "${BUILD_DIR}/etc/logrotate.d"
 mkdir -p "${RELEASE_DIR}"
 
 # Clean old packages
@@ -79,6 +80,7 @@ cp -r src "${BUILD_DIR}/usr/share/${APP_NAME}/"
 mkdir -p "${BUILD_DIR}/usr/share/${APP_NAME}/data"
 cp -r data/ui "${BUILD_DIR}/usr/share/${APP_NAME}/data/"
 cp -r data/windows-app-recipes "${BUILD_DIR}/usr/share/${APP_NAME}/"
+cp data/rdp-session-manager.logrotate "${BUILD_DIR}/etc/logrotate.d/${APP_NAME}"
 
 # Copy scripts if exist
 [ -d "scripts" ] && cp -r scripts "${BUILD_DIR}/usr/share/${APP_NAME}/"

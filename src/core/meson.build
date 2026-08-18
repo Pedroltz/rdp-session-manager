@@ -7,6 +7,9 @@ core_sources = [
     'session_monitor.py',
     'server_config.py',
     'server_manager.py',
+    'health.py',
+    'remediation.py',
+    'audit.py',
     'windows_runtime.py',
     'windows_app.py',
 ]

@@ -6,6 +6,10 @@ if command -v umu-run >/dev/null 2>&1; then
     exit 0
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit windows.runtime.install system
+
 . /etc/os-release
 case "$(uname -m)" in
     x86_64) ARCH="amd64" ;;

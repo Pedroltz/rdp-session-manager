@@ -22,6 +22,9 @@ from core.desktop_environments import SUPPORTED_DESKTOPS, normalize_desktop_id
 from core.system_deps import SystemDependencies
 from core.config import AppConfig
 from core.server_manager import ServerManager
+from core.health import HealthService
+from core.remediation import RemediationService
+from core.audit import AuditStore
 from core.windows_runtime import WindowsRuntimeMigrator
 from core.windows_app import (
     InstallRecipe,
@@ -52,6 +55,9 @@ class CLI:
         self._session_monitor = None
         self._de_installer = None
         self._system_deps = None
+        self._health_service = None
+        self._remediation_service = None
+        self._audit_store = None
         self.server_manager = ServerManager()
         self.windows_migrator = WindowsRuntimeMigrator()
 
@@ -98,6 +104,32 @@ class CLI:
         if self._system_deps is None:
             self._system_deps = SystemDependencies()
         return self._system_deps
+
+    @property
+    def health_service(self):
+        if self._health_service is None:
+            self._health_service = HealthService(
+                self.server_manager,
+                # Health is read-only and must not create per-admin settings
+                # merely to inspect managed system accounts.
+                UserManager(app_config=None),
+                self.session_monitor,
+            )
+        return self._health_service
+
+    @property
+    def remediation_service(self):
+        if self._remediation_service is None:
+            self._remediation_service = RemediationService(
+                UserManager(app_config=None)
+            )
+        return self._remediation_service
+
+    @property
+    def audit_store(self):
+        if self._audit_store is None:
+            self._audit_store = AuditStore()
+        return self._audit_store
 
     def print_success(self, message: str):
         """Print success message"""
@@ -740,28 +772,46 @@ class CLI:
             return 1
 
     def user_repair(self, args):
-        """Diagnose and repair a managed RDP account."""
+        """Plan, confirm, revalidate, and repair a managed RDP account."""
         try:
             import getpass
             import json
 
-            diagnosis = self.user_manager.diagnose_user(args.username)
+            plan = self.remediation_service.plan_user(args.username)
             if args.format == 'json':
-                print(json.dumps(diagnosis, indent=2))
+                print(json.dumps(plan.to_dict(), indent=2))
             else:
-                self.print_header(f"RDP User Diagnosis: {args.username}")
-                if diagnosis.get('issues'):
-                    for issue in diagnosis['issues']:
+                self.print_header(f"RDP User Repair Plan: {args.username}")
+                if plan.issues:
+                    for issue in plan.issues:
                         self.print_warning(issue)
                 else:
-                    self.print_info("Managed files look healthy; the RDP password will be reset.")
+                    self.print_info("Managed files are healthy; the plan will reset the RDP password.")
+                print("\n  Planned steps:")
+                for index, step in enumerate(plan.steps, 1):
+                    flags = []
+                    if not step.reversible:
+                        flags.append("not reversible")
+                    if step.disruptive:
+                        flags.append("disruptive")
+                    suffix = f" ({', '.join(flags)})" if flags else ""
+                    print(f"    {index}. {step.summary}{suffix}")
+                if plan.blockers:
+                    print("\n  Blockers:")
+                    for blocker in plan.blockers:
+                        self.print_warning(blocker)
 
-            if not diagnosis.get('exists') or not diagnosis.get('managed'):
-                self.print_error("The account is not eligible for automatic repair")
+            if getattr(args, 'plan', False):
+                return 0 if plan.applicable else 1
+            if not plan.applicable:
+                self.print_error("The repair plan cannot be applied")
                 return 1
-            if diagnosis.get('active'):
-                self.print_error("Disconnect the user before repairing it")
-                return 1
+
+            if not getattr(args, 'yes', False):
+                response = input("\nApply this repair plan? [y/N]: ").strip().lower()
+                if response not in ('y', 'yes'):
+                    self.print_info("Repair canceled")
+                    return 0
 
             password = getpass.getpass(f"New RDP password for {args.username}: ")
             confirmation = getpass.getpass("Confirm RDP password: ")
@@ -769,11 +819,16 @@ class CLI:
                 self.print_error("Passwords do not match")
                 return 1
 
+            valid, validation_error = self.remediation_service.validate_user_plan(plan)
+            if not valid:
+                self.print_error(validation_error)
+                return 1
+
             self.print_info(
                 "Authenticate once to repair the password, profile and session runtime..."
             )
             success, message = self.user_manager.repair_user(
-                args.username, password
+                args.username, password, plan_id=plan.plan_id
             )
             if not success:
                 self.print_error(message or "Repair failed")
@@ -1357,6 +1412,41 @@ class CLI:
             self.print_error(f"Error getting server info: {e}")
             return 1
 
+    def health(self, args):
+        """Print the unified host/user/session health report."""
+        try:
+            report = self.health_service.collect(args.user)
+            data = report.to_dict()
+            if args.format == 'json':
+                print(json.dumps(data, indent=2))
+            else:
+                self.print_header("RDP Session Manager Health")
+                print(f"  Overall:  {data['overall_status'].upper()}")
+                print(f"  Captured: {data['captured_at']}")
+                counts = data['counts']
+                print(
+                    "  Checks:   "
+                    f"{counts['healthy']} healthy, {counts['warning']} warning, "
+                    f"{counts['critical']} critical, {counts['unknown']} unknown"
+                )
+                print()
+                symbols = {
+                    'healthy': 'OK',
+                    'warning': '!',
+                    'critical': 'X',
+                    'unknown': '?',
+                }
+                for check in data['checks']:
+                    marker = symbols[check['status']]
+                    print(
+                        f"  {marker:>2} {check['id']:<34} "
+                        f"{check['summary']}"
+                    )
+            return 0 if report.overall_status == 'healthy' else 1
+        except Exception as exc:
+            self.print_error(f"Error collecting health report: {exc}")
+            return 2
+
     def server_status(self, args):
         """Show a server health snapshot."""
         try:
@@ -1704,6 +1794,57 @@ class CLI:
             self.print_error(f"Error installing package: {e}")
             return 1
 
+    # ==================== AUDIT COMMANDS ====================
+
+    @staticmethod
+    def _audit_filters(args):
+        return {
+            'limit': args.limit,
+            'user': args.user or '',
+            'action': args.action or '',
+            'result': args.result or '',
+            'since': args.since or '',
+            'until': args.until or '',
+        }
+
+    def audit_list(self, args):
+        """List filtered privileged audit events."""
+        try:
+            events = self.audit_store.list_events(**self._audit_filters(args))
+            if args.format == 'json':
+                print(json.dumps(events, indent=2))
+            else:
+                self.print_header("Administrative audit trail")
+                if not events:
+                    print("No matching events.")
+                for event in events:
+                    timestamp = str(event.get('timestamp', '')).replace('+00:00', 'Z')
+                    print(
+                        f"  {timestamp:<28} {event.get('result', ''):<7} "
+                        f"{event.get('action', ''):<20} {event.get('target', '')}"
+                    )
+                    print(
+                        f"    actor={event.get('actor', '')} "
+                        f"plan={event.get('plan_id', '') or '-'} "
+                        f"error={event.get('error_code', '') or '-'}"
+                    )
+            return 0
+        except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+            self.print_error(f"Could not read audit events: {exc}")
+            return 1
+
+    def audit_export(self, args):
+        """Export filtered audit events as JSONL."""
+        try:
+            output, count = self.audit_store.export(
+                args.output, **self._audit_filters(args)
+            )
+            self.print_success(f"Exported {count} audit event(s) to {output}")
+            return 0
+        except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+            self.print_error(f"Could not export audit events: {exc}")
+            return 1
+
     # ==================== MAIN ====================
 
     def run(self, argv=None):
@@ -1719,6 +1860,43 @@ class CLI:
         parser.add_argument('--version', action='version', version=f'RDPSM {__version__}')
 
         subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+        health_parser = subparsers.add_parser(
+            'health', help='Show unified host, user, and session health'
+        )
+        health_parser.add_argument('--user', help='Limit checks to one managed user')
+        health_parser.add_argument(
+            '--format', choices=['table', 'json'], default='table',
+            help='Output format',
+        )
+        health_parser.set_defaults(func=self.health)
+
+        audit_parser = subparsers.add_parser(
+            'audit', help='Inspect or export privileged administrative events'
+        )
+        audit_subparsers = audit_parser.add_subparsers(dest='subcommand')
+
+        def add_audit_filters(command, default_limit):
+            command.add_argument('--limit', type=int, default=default_limit)
+            command.add_argument('--user', help='Match actor or target user')
+            command.add_argument('--action', help='Match an exact action ID')
+            command.add_argument(
+                '--result', choices=['success', 'failure'], help='Filter by result'
+            )
+            command.add_argument('--since', help='UTC/ISO-8601 lower time bound')
+            command.add_argument('--until', help='UTC/ISO-8601 upper time bound')
+
+        audit_list = audit_subparsers.add_parser('list', help='List audit events')
+        add_audit_filters(audit_list, 100)
+        audit_list.add_argument('--format', choices=['table', 'json'], default='table')
+        audit_list.set_defaults(func=self.audit_list)
+
+        audit_export = audit_subparsers.add_parser(
+            'export', help='Export audit events as JSONL'
+        )
+        audit_export.add_argument('--output', required=True, help='Destination JSONL file')
+        add_audit_filters(audit_export, 100000)
+        audit_export.set_defaults(func=self.audit_export)
 
         # User commands
         user_parser = subparsers.add_parser('user', help='User management')
@@ -1783,7 +1961,15 @@ class CLI:
             '--format',
             choices=['table', 'json'],
             default='table',
-            help='Diagnosis output format',
+            help='Repair plan output format',
+        )
+        user_repair.add_argument(
+            '--plan', action='store_true',
+            help='Print the repair plan without changing the account',
+        )
+        user_repair.add_argument(
+            '--yes', action='store_true',
+            help='Apply the displayed plan without an additional confirmation prompt',
         )
         user_repair.set_defaults(func=self.user_repair)
 
@@ -2079,7 +2265,12 @@ class CLI:
             )
 
         # Setup logging
-        file_logging = args.command != 'server'
+        read_only_repair_plan = (
+            args.command == 'user'
+            and getattr(args, 'subcommand', None) == 'repair'
+            and getattr(args, 'plan', False)
+        )
+        file_logging = args.command not in ('server', 'health', 'audit') and not read_only_repair_plan
         if args.verbose:
             setup_logger(log_level=logging.DEBUG, file_logging=file_logging)
         else:
@@ -2087,7 +2278,27 @@ class CLI:
 
         # Execute command
         if hasattr(args, 'func'):
-            return args.func(args)
+            result = args.func(args)
+            windows_mutations = {
+                'install', 'select', 'resume', 'validate', 'retry', 'remove', 'migrate'
+            }
+            if (
+                args.command == 'windows-app'
+                and getattr(args, 'subcommand', None) in windows_mutations
+                and os.geteuid() == 0
+            ):
+                action = f"windows.app.{args.subcommand}"
+                target = getattr(args, 'username', 'system')
+                try:
+                    self.audit_store.record_privileged(
+                        action=action,
+                        target=target,
+                        success=result == 0,
+                        error_code='' if result == 0 else f'exit-{result}',
+                    )
+                except Exception as exc:
+                    logger.warning("Could not record %s audit event: %s", action, exc)
+            return result
         else:
             parser.print_help()
             return 0

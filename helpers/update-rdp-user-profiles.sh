@@ -6,6 +6,9 @@ set -e
 
 USERNAME="$1"
 PROFILES_JSON_SRC="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.profiles.update "$USERNAME"
 
 if [ -z "$USERNAME" ] || [ -z "$PROFILES_JSON_SRC" ] || [ ! -f "$PROFILES_JSON_SRC" ]; then
     echo "Error: Invalid arguments"

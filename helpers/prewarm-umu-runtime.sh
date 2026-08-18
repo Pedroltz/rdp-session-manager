@@ -42,6 +42,10 @@ if runtime_ready; then
     exit 0
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit windows.runtime.prewarm "$USERNAME"
+
 echo "→ Downloading and validating the shared UMU runtime..."
 PREWARM_LOG="$(mktemp /tmp/rdpsm-umu-prewarm.XXXXXX)"
 /usr/bin/chown "$USERNAME:rdp-users" "$PREWARM_LOG"

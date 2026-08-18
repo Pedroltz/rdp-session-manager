@@ -8,6 +8,9 @@ USERNAME="${1:-}"
 HOME_DIR="${2:-}"
 EXE_PATH="${3:-}"
 WINE_PREFIX="${4:-$HOME_DIR/.wine}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit windows.runtime.configure "$USERNAME"
 
 [ -n "$USERNAME" ] && [ -d "$HOME_DIR" ] && [ -f "$EXE_PATH" ] || {
     echo "Usage: $0 USERNAME HOME_DIR EXE_PATH [WINE_PREFIX]" >&2

@@ -1,0 +1,89 @@
+name: Quality Checks
+
+on:
+  pull_request:
+  push:
+    branches: [master, main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-compatibility:
+    name: Python ${{ matrix.python }} syntax
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ['3.9', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m compileall -q src helpers installer
+
+  tests:
+    name: Unit, schemas, and helper checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-gi python3-gi-cairo python3-psutil \
+            gir1.2-gtk-4.0 gir1.2-adw-1 libxml2-utils
+      - name: Compile Python
+        run: python3 -m compileall -q src helpers tests installer
+      - name: Validate shell helpers
+        run: find helpers installer tests -type f -name '*.sh' -print0 | xargs -0 bash -n
+      - name: Validate XML and JSON assets
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from xml.etree import ElementTree
+
+          for path in Path("data").glob("*.xml"):
+              ElementTree.parse(path)
+          for path in Path("data/windows-app-recipes").glob("*.json"):
+              json.loads(path.read_text(encoding="utf-8"))
+          PY
+      - name: Run unit and integration tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Test installer bootstrap
+        run: bash tests/test_installer_bootstrap.sh
+
+  packages:
+    name: Build Debian and Arch packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev rubygems build-essential zstd libarchive-tools
+          sudo gem install --no-document fpm
+      - name: Build packages
+        run: bash installer/build_packages.sh
+      - name: Verify package contents
+        run: |
+          dpkg-deb --info release/rdp-session-manager.deb >/dev/null
+          dpkg-deb --contents release/rdp-session-manager.deb | grep -F 'audit-event.py'
+          dpkg-deb --contents release/rdp-session-manager.deb | grep -F 'etc/logrotate.d/rdp-session-manager'
+          bsdtar -tf release/rdp-session-manager.pkg.tar.zst | grep -F 'audit-event.py'
+          bsdtar -tf release/rdp-session-manager.pkg.tar.zst | grep -F 'etc/logrotate.d/rdp-session-manager'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ github.sha }}
+          path: |
+            release/rdp-session-manager.deb
+            release/rdp-session-manager.pkg.tar.zst
+          retention-days: 7

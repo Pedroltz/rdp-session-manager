@@ -12,6 +12,11 @@ if [ -z "$CREDENTIALS" ]; then
     exit 1
 fi
 
+USERNAME="${CREDENTIALS%%:*}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.password.change "$USERNAME"
+
 # Definir senha usando chpasswd
 echo "$CREDENTIALS" | /usr/sbin/chpasswd
 

@@ -7,6 +7,10 @@ set -e
 USERNAME="$1"
 shift  # Remove USERNAME dos argumentos
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit windows.dependencies.install "$USERNAME"
+
 if [ -z "$USERNAME" ]; then
     echo "Error: USERNAME was not provided"
     echo "Usage: $0 USERNAME [PACKAGES...]"

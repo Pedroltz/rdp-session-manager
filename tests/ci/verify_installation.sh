@@ -72,8 +72,16 @@ assert_file /usr/share/polkit-1/actions/com.rdp.SessionManager.policy
 assert_file /usr/share/glib-2.0/schemas/com.rdp.SessionManager.gschema.xml
 assert_file /usr/share/glib-2.0/schemas/gschemas.compiled
 assert_file /usr/share/rdp-session-manager/helpers/create-rdp-user.sh
+assert_file /usr/share/rdp-session-manager/helpers/audit-event.py
+assert_file /usr/share/rdp-session-manager/helpers/audit-exec.py
+assert_file /usr/share/rdp-session-manager/helpers/audit-lib.sh
+assert_file /etc/logrotate.d/rdp-session-manager
 [[ -x /usr/share/rdp-session-manager/helpers/create-rdp-user.sh ]] \
     || fail "create-rdp-user.sh is not executable"
+[[ -x /usr/share/rdp-session-manager/helpers/audit-event.py ]] \
+    || fail "audit-event.py is not executable"
+[[ -x /usr/share/rdp-session-manager/helpers/audit-exec.py ]] \
+    || fail "audit-exec.py is not executable"
 
 python3 - <<'PY'
 import xml.etree.ElementTree as ET

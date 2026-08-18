@@ -11,6 +11,9 @@ fi
 
 USERNAME="$1"
 FULLNAME="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.fullname.change "$USERNAME"
 
 # Verificar se usuário existe
 if ! id "$USERNAME" &>/dev/null; then

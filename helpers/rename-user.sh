@@ -11,6 +11,9 @@ fi
 
 OLD_USERNAME="$1"
 NEW_USERNAME="$2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/audit-lib.sh"
+rdpsm_audit_on_exit user.rename "$OLD_USERNAME"
 
 # Verificar se usuário antigo existe
 if ! id "$OLD_USERNAME" &>/dev/null; then

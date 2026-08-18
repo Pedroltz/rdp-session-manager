@@ -229,8 +229,8 @@ class ProfileEditDialog(Adw.Dialog):
         self.rdp_user = rdp_user
 
         self.set_title("Add Connection Source")
-        self.set_content_width(450)
-        self.set_content_height(450)
+        self.set_content_width(520)
+        self.set_content_height(460)
 
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
