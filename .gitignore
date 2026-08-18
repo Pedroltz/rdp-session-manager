@@ -54,3 +54,5 @@ release-assets/
 
 # End-to-end test artifacts
 artifacts/
+output/
+tmp/

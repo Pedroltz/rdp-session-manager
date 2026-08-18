@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import LandingPage from "../components/LandingPage.astro";
+import { content } from "../data/content";
+---
+
+<BaseLayout content={content.pt}>
+  <LandingPage content={content.pt} />
+</BaseLayout>

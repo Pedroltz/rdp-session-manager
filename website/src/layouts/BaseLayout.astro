@@ -1,0 +1,56 @@
+---
+import "../styles/global.css";
+import type { SiteContent } from "../data/content";
+
+interface Props { content: SiteContent }
+const { content } = Astro.props;
+const isPt = content.locale === "pt";
+const title = isPt
+  ? "RDP Session Manager — aplicações Windows no Linux via RDP"
+  : "RDP Session Manager — Windows applications on Linux over RDP";
+const description = content.hero.body;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const canonical = new URL(isPt ? `${base}/` : `${base}/en/`, Astro.site);
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "RDP Session Manager",
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Linux",
+  description,
+  license: "https://www.gnu.org/licenses/gpl-3.0.html",
+  downloadUrl: "https://github.com/Pedroltz/rdp-session-manager/releases/latest",
+  codeRepository: "https://github.com/Pedroltz/rdp-session-manager"
+};
+---
+
+<!doctype html>
+<html lang={content.locale === "pt" ? "pt-BR" : "en"}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="pt-BR" href={new URL(`${base}/`, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(`${base}/en/`, Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(`${base}/`, Astro.site)} />
+    <link rel="icon" type="image/png" href={`${base}/monitor.png`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(`${base}/og.png`, Astro.site)} />
+    <meta property="og:locale" content={isPt ? "pt_BR" : "en_US"} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL(`${base}/og.png`, Astro.site)} />
+    <title>{title}</title>
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

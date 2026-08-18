@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pedroltz.github.io/rdp-session-manager/sitemap-index.xml
