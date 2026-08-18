@@ -29,7 +29,9 @@ class SafeTarTest(unittest.TestCase):
             archive = root / "umu.tar"
             folder = tarfile.TarInfo("umu")
             folder.type = tarfile.DIRTYPE
+            folder.mode = 0o755
             executable = tarfile.TarInfo("umu/umu-run")
+            executable.mode = 0o755
             payload = b"#!/usr/bin/env python3\n"
             executable.size = len(payload)
             link = tarfile.TarInfo("umu/umu_run.py")
