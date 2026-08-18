@@ -9,7 +9,8 @@ const title = isPt
   ? "RDP Session Manager — aplicações Windows no Linux via RDP"
   : "RDP Session Manager — Windows applications on Linux over RDP";
 const description = content.hero.body;
-const canonical = new URL(isPt ? "/" : "/en/", Astro.site);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const canonical = new URL(isPt ? `${base}/` : `${base}/en/`, Astro.site);
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -32,20 +33,20 @@ const structuredData = {
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="pt-BR" href={new URL("/", Astro.site)} />
-    <link rel="alternate" hreflang="en" href={new URL("/en/", Astro.site)} />
-    <link rel="alternate" hreflang="x-default" href={new URL("/", Astro.site)} />
-    <link rel="icon" type="image/png" href="/monitor.png" />
+    <link rel="alternate" hreflang="pt-BR" href={new URL(`${base}/`, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(`${base}/en/`, Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(`${base}/`, Astro.site)} />
+    <link rel="icon" type="image/png" href={`${base}/monitor.png`} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={new URL("/og.png", Astro.site)} />
+    <meta property="og:image" content={new URL(`${base}/og.png`, Astro.site)} />
     <meta property="og:locale" content={isPt ? "pt_BR" : "en_US"} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL("/og.png", Astro.site)} />
+    <meta name="twitter:image" content={new URL(`${base}/og.png`, Astro.site)} />
     <title>{title}</title>
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
   </head>

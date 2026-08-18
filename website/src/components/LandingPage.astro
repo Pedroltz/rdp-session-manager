@@ -3,7 +3,8 @@ import type { DemoMode, SiteContent } from "../data/content";
 
 interface Props { content: SiteContent }
 const { content: c } = Astro.props;
-const languageHref = c.locale === "pt" ? "/en/" : "/";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const languageHref = c.locale === "pt" ? `${base}/en/` : `${base}/`;
 const repo = "https://github.com/Pedroltz/rdp-session-manager";
 const installCommand = "curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash";
 const modes: DemoMode[] = ["desktop", "linux", "windows"];
@@ -18,7 +19,7 @@ const heroAccentLines = c.locale === "pt"
 <a class="skip-link" href="#main">{c.locale === "pt" ? "Pular para o conteúdo" : "Skip to content"}</a>
 
 <header class="site-header" data-header>
-  <a class="brand" href={c.locale === "pt" ? "/" : "/en/"} aria-label="RDP Session Manager">
+  <a class="brand" href={c.locale === "pt" ? `${base}/` : `${base}/en/`} aria-label="RDP Session Manager">
     <span class="brand-name"><strong>RDP</strong><span>Session Manager</span></span>
   </a>
   <nav class="desktop-nav" aria-label={c.locale === "pt" ? "Navegação principal" : "Primary navigation"}>

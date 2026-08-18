@@ -6,9 +6,12 @@
   <a href="https://github.com/Pedroltz/rdp-session-manager/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-ea4aaa?style=for-the-badge" alt="GPL-3.0 license"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9 or later"></a>
   <a href="https://www.gtk.org/"><img src="https://img.shields.io/badge/GTK-4-78c2ad?style=for-the-badge&logo=gnome&logoColor=white" alt="GTK 4"></a>
+  <a href="https://pedroltz.github.io/rdp-session-manager/"><img src="https://img.shields.io/badge/website-live-09090b?style=for-the-badge&logo=astro&logoColor=FF5D01" alt="Official Website"></a>
+  <a href="https://github.com/Pedroltz/rdp-session-manager/actions"><img src="https://img.shields.io/github/actions/workflow/status/Pedroltz/rdp-session-manager/quality-checks.yml?style=for-the-badge&label=quality%20checks" alt="Quality checks"></a>
   <a href="https://github.com/Pedroltz/rdp-session-manager/releases"><img src="https://img.shields.io/github/v/release/Pedroltz/rdp-session-manager?style=for-the-badge&color=9b8cff" alt="Latest release"></a>
   <br><br>
   <p><code>Linux</code> &nbsp;•&nbsp; <code>GTK 4</code> &nbsp;•&nbsp; <code>libadwaita</code> &nbsp;•&nbsp; <code>xrdp</code> &nbsp;•&nbsp; <code>RemoteApp</code></p>
+  <p>🌐 <a href="https://pedroltz.github.io/rdp-session-manager/"><strong>pedroltz.github.io/rdp-session-manager</strong></a></p>
 </div>
 
 ## Overview

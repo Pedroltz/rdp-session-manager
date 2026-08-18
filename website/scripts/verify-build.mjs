@@ -15,8 +15,8 @@ const requiredFiles = [
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
 
 const pages = [
-  { file: "dist/index.html", lang: "pt-BR", alternate: "/en/" },
-  { file: "dist/en/index.html", lang: "en", alternate: "/" }
+  { file: "dist/index.html", lang: "pt-BR", alternate: "/rdp-session-manager/en/" },
+  { file: "dist/en/index.html", lang: "en", alternate: "/rdp-session-manager/" }
 ];
 
 const requiredFragments = [
