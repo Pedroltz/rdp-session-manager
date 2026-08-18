@@ -1,0 +1,637 @@
+---
+import type { DemoMode, SiteContent } from "../data/content";
+
+interface Props { content: SiteContent }
+const { content: c } = Astro.props;
+const languageHref = c.locale === "pt" ? "/en/" : "/";
+const repo = "https://github.com/Pedroltz/rdp-session-manager";
+const installCommand = "curl -fsSL https://github.com/Pedroltz/rdp-session-manager/releases/latest/download/install.sh | bash";
+const modes: DemoMode[] = ["desktop", "linux", "windows"];
+const heroTitleLines = c.locale === "pt"
+  ? ["Leve aplicações", "Windows para", "qualquer tela."]
+  : ["Bring Windows", "applications to", "any screen."];
+const heroAccentLines = c.locale === "pt"
+  ? ["Sem reescrever", "o legado."]
+  : ["Without rewriting", "the legacy."];
+---
+
+<a class="skip-link" href="#main">{c.locale === "pt" ? "Pular para o conteúdo" : "Skip to content"}</a>
+
+<header class="site-header" data-header>
+  <a class="brand" href={c.locale === "pt" ? "/" : "/en/"} aria-label="RDP Session Manager">
+    <span class="brand-name"><strong>RDP</strong><span>Session Manager</span></span>
+  </a>
+  <nav class="desktop-nav" aria-label={c.locale === "pt" ? "Navegação principal" : "Primary navigation"}>
+    <a href="#story">{c.nav.story}</a>
+    <a href="#features">{c.nav.features}</a>
+    <a href="#compatibility">{c.nav.compatibility}</a>
+    <a href="#install">{c.nav.install}</a>
+  </nav>
+  <div class="header-actions">
+    <a class="language-link" href={languageHref} hreflang={c.locale === "pt" ? "en" : "pt-BR"}>{c.langName}</a>
+    <a class="button button-small button-light" href={repo} target="_blank" rel="noreferrer">{c.nav.github}<span aria-hidden="true">↗</span></a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero section-shell" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow hero-reveal">{c.hero.kicker}</p>
+      <h1 id="hero-title" class="hero-reveal">
+        <span class="sr-only">{c.hero.title} {c.hero.accent}</span>
+        <span aria-hidden="true" class="hero-title-lines">
+          {heroTitleLines.map((line) => <span class="hero-line">{line}</span>)}
+          <span class="hero-accent-lines">{heroAccentLines.map((line) => <span class="hero-line">{line}</span>)}</span>
+        </span>
+      </h1>
+      <p class="hero-body hero-reveal">{c.hero.body}</p>
+      <div class="hero-actions hero-reveal">
+        <a class="button button-primary" href="#install">{c.hero.install}<span aria-hidden="true">↓</span></a>
+        <a class="button button-ghost" href={repo} target="_blank" rel="noreferrer">{c.hero.github}<span aria-hidden="true">↗</span></a>
+      </div>
+      <p class="tech-line hero-reveal">{c.hero.proof}</p>
+    </div>
+
+    <div class="hero-visual hero-reveal" aria-label={c.locale === "pt" ? "Aplicação Windows sendo entregue por um servidor Linux" : "Windows application delivered by a Linux server"}>
+      <div class="signal-orbit orbit-one" aria-hidden="true"></div>
+      <div class="signal-orbit orbit-two" aria-hidden="true"></div>
+      <div class="hero-particle-field" aria-hidden="true">
+        <span class="hero-particle"></span>
+        <span class="hero-particle cream"></span>
+        <span class="hero-particle mint"></span>
+        <span class="hero-particle"></span>
+        <span class="hero-particle cream"></span>
+        <span class="hero-particle square mint"></span>
+        <span class="hero-particle square"></span>
+        <span class="hero-particle ring"></span>
+        <span class="hero-particle tiny cream"></span>
+      </div>
+      <div class="hero-signal-details" aria-hidden="true">
+        <span class="signal-pulse"></span>
+        <span class="signal-tick tick-one"></span>
+        <span class="signal-tick tick-two"></span>
+        <span class="signal-tick tick-three"></span>
+        <span class="signal-label label-port"><i></i>3389/TCP</span>
+        <span class="signal-label label-tls"><i></i>TLS</span>
+      </div>
+      <div class="app-float app-float-one" aria-hidden="true"><span class="window-dots">● ● ●</span><strong>LegacyApp.exe</strong></div>
+      <div class="app-float app-float-two" aria-hidden="true"><span>RDP</span><strong>Connected</strong></div>
+      <div class="crt-shell">
+        <div class="crt-topbar"><span>server://linux</span><span class="live-dot">LIVE</span></div>
+        <div class="crt-screen">
+          <div class="scanlines" aria-hidden="true"></div>
+          <div class="boot-copy"><span>RDP</span><small>SESSION MANAGER</small></div>
+          <div class="boot-log" aria-hidden="true">
+            <span>WineGE&nbsp;&nbsp;[ready]</span>
+            <span>xrdp&nbsp;&nbsp;&nbsp;&nbsp;[active]</span>
+            <span>session&nbsp;[published]</span>
+          </div>
+        </div>
+        <div class="crt-footer"><span class="crt-light"></span><span class="crt-button"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="story" class="story" aria-labelledby="story-title">
+    <div class="story-intro section-shell">
+      <p class="eyebrow">{c.story.kicker}</p>
+      <h2 id="story-title">{c.story.title}</h2>
+      <p>{c.story.body}</p>
+    </div>
+    <div class="story-stage" data-story>
+      <div class="story-progress" aria-hidden="true"><span data-story-progress></span></div>
+      <div class="story-card story-legacy" data-story-node="legacy">
+        <span class="story-index">01</span>
+        <div class="mini-window" aria-hidden="true">
+          <div class="mini-window-bar"><i></i><i></i><i></i></div>
+          <div class="legacy-mark">.EXE</div>
+        </div>
+        <h3>{c.story.legacy}</h3>
+        <p>{c.story.legacyDetail}</p>
+      </div>
+      <div class="story-connector connector-a" aria-hidden="true"><span>WineGE</span><i></i></div>
+      <div class="story-card story-server" data-story-node="server">
+        <span class="story-index">02</span>
+        <div class="server-stack" aria-hidden="true"><i></i><i></i><i></i></div>
+        <h3>{c.story.server}</h3>
+        <p>{c.story.serverDetail}</p>
+        <div class="server-pills"><span>GTK 4</span><span>xrdp</span><span>PolicyKit</span></div>
+      </div>
+      <div class="story-connector connector-b" aria-hidden="true"><span>RDP</span><i></i></div>
+      <div class="story-card story-access" data-story-node="access">
+        <span class="story-index">03</span>
+        <div class="client-grid" aria-label={c.story.clients.join(", ")}>
+          {c.story.clients.map((client, index) => <span style={`--i:${index}`}>{client}</span>)}
+        </div>
+        <h3>{c.story.access}</h3>
+        <p>{c.story.accessDetail}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo section-shell" aria-labelledby="demo-title">
+    <div class="section-heading">
+      <p class="eyebrow">{c.demo.kicker}</p>
+      <h2 id="demo-title">{c.demo.title}</h2>
+      <p>{c.demo.body}</p>
+    </div>
+
+    <div class="experience-switcher" data-experience data-active-view="desktop">
+      <div class="experience-toggle" role="tablist" aria-label={c.locale === "pt" ? "Escolher experiência" : "Choose experience"}>
+        <span class="experience-toggle-thumb" aria-hidden="true"></span>
+        <button type="button" role="tab" aria-selected="true" aria-controls="desktop-experience" data-experience-tab="desktop">
+          <span class="toggle-icon desktop-icon" aria-hidden="true"></span>Desktop
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="cli-experience" data-experience-tab="cli" tabindex="-1">
+          <span class="toggle-icon cli-icon" aria-hidden="true">&gt;_</span>CLI
+        </button>
+      </div>
+
+      <div class="experience-stage">
+        <div id="desktop-experience" class="experience-panel" role="tabpanel" data-experience-panel="desktop">
+          <div class="demo-shell" data-demo>
+      <div class="demo-toolbar">
+        <div class="demo-titlebar"><span class="demo-logo">RDP</span><strong>Session Manager</strong></div>
+        <span class="demo-label">{c.locale === "pt" ? "DEMONSTRAÇÃO INTERATIVA" : "INTERACTIVE DEMO"}</span>
+      </div>
+      <div class="demo-body">
+        <div class="demo-sidebar" role="tablist" aria-label={c.locale === "pt" ? "Tipo de sessão" : "Session type"}>
+          {modes.map((mode, index) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={index === 0 ? "true" : "false"}
+              tabindex={index === 0 ? "0" : "-1"}
+              data-demo-mode={mode}
+              data-title={c.demo.modes[mode].title}
+              data-session={c.demo.modes[mode].session}
+              data-command={c.demo.modes[mode].command}
+              data-status={c.demo.modes[mode].status}
+              data-detail={c.demo.modes[mode].detail}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>{c.demo.modes[mode].label}
+            </button>
+          ))}
+        </div>
+        <div class="demo-panel" role="tabpanel" tabindex="0">
+          <div class="demo-panel-head">
+            <div><span class="status-dot"></span><span data-demo-status>{c.demo.modes.desktop.status}</span></div>
+            <label class="toggle"><input type="checkbox" checked aria-label={c.demo.active} /><span></span>{c.demo.active}</label>
+          </div>
+          <div class="demo-panel-content">
+            <div class="demo-user-card">
+              <span class="avatar">LT</span>
+              <div><small>{c.demo.user}</small><strong>legacy-team</strong><span>10.0.0.42</span></div>
+              <span class="session-badge">RDP</span>
+            </div>
+            <h3 data-demo-title>{c.demo.modes.desktop.title}</h3>
+            <div class="field-row">
+              <label><span>{c.demo.sessionType}</span><strong data-demo-session>{c.demo.modes.desktop.session}</strong></label>
+              <label><span>{c.demo.app}</span><code data-demo-command>{c.demo.modes.desktop.command}</code></label>
+            </div>
+            <div class="demo-preview">
+              <div class="preview-window">
+                <div class="preview-bar"><span>● ● ●</span><strong data-demo-window>{c.demo.modes.desktop.session}</strong></div>
+                <div class="preview-content">
+                  <div class="preview-sidebar"></div>
+                  <div class="preview-cards"><i></i><i></i><i></i><i></i></div>
+                </div>
+              </div>
+              <p data-demo-detail>{c.demo.modes.desktop.detail}</p>
+            </div>
+          </div>
+        </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="cli-experience" class="experience-panel" role="tabpanel" data-experience-panel="cli" hidden>
+          <div class="cli-window">
+            <div class="cli-toolbar">
+              <div><span></span><span></span><span></span></div>
+            </div>
+            <div class="cli-screen" aria-hidden="true">
+              <div class="cli-line cli-command" data-cli-line data-cli-source="$ rdpsm server status">$ rdpsm server status</div>
+              <div class="cli-line cli-output" data-cli-line data-cli-source="● xrdp.service        active (running)">● xrdp.service        active (running)</div>
+              <div class="cli-line cli-output" data-cli-line data-cli-source="  address             10.0.0.42:3389">  address             10.0.0.42:3389</div>
+              <div class="cli-line cli-spacer" aria-hidden="true"></div>
+              <div class="cli-line cli-command" data-cli-line data-cli-source="$ rdpsm user create legacy-team \">$ rdpsm user create legacy-team \</div>
+              <div class="cli-line cli-command cli-indent" data-cli-line data-cli-source="    --session-type winege-remoteapp \">    --session-type winege-remoteapp \</div>
+              <div class="cli-line cli-command cli-indent" data-cli-line data-cli-source="    --app-command LegacyApp.exe">    --app-command LegacyApp.exe</div>
+              <div class="cli-line cli-progress" data-cli-line data-cli-source="[1/4] Creating isolated user ........ done">[1/4] Creating isolated user ........ done</div>
+              <div class="cli-line cli-progress" data-cli-line data-cli-source="[2/4] Preparing WineGE prefix ...... done">[2/4] Preparing WineGE prefix ...... done</div>
+              <div class="cli-line cli-progress" data-cli-line data-cli-source="[3/4] Configuring RemoteApp ......... done">[3/4] Configuring RemoteApp ......... done</div>
+              <div class="cli-line cli-success" data-cli-line data-cli-source="✓ Session published successfully">✓ Session published successfully</div>
+              <div class="cli-line cli-spacer" aria-hidden="true"></div>
+              <div class="cli-line cli-command" data-cli-line data-cli-source="$ rdpsm session list">$ rdpsm session list</div>
+              <div class="cli-line cli-table" data-cli-line data-cli-source="USER          TYPE                 STATUS">USER          TYPE                 STATUS</div>
+              <div class="cli-line cli-table" data-cli-line data-cli-source="legacy-team   WineGE RemoteApp    active">legacy-team   WineGE RemoteApp    active</div>
+              <span class="cli-cursor" aria-hidden="true" hidden></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features section-shell" aria-labelledby="features-title">
+    <div class="features-heading" data-reveal>
+      <p class="eyebrow">{c.features.kicker}</p>
+      <h2 id="features-title">{c.features.title}</h2>
+      <p class="features-lead">{c.features.body}</p>
+    </div>
+    <div class="feature-grid">
+      {c.features.items.map((item, index) => (
+        <article class={`feature-card feature-${item.accent}`} data-feature-card>
+          <div class="feature-card-glow" aria-hidden="true"></div>
+          <div class="feature-header">
+            <span class="feature-pill"><i class="feature-dot"></i>{item.eyebrow}</span>
+            <span class="feature-num" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          </div>
+          <div class="feature-body">
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
+          </div>
+          <div class="feature-footer" aria-hidden="true">
+            <span class="feature-indicator"></span>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="mascot-spotlight section-shell" aria-labelledby="spotlight-title" data-reveal>
+    <img
+      src={c.locale === "pt" ? "./rdp-session-manager-mascot.png" : "../rdp-session-manager-mascot.png"}
+      alt={c.locale === "pt" ? "Axolote rosa ao lado de um computador retrô" : "Pink axolotl beside a retro computer"}
+      loading="lazy"
+      width="1920"
+      height="820"
+    />
+    <div class="spotlight-shade" aria-hidden="true"></div>
+    <div class="spotlight-content">
+      <p class="spotlight-kicker">{c.locale === "pt" ? "WINDOWS NO LINUX. ACESSO EM QUALQUER TELA." : "WINDOWS ON LINUX. ACCESS ON ANY SCREEN."}</p>
+      <h2 id="spotlight-title">
+        {c.locale === "pt" ? <>Seu legado.<br /><em>Agora, acessível.</em></> : <>Your legacy.<br /><em>Now accessible.</em></>}
+      </h2>
+      <p class="spotlight-body">
+        {c.locale === "pt"
+          ? "Publique aplicações Windows e desktops Linux a partir de um único servidor, com sessões isoladas e controle centralizado."
+          : "Publish Windows applications and Linux desktops from one server, with isolated sessions and centralized control."}
+      </p>
+      <ul class="spotlight-list">
+        <li><span>01</span>{c.locale === "pt" ? "Aplicações Windows no Linux" : "Windows applications on Linux"}</li>
+        <li><span>02</span>{c.locale === "pt" ? "Desktops completos por RDP" : "Full desktops over RDP"}</li>
+        <li><span>03</span>{c.locale === "pt" ? "Uma sessão isolada por usuário" : "One isolated session per user"}</li>
+      </ul>
+      <a class="spotlight-link" href="#compatibility">
+        {c.locale === "pt" ? "Explorar capacidades" : "Explore capabilities"}<span aria-hidden="true">↘</span>
+      </a>
+    </div>
+  </section>
+
+  <section id="compatibility" class="compatibility section-shell" aria-labelledby="compatibility-title">
+    <div class="compat-copy">
+      <p class="eyebrow">{c.compatibility.kicker}</p>
+      <h2 id="compatibility-title">{c.compatibility.title}</h2>
+      <p>{c.compatibility.body}</p>
+      <div class="verified"><span aria-hidden="true">✓</span>{c.compatibility.verified}</div>
+    </div>
+    <div class="compat-matrix">
+      <div class="compat-row" data-reveal><strong>{c.compatibility.distros}</strong><span>Ubuntu 22.04+</span><span>Debian 12+</span><span>Arch Linux</span><span>Manjaro</span><span>EndeavourOS</span><span>CachyOS</span></div>
+      <div class="compat-row" data-reveal><strong>{c.compatibility.desktops}</strong><span>GNOME</span><span>KDE Plasma</span><span>XFCE</span><span>Linux RemoteApp</span><span>WineGE RemoteApp</span></div>
+      <div class="compat-row" data-reveal><strong>{c.compatibility.clients}</strong><span>Windows</span><span>Linux</span><span>macOS</span><span>Android</span><span>iOS</span></div>
+    </div>
+  </section>
+
+  <section id="install" class="install section-shell" aria-labelledby="install-title">
+    <div class="install-heading" data-reveal>
+      <p class="eyebrow">{c.install.kicker}</p>
+      <h2 id="install-title">{c.install.title}</h2>
+      <p>{c.install.body}</p>
+    </div>
+
+    <div class="install-card" data-reveal>
+      <div class="install-bar" data-terminal>
+        <div class="install-cmd">
+          <span class="prompt-char" aria-hidden="true">$</span>
+          <code>{installCommand}</code>
+        </div>
+        <button
+          type="button"
+          class="copy-btn"
+          data-copy
+          data-copy-label={c.install.copy}
+          data-copied-label={c.install.copied}
+          data-command={installCommand}
+          aria-label={c.install.copy}
+        >
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5.5" y="5.5" width="8" height="8" rx="2"></rect>
+            <path d="M3.5 10.5h-1a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1"></path>
+          </svg>
+          <span data-copy-text>{c.install.copy}</span>
+        </button>
+      </div>
+
+      <div class="install-meta">
+        <div class="install-reqs">
+          <strong>{c.install.requirements}</strong>
+          <span>{c.install.reqBody}</span>
+        </div>
+        <div class="install-nav">
+          <a href={`${repo}/blob/master/docs/INSTALL.md`} target="_blank" rel="noreferrer">{c.install.docs}<span aria-hidden="true">↗</span></a>
+          <a href={`${repo}/releases/latest`} target="_blank" rel="noreferrer">{c.install.releases}<span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="open-source section-shell" aria-labelledby="open-title">
+    <div class="open-grid" data-reveal>
+      <div>
+        <p class="eyebrow">{c.openSource.kicker}</p>
+        <h2 id="open-title">{c.openSource.title}</h2>
+        <p>{c.openSource.body}</p>
+        <a class="button button-light" href={repo} target="_blank" rel="noreferrer">{c.openSource.cta}<span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="code-art" aria-hidden="true">
+        <span>rdpsm user create legacy-team \</span>
+        <span>&nbsp;&nbsp;--session-type winege-remoteapp \</span>
+        <span>&nbsp;&nbsp;--app-command LegacyApp.exe</span>
+        <i></i><i></i><i></i>
+        <strong>GPL-3.0</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq section-shell" aria-labelledby="faq-title">
+    <div class="faq-heading"><p class="eyebrow">{c.faq.kicker}</p><h2 id="faq-title">{c.faq.title}</h2></div>
+    <div class="faq-list">
+      {c.faq.items.map((item, index) => (
+        <details data-reveal>
+          <summary><span>{String(index + 1).padStart(2, "0")}</span>{item.question}<i aria-hidden="true">+</i></summary>
+          <p>{item.answer}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer section-shell">
+  <a class="brand footer-brand" href="#main"><span class="brand-name"><strong>RDP</strong><span>Session Manager</span></span></a>
+  <p>{c.footer}</p>
+  <div><a href={repo} target="_blank" rel="noreferrer">GitHub</a><a href={`${repo}/blob/master/LICENSE`} target="_blank" rel="noreferrer">GPL-3.0</a><a href={languageHref}>{c.langName}</a></div>
+</footer>
+
+<script>
+  import gsap from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+  gsap.registerPlugin(ScrollTrigger);
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function setupAnimations() {
+    if (reducedMotion.matches) return;
+
+    gsap.from(".hero-reveal", { opacity: 0, y: 22, duration: 0.75, stagger: 0.07, ease: "power2.out" });
+    gsap.from(".crt-shell", { scale: 0.92, duration: 0.95, ease: "power2.out" });
+
+    gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((element) => {
+      gsap.from(element, {
+        opacity: 0,
+        y: 28,
+        duration: 0.65,
+        ease: "power2.out",
+        scrollTrigger: { trigger: element, start: "top 88%", once: true }
+      });
+    });
+
+    const featureCards = gsap.utils.toArray<HTMLElement>("[data-feature-card]");
+    if (featureCards.length > 0) {
+      gsap.from(featureCards, {
+        opacity: 0,
+        y: 28,
+        duration: 0.6,
+        stagger: 0.07,
+        ease: "power2.out",
+        clearProps: "transform",
+        scrollTrigger: {
+          trigger: ".feature-grid",
+          start: "top 85%",
+          once: true
+        }
+      });
+    }
+
+    const story = document.querySelector<HTMLElement>("[data-story]");
+    if (story && window.matchMedia("(min-width: 901px)").matches) {
+      const timeline = gsap.timeline({
+        scrollTrigger: { trigger: story, start: "top top", end: "+=1500", pin: true, scrub: 0.4, anticipatePin: 1 }
+      });
+      timeline
+        .from("[data-story-node='legacy']", { opacity: 0.35, scale: 0.88, duration: 0.6 })
+        .to("[data-story-progress]", { scaleX: 0.34, duration: 0.8 }, 0)
+        .from(".connector-a i", { scaleX: 0, transformOrigin: "left", duration: 0.6 })
+        .from("[data-story-node='server']", { opacity: 0.25, y: 50, scale: 0.88, duration: 0.6 }, "-=0.2")
+        .to("[data-story-progress]", { scaleX: 0.68, duration: 0.8 }, "<")
+        .from(".connector-b i", { scaleX: 0, transformOrigin: "left", duration: 0.6 })
+        .from("[data-story-node='access']", { opacity: 0.25, y: 50, scale: 0.88, duration: 0.6 }, "-=0.2")
+        .from(".client-grid span", { opacity: 0, y: 10, stagger: 0.07, duration: 0.4 }, "-=0.25")
+        .to("[data-story-progress]", { scaleX: 1, duration: 0.6 }, "<");
+    }
+  }
+
+  function setupDemo() {
+    const demo = document.querySelector<HTMLElement>("[data-demo]");
+    if (!demo) return;
+    const tabs = Array.from(demo.querySelectorAll<HTMLButtonElement>("[data-demo-mode]"));
+    const title = demo.querySelector<HTMLElement>("[data-demo-title]");
+    const session = demo.querySelector<HTMLElement>("[data-demo-session]");
+    const command = demo.querySelector<HTMLElement>("[data-demo-command]");
+    const status = demo.querySelector<HTMLElement>("[data-demo-status]");
+    const detail = demo.querySelector<HTMLElement>("[data-demo-detail]");
+    const windowTitle = demo.querySelector<HTMLElement>("[data-demo-window]");
+    const panel = demo.querySelector<HTMLElement>("[role='tabpanel']");
+
+    const activate = (tab: HTMLButtonElement) => {
+      tabs.forEach((item) => {
+        const active = item === tab;
+        item.setAttribute("aria-selected", String(active));
+        item.tabIndex = active ? 0 : -1;
+      });
+      if (title) title.textContent = tab.dataset.title ?? "";
+      if (session) session.textContent = tab.dataset.session ?? "";
+      if (command) command.textContent = tab.dataset.command ?? "";
+      if (status) status.textContent = tab.dataset.status ?? "";
+      if (detail) detail.textContent = tab.dataset.detail ?? "";
+      if (windowTitle) windowTitle.textContent = tab.dataset.session ?? "";
+      demo.dataset.activeMode = tab.dataset.demoMode;
+      if (!reducedMotion.matches && panel) gsap.fromTo(panel, { opacity: 0.65, y: 8 }, { opacity: 1, y: 0, duration: 0.32 });
+    };
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activate(tab));
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+        const next = tabs[(index + direction + tabs.length) % tabs.length];
+        next.focus();
+        activate(next);
+      });
+    });
+  }
+
+  function setupExperienceSwitch() {
+    const experience = document.querySelector<HTMLElement>("[data-experience]");
+    if (!experience) return;
+    const tabs = Array.from(experience.querySelectorAll<HTMLButtonElement>("[data-experience-tab]"));
+    const panels = Array.from(experience.querySelectorAll<HTMLElement>("[data-experience-panel]"));
+    const cliLines = Array.from(experience.querySelectorAll<HTMLElement>("[data-cli-line]"));
+    const cliCursor = experience.querySelector<HTMLElement>(".cli-cursor");
+    let typingRun = 0;
+    const wait = (milliseconds: number) => new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+
+    const renderCli = async () => {
+      const currentRun = ++typingRun;
+      if (reducedMotion.matches) {
+        cliLines.forEach((line) => {
+          line.textContent = line.dataset.cliSource ?? "";
+          line.style.opacity = "1";
+          line.style.transform = "none";
+        });
+        if (cliCursor) cliCursor.hidden = true;
+        return;
+      }
+
+      cliLines.forEach((line) => {
+        const isCommand = line.classList.contains("cli-command");
+        line.textContent = isCommand ? "" : (line.dataset.cliSource ?? "");
+        line.style.opacity = isCommand ? "1" : "0";
+        line.style.transform = isCommand ? "none" : "translateY(7px)";
+      });
+      if (cliCursor) cliCursor.hidden = true;
+
+      for (const line of cliLines) {
+        const source = line.dataset.cliSource ?? "";
+        const isCommand = line.classList.contains("cli-command");
+
+        if (isCommand) {
+          line.textContent = "";
+          if (cliCursor) {
+            cliCursor.hidden = false;
+            line.append(cliCursor);
+          }
+          await wait(260);
+
+          for (let index = 1; index <= source.length; index += 1) {
+            if (currentRun !== typingRun) {
+              if (cliCursor) cliCursor.hidden = true;
+              return;
+            }
+            line.textContent = source.slice(0, index);
+            if (cliCursor) line.append(cliCursor);
+            await wait(42);
+          }
+
+          await wait(360);
+          if (cliCursor) cliCursor.hidden = true;
+        } else {
+          if (currentRun !== typingRun) {
+            if (cliCursor) cliCursor.hidden = true;
+            return;
+          }
+          gsap.to(line, {
+            opacity: 1,
+            y: 0,
+            duration: 0.32,
+            ease: "power2.out",
+            overwrite: true,
+          });
+          await wait(line.classList.contains("cli-progress") ? 320 : 240);
+        }
+      }
+      if (cliCursor) cliCursor.hidden = true;
+    };
+
+    const activate = (tab: HTMLButtonElement) => {
+      const view = tab.dataset.experienceTab ?? "desktop";
+      experience.dataset.activeView = view;
+      tabs.forEach((item) => {
+        const active = item === tab;
+        item.setAttribute("aria-selected", String(active));
+        item.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel) => {
+        const active = panel.dataset.experiencePanel === view;
+        panel.hidden = !active;
+        if (active && !reducedMotion.matches) {
+          gsap.fromTo(panel, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" });
+        }
+      });
+      if (view === "cli") void renderCli();
+      else {
+        typingRun += 1;
+        if (cliCursor) cliCursor.hidden = true;
+      }
+    };
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activate(tab));
+      tab.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        const next = tabs[(index + direction + tabs.length) % tabs.length];
+        next.focus();
+        activate(next);
+      });
+    });
+  }
+
+  function setupCopy() {
+    const button = document.querySelector<HTMLButtonElement>("[data-copy]");
+    const label = button?.querySelector<HTMLElement>("[data-copy-text]");
+    if (!button || !label) return;
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.command ?? "");
+        label.textContent = button.dataset.copiedLabel ?? "Copied!";
+        button.dataset.copied = "true";
+        window.setTimeout(() => {
+          label.textContent = button.dataset.copyLabel ?? "Copy";
+          button.dataset.copied = "false";
+        }, 1800);
+      } catch {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        const code = document.querySelector(".install-code code, .terminal-body code");
+        if (selection && code) { range.selectNodeContents(code); selection.removeAllRanges(); selection.addRange(range); }
+      }
+    });
+  }
+
+  function setupFeatureSpotlight() {
+    const cards = document.querySelectorAll<HTMLElement>("[data-feature-card]");
+    cards.forEach((card) => {
+      let rafId = 0;
+      card.addEventListener("mousemove", (e) => {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty("--mouse-x", `${x}px`);
+          card.style.setProperty("--mouse-y", `${y}px`);
+        });
+      }, { passive: true });
+    });
+  }
+
+  setupAnimations();
+  setupDemo();
+  setupExperienceSwitch();
+  setupCopy();
+  setupFeatureSpotlight();
+</script>
